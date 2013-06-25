@@ -1,3 +1,10 @@
+
+/// we should use portable version of HookCollection?
+var fs = require('fs');
+var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
+eval(content);
+
+
 function Scalar(value){
   var tov = typeof value;
   if(!((tov==='string')||(tov==='number'))){
@@ -113,10 +120,6 @@ function Collection(defaultelementconstructor){
 	var self = this;
 
 	this.attach = function(objorname){
-		/*
-		 *
-		 *
-		*/ 
 		var data = self;
 		var ret = {};
 		var m;
@@ -312,3 +315,10 @@ function Transaction (alias) {
 	this.operations = function () {return ta;}
 }
 
+module.exports = {
+	Transaction : Transaction,
+	Scalar : Scalar,
+	Series : Series,
+	Collection : Collection,
+	HookCollection : HookCollection
+}

@@ -2,6 +2,9 @@ var util = require('util');
 var vm = require('vm');
 var fs = require('fs');
 
+var datamaster = require('./datamaster.js');
+
+/*NEED REWORK ....*/
 function codeAppendedFromFiles(paths){
   var code = '';
   for(var i in paths){
@@ -32,6 +35,11 @@ function execCode(code){
 
 module.exports = {
   glueCode : glueCode,
-  execCode : execCode
+  execCode : execCode,
+	Collection : datamaster.Collection,
+	Series : datamaster.Series,
+	Scalar : datamaster.Scalar,
+	HookCollection : datamaster.HookCollection,
+	Transaction : datamaster.Transaction
 };
 
