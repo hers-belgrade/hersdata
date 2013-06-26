@@ -5,9 +5,34 @@ var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
 
+function convert_to_structure  (structorjson) {
+	var s;
+	if (typeof(structorjson) == 'string') {
+		try {
+			///  check if this is a valid json ....
+			s = JSON.parse(structorjson);
+		}catch (e) {
+			s = structorjson; //consider it as a scalar, string ....
+		}
+	}else{
+		s = structorjson;
+	}
+	return s;
+}
+
+function decide_structure (structorjson) {
+	cs = convert_to_structure(structorjson);
+}
+
+function generate_from_json (structorjson) {
+	var cs = convert_to_structure(structorjson);
+	return ('object' === typeof(cs)) ? new Collection(cs) : new Scalar(cs);
+}
+
 function Scalar(value){
   var tov = typeof value;
-  if(!((tov==='string')||(tov==='number'))){
+	if (tov === 'object') {
+  //if(!((tov==='string')||(tov==='number'))){
     throw 'Scalar can be nothing but a string or a number';
   }
   var data = value;
@@ -44,27 +69,37 @@ function Scalar(value){
   };
 }
 
-function Collection(defaultelementconstructor){
+function Collection(init){
   var data = {};
-  var defaultconstuctor = defaultelementconstructor || function(){
-    throw 'No default constructor provided';
-  };
   var newElement = new HookCollection();
   var elementDestroyed = new HookCollection();
+	var self = this;
+
+	this.value = function () {
+		var ret = {};
+		for (var i in data) ret[i] = data[i].value();
+		return ret;
+	}
 
 
-  var add = function(name,value,constructor){
-    if(typeof constructor !== 'function'){
-			constructor = defaultelementconstructor;
-    }
-    var element = new constructor(value);
+  this.add = function(name,value){
+		var e = convert_to_structure(value);
+		var te = typeof(e);
+		data[name] = (te == 'object') ? new Collection(e) : new Scalar(e);
+		newElement.fire(name, data[name].stringify());
+
+		/*
+		element = value; ///we should parse value ....
     data[name] = element;
     newElement.fire(name,element.stringify());
+		*/
   };
+
   this.addScalar = function(name,value){
-    add(name,value,Scalar);
+		if ('object' === typeof(value)) return;
+    this.add(name,value);
   };
-  this.add = add;
+
   this.destroy = function(name){
     var el = data[name];
     if(typeof el === 'undefined'){
@@ -73,7 +108,8 @@ function Collection(defaultelementconstructor){
     delete data[name];
     el.destroy();
     elementDestroyed.fire(name);
-  };
+  }
+	;
   this.element = function(name){
 		switch(typeof(name)) {
 			case 'undefined': return undefined;
@@ -95,29 +131,27 @@ function Collection(defaultelementconstructor){
 	this.begin_transaction = new HookCollection();
 	this.end_transaction = new HookCollection();
 
-  var stringify = function(){
+  this.stringify = function(){
     var ret = {};
     for(var i in data){
-      ret[i] = data[i].stringify();
+      ret[i] = data[i].value();
     }
     return JSON.stringify(ret);
   };
+
   this.copy = function(){
-    return new CollectionCopy(defaultelementconstructor,stringify());
-  };
-  this.stringify = stringify;
-  this.parse = function(value){
-    var vj = JSON.parse(value);
-    for(var i in vj){
-      if(data[i]){
-        data[i].parse(vj[i]);
-      }else{
-        add(i,vj[i],defaultconstuctor);
-      }
-    }
+    return new CollectionCopy(defaultelementconstructor,self.stringify());
   };
 
-	var self = this;
+  this.parse = function(value){
+		var s = convert_to_structure(value);
+		///forget, I can't create Collection from a scalar !!!
+		if ('object' != typeof(s)) return;
+		for (var i in s) { 
+			this.add(i, s[i]); 
+		}
+  };
+
 
 	this.attach = function(objorname){
 		var data = self;
@@ -247,38 +281,8 @@ function Collection(defaultelementconstructor){
 		}
 		this.end_transaction.fire({'transaction':transaction.alias(), 'state': this.stringify(), 'params':params.end_params});
 	}
-}
 
-function Series(defaultelementconstructor,capacity){
-  Collection.apply(this,[defaultelementconstructor]);
-  this.addScalar('capacity',0);
-  var t = this;
-  this.copy = function(){
-    return new SeriesCopy(defaultelementconstructor,t.stringify());
-  };
-  this.setCapacity = function(cap){
-    if(!(cap>0)){
-      return;
-    }
-    var curcap = t.element('capacity').value();
-    if(curcap===cap){
-      return;
-    }
-    if(curcap>cap){
-      for(var i=curcap; i<cap; i++){
-        t.destroy(i);
-      }
-    }
-    if(curcap<cap){
-      for(var i=curcap; i<cap; i++){
-        t.add(i,undefined,Player);
-      }
-    }
-		this.element('capacity').alter(capacity);
-  }
-  if(capacity){
-		this.setCapacity(capacity);
-  }
+	self.parse(init);
 }
 
 /*
@@ -318,7 +322,7 @@ function Transaction (alias) {
 module.exports = {
 	Transaction : Transaction,
 	Scalar : Scalar,
-	Series : Series,
 	Collection : Collection,
-	HookCollection : HookCollection
+	HookCollection : HookCollection,
+	generate_from_json : generate_from_json 
 }
