@@ -1,9 +1,7 @@
-
 /// we should use portable version of HookCollection?
 var fs = require('fs');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
-
 
 function convert_to_structure  (structorjson) {
 	var s;
@@ -26,77 +24,106 @@ function decide_structure (structorjson) {
 
 function generate_from_json (structorjson) {
 	var cs = convert_to_structure(structorjson);
-	return ('object' === typeof(cs)) ? new Collection(cs) : new Scalar(cs);
+	return (Scalar.isScalarable(cs)) ? new Scalar(cs) : new Collection(cs);
 }
 
-function Scalar(value){
-  var tov = typeof value;
-	if (tov === 'object') {
-  //if(!((tov==='string')||(tov==='number'))){
-    throw 'Scalar can be nothing but a string or a number';
+function Scalar(public_value, private_value, key){
+	if (Scalar.isScalarable(public_value)) {
+		if (public_value instanceof Array) {
+			var t = public_value;
+			public_value = t[0];
+			private_value= t[1];
+			key = t[2];
+		}
+	}else{
+    throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
+	}
+	var self = this;
+  this.alter = function(public_data_a, private_data_a, key_a){
+		public_data = public_data_a;
+		private_data = private_data_a;
+		key = key_a;
   }
-  var data = value;
-  var changed = new HookCollection();
-  this.alter = function(newval){
-    if(data!==newval){
-      var oldval=data;
-      data=newval;
-      changed.fire('',oldval,newval);
-    }
-  }
-  this.changed = changed;
-  var destroyed = new HookCollection();
-  this.destroy = function(){
-    destroyed.fire();
-    changed.destroy();
-    changed = undefined;
-    destroyed.destroy();
-    destroyed = undefined;
-  }
-  this.destroyed = destroyed;
-  this.value = function(){
-    return data;
+
+  this.value = function(key_a){
+		if (!key) return public_value;
+    return (key_a == key ? private_value : public_value);
   };
-  var stringify = function(){
-    return JSON.stringify(data);
+
+  this.stringify = function(key_a){
+    return this.value(key_a);
   };
-  this.copy = function(){
-    return new ScalarCopy(stringify());
+
+  this.copy = function(key_a){
+    return new ScalarCopy(self.stringify(key_a));
   };
-  this.stringify = stringify;
+
   this.parse = function(value){
-    data = JSON.parse(value);
+		var tov = typeof(value);
+		if ('object' != tov) {
+			if ('string' == tov) {
+				try {
+					value = JSON.parse(value);
+				}catch (e) {
+					///invalid json => just string
+					public_data = value;
+					return;
+				}
+			}else{
+				public_data = value;
+				return;
+			}
+		}
+		if (value instanceof Array) {
+			public_data = value[0];
+			private_data= value[1];
+			key = value[2];
+		}
   };
+	this.parse(public_value, private_value, key);
+
+	this.print_debug = function (){
+		console.log(public_value,private_value, key);
+	}
+}
+
+Scalar.isScalarable = function (obj) {
+	return (('object' != typeof(obj)) || (obj instanceof Array));
 }
 
 function Collection(init){
   var data = {};
-  var newElement = new HookCollection();
-  var elementDestroyed = new HookCollection();
 	var self = this;
 
-	this.value = function () {
+	function struct_tree (path) {
+		var ret = [self];
+		if (path.length == 0) return ret;
+		var p = path.slice(0);
+		var target = self;
+		while (p.length) {
+			target = target.element(p.shift());
+			ret.push(target);
+		}
+		return ret;
+	}
+	this.value = function (key, path) {
+		if (path) {
+			var t = this.element(path);
+			return (t)?t.value(key):undefined;
+		}
 		var ret = {};
-		for (var i in data) ret[i] = data[i].value();
+		for (var i in data) ret[i] = data[i].value(key);
 		return ret;
 	}
 
-
   this.add = function(name,value){
 		var e = convert_to_structure(value);
-		var te = typeof(e);
-		data[name] = (te == 'object') ? new Collection(e) : new Scalar(e);
-		newElement.fire(name, data[name].stringify());
-
-		/*
-		element = value; ///we should parse value ....
-    data[name] = element;
-    newElement.fire(name,element.stringify());
-		*/
+		data[name] = (Scalar.isScalarable(e))? new Scalar(e):new Collection(e);
+		return e;
   };
 
   this.addScalar = function(name,value){
-		if ('object' === typeof(value)) return;
+		if (!Scalar.isScalarable(value)) return;
     this.add(name,value);
   };
 
@@ -107,34 +134,19 @@ function Collection(init){
     }
     delete data[name];
     el.destroy();
-    elementDestroyed.fire(name);
-  }
-	;
-  this.element = function(name){
-		switch(typeof(name)) {
-			case 'undefined': return undefined;
-			case 'number':
-			case 'string': return data[name];
-			case 'object':{
-				if (name instanceof Array) {
-					var st = this.struct_tree(name);
-					return st.pop();
-				}else{
-					return undefined;
-				}
-			}
-		}
   };
-  this.newElement = newElement;
-  this.elementDestroyed = elementDestroyed;
 
-	this.begin_transaction = new HookCollection();
-	this.end_transaction = new HookCollection();
-
-  this.stringify = function(){
+	this.element = function(name){
+		/// return a clean Collection reference, not a value which is struct copy  ....
+		if ('string' === typeof(name)) {
+			return data[name];
+		}
+		return (name instanceof Array) ? struct_tree(name).pop() : undefined;
+  };
+  this.stringify = function(key){
     var ret = {};
     for(var i in data){
-      ret[i] = data[i].value();
+      ret[i] = data[i].value(key);
     }
     return JSON.stringify(ret);
   };
@@ -239,50 +251,49 @@ function Collection(init){
 		return ret;
 	}
 
-	function struct_tree (path) {
-		var ret = [self];
-		if (path.length == 0) return ret;
-		var p = path.slice(0);
-		var target = self;
-		while (p.length) {
-			target = target.element(p.shift());
-			ret.push(target);
-		}
-		return ret;
-	}
 
 	var operations = {
 		alter : function (path, val) {
-			var target = struct_tree(path).pop();
-			target && target.alter(val);
+			var target = self.element(path);
+			if (!target) return undefined;
+			target.alter(val);
+			return target;
 		},
 		add: function (path, params) {
-			var target = struct_tree(path).pop();
-			target && target.add (params.name, params.value, params.constructor_function);
+			var target = self.element(path);
+			if (!target) return undefined;
+			target.add (params.name, params.value);
+			return target;
 		},
 		remove: function (path, params) {
 			var st = struct_tree(path);
-			if (st.length < 2) return;
+			if (st.length < 2) return undefined;
 			var el = st.pop();
 			var target = st.pop();
-			target && target.destroy(params.name);
+			if (!target) return undefined;
+			target.destroy(params.name);
+			return target.element(params.name);
 		}
 	};
 
-	this.commit = function (transaction, params) {
-		params = params || {};
-		var t_alias = transaction.alias();
-		this.begin_transaction.fire({'transaction': transaction.alias(), 'state': this.stringify(), 'params':params.begin_params});
+	this.commit = function (transaction) {
 		var ops = transaction.operations();
+		var res = [];
 		for (var i in ops) {
-			if (ops[i] && ops[i].action) {
-				operations[ops[i].action].call(this, ops[i].path, ops[i].params);
+			var it = ops[i];
+			if (it && it.action) {
+				var target = operations[it.action].call(this, it.path, it.params);
+				res.push ({ action:it.action, target:target, path:it.path });
 			}
 		}
-		this.end_transaction.fire({'transaction':transaction.alias(), 'state': this.stringify(), 'params':params.end_params});
+		var update_struct = { alias : transaction.alias(), batch : res };
+		this.onNewTransaction.fire(update_struct);
+		return update_struct;
 	}
 
-	self.parse(init);
+	this.onNewTransaction = new HookCollection();
+
+	this.parse(init);
 }
 
 /*
