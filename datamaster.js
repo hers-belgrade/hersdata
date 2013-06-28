@@ -18,10 +18,6 @@ function convert_to_structure  (structorjson) {
 	return s;
 }
 
-function decide_structure (structorjson) {
-	cs = convert_to_structure(structorjson);
-}
-
 function generate_from_json (structorjson) {
 	var cs = convert_to_structure(structorjson);
 	return (Scalar.isScalarable(cs)) ? new Scalar(cs) : new Collection(cs);
@@ -257,13 +253,18 @@ function Collection(init){
 			var target = self.element(path);
 			if (!target) return undefined;
 			target.alter(val);
-			return target;
+			return {
+				target:target
+			};
 		},
 		add: function (path, params) {
 			var target = self.element(path);
 			if (!target) return undefined;
 			target.add (params.name, params.value);
-			return target;
+			return {
+				name: params.name,
+				target:target.element(params.name)
+			}
 		},
 		remove: function (path, params) {
 			var st = struct_tree(path);
@@ -272,7 +273,10 @@ function Collection(init){
 			var target = st.pop();
 			if (!target) return undefined;
 			target.destroy(params.name);
-			return target.element(params.name);
+			return {
+				target: target.element(params.name),
+				name: params.name
+			};
 		}
 	};
 
@@ -283,7 +287,7 @@ function Collection(init){
 			var it = ops[i];
 			if (it && it.action) {
 				var target = operations[it.action].call(this, it.path, it.params);
-				res.push ({ action:it.action, target:target, path:it.path });
+				res.push ({ action:it.action, target:target, path:it.path});
 			}
 		}
 		var update_struct = { alias : transaction.alias(), batch : res };
