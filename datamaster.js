@@ -3,94 +3,130 @@ var fs = require('fs');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
-function convert_to_structure  (structorjson) {
-	var s;
-	if (typeof(structorjson) == 'string') {
+
+function Factory (json_or_obj) {
+	var v;
+	if ('string' === typeof(json_or_obj)) {
 		try {
-			///  check if this is a valid json ....
-			s = JSON.parse(structorjson);
-		}catch (e) {
-			s = structorjson; //consider it as a scalar, string ....
-		}
-	}else{
-		s = structorjson;
+			v = JSON.parse(json_or_obj);
+		}catch (e) {}
+	}else if ('object' === typeof(json_or_obj)){
+		v = (json_or_obj instanceof Array) ? undefined : json_or_obj;
 	}
-	return s;
+	if (!v) return undefined;
+	switch (v.type) {
+		case 'Scalar' : return Scalar.fromObj(v);
+		case 'Collection':return Collection.fromObj(v);
+	}
 }
 
-function generate_from_json (structorjson) {
-	var cs = convert_to_structure(structorjson);
-	return (Scalar.isScalarable(cs)) ? new Scalar(cs) : new Collection(cs);
+
+function throw_if_invalid_scalar(val) {
+	if ('object' === typeof(val)) throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
 }
 
-function Scalar(public_value, private_value, key){
-	if (Scalar.isScalarable(public_value)) {
-		if (public_value instanceof Array) {
-			var t = public_value;
-			public_value = t[0];
-			private_value= t[1];
-			key = t[2];
+function throw_if_invalid_access_level (val) {
+	var tov = typeof(val);
+	if ('undefined' === tov) return;
+	if (val instanceof Array) return;
+	throw "Access can not be nothing but an array or an undefined "+JSON.stringify(arguments);
+}
+
+function is_access_ok (s_als, c_als) {
+	if (!s_als) return true;
+	if ('string' === typeof(c_als)) return (s_als.indexOf(c_als) > -1);
+	if (c_als instanceof Array) {
+		for (var i in c_als) {
+			if (s_als.indexOf(c_als[i]) > -1) return true;
 		}
-	}else{
-    throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
 	}
+	return false;
+}
+
+
+//// alter, and add functions are not checked against access_level, make sure you guard them from attached functionality
+function Scalar(restricted_value, public_value, access_level) {
+	function throw_if_any_invalid (ra,pa,al) {
+		throw_if_invalid_scalar (ra);
+		throw_if_invalid_scalar (pa);
+		throw_if_invalid_access_level (al);
+	}
+
+	function set_from_obj(obj) {
+		if ('object' != typeof (obj)) {
+			throw "Can not call set_from_obj with arg of type "+typeof(obj)+" "+JSON.stringify(arguments);
+			return;
+		}
+
+		if (obj instanceof Array) {
+			throw "Can not call set_from_obj with arg of type Array "+JSON.stringify(arguments);
+			return;
+		}
+
+		throw_if_any_invalid(obj.restricted_value, obj.public_value, obj.access_level);
+		set_from_vals(obj.restricted_value, obj.public_value, obj.access_level);
+	}
+
+	function set_from_vals (ra,pa,al) {
+		if (typeof(ra) === 'object') return set_from_obj(ra);
+		throw_if_any_invalid(ra,pa, al);
+
+		restricted_value = ra;
+		public_value = pa;
+		access_level = al;
+	}
+	set_from_vals (restricted_value, public_value, access_level);
+
 	var self = this;
-  this.alter = function(public_data_a, private_data_a, key_a){
-		public_data = public_data_a;
-		private_data = private_data_a;
-		key = key_a;
-  }
-
-  this.value = function(key_a){
-		if (!key) return public_value;
-    return (key_a == key ? private_value : public_value);
-  };
-
-  this.stringify = function(key_a){
-    return this.value(key_a);
-  };
-
-  this.copy = function(key_a){
-    return new ScalarCopy(self.stringify(key_a));
-  };
-
-  this.parse = function(value){
-		var tov = typeof(value);
-		if ('object' != tov) {
-			if ('string' == tov) {
-				try {
-					value = JSON.parse(value);
-				}catch (e) {
-					///invalid json => just string
-					public_data = value;
-					return;
-				}
-			}else{
-				public_data = value;
-				return;
-			}
+	this.alter = function (ra, pa, al) { set_from_vals(ra, pa, al); }
+	this.stringify = function (al) {
+		return {
+			type: this.type(),
+			value:this.value(al)
 		}
-		if (value instanceof Array) {
-			public_data = value[0];
-			private_data= value[1];
-			key = value[2];
-		}
-  };
-	this.parse(public_value, private_value, key);
+	}
 
-	this.print_debug = function (){
-		console.log(public_value,private_value, key);
+	//use this for serialization
+	this.json = function () { return JSON.stringify(this.dump()); }
+
+	this.dump = function () {
+		return {
+			type: this.type(),
+			restricted_value : restricted_value,
+			public_value : public_value,
+			access_level : access_level
+		}
+	}
+
+	this.value = function (al) {
+		return (is_access_ok(access_level, al)) ? restricted_value : public_value;
+	}
+	this.type = function () { return 'Scalar'; }
+	this.destroy = function  () {
+		public_value = undefined;
+		restricted_value = undefined;
+		access_level = undefined;
 	}
 }
 
-Scalar.isScalarable = function (obj) {
-	return (('object' != typeof(obj)) || (obj instanceof Array));
+//use this for deserialisation
+Scalar.fromString = function(s) {
+	try {
+		return Scalar.fromObj(JSON.parse(s));
+	}catch (e) {
+		return undefined;
+	}
 }
 
-function Collection(init){
-  var data = {};
-	var self = this;
+Scalar.fromObj = function (v) {
+	if (!v) return undefined;
+	if (v instanceof Array) return undefined;
+	return new Scalar (v.restricted_value, v.public_value, v.access_level);
+}
 
+function Collection(access_level){
+	var data = {};
+	var self = this;
 	function struct_tree (path) {
 		var ret = [self];
 		if (path.length == 0) return ret;
@@ -99,67 +135,73 @@ function Collection(init){
 		while (p.length) {
 			target = target.element(p.shift());
 			ret.push(target);
+			if (!target) return ret;
 		}
 		return ret;
 	}
-	this.value = function (key, path) {
+
+
+	this.value = function (c_al, path) {
 		if (path) {
-			var t = this.element(path);
-			return (t)?t.value(key):undefined;
+			var t = this.element(path, c_al);
+			return (t)?t.value(c_al):undefined;
 		}
+
 		var ret = {};
-		for (var i in data) ret[i] = data[i].value(key);
+		var choice = is_access_ok(access_level, c_al) ? 'restricted_value' : 'public_value';
+		for (var i in data) {
+			if (data[i][choice]) ret[i] = data[i][choice].value(c_al);
+		}
 		return ret;
 	}
 
-  this.add = function(name,value){
-		var e = convert_to_structure(value);
-		data[name] = (Scalar.isScalarable(e))? new Scalar(e):new Collection(e);
-		return e;
+  this.add = function(name,restricted_value, public_value, access_level){
+		/// todo: checks missing
+		data[name] = {
+			restricted_value : restricted_value,
+			public_value : public_value,
+			access_level : access_level
+		};
   };
 
-  this.addScalar = function(name,value){
-		if (!Scalar.isScalarable(value)) return;
-    this.add(name,value);
-  };
-
+	/// TODO: struct review missing ....
   this.destroy = function(name){
-    var el = data[name];
-    if(typeof el === 'undefined'){
-      return;
-    }
-    delete data[name];
-    el.destroy();
+    var rel = restricted_data[name];
+		var pel = public_data[name];
+
+		if (rel) {
+			delete restricted_data[name];
+			rel.destroy();
+		}
+		if (pel) {
+			delete public_data[name];
+			pel.destroy();
+		}
   };
 
-	this.element = function(name){
-		/// return a clean Collection reference, not a value which is struct copy  ....
+	this.element = function(name, al){
 		if ('string' === typeof(name)) {
-			return data[name];
+			var d = data[name] || {};
+			return (is_access_ok(access_level, al)) ? d.restricted_value: d.public_value;
 		}
-		return (name instanceof Array) ? struct_tree(name).pop() : undefined;
+		return (name instanceof Array) ? struct_tree(name, al).pop() : undefined;
   };
-  this.stringify = function(key){
-    var ret = {};
-    for(var i in data){
-      ret[i] = data[i].value(key);
-    }
-    return JSON.stringify(ret);
-  };
+	this.dump = function() {
+		var rd = {type : this.type(), access_level: access_level};
 
-  this.copy = function(){
-    return new CollectionCopy(defaultelementconstructor,self.stringify());
-  };
-
-  this.parse = function(value){
-		var s = convert_to_structure(value);
-		///forget, I can't create Collection from a scalar !!!
-		if ('object' != typeof(s)) return;
-		for (var i in s) { 
-			this.add(i, s[i]); 
+		for (var i in data) {
+			var d = data[i] || {};
+			rd[i] = {
+				restricted_value : ('undefined' == typeof(d.restricted_value)) ? undefined : d.restricted_value.dump() ,
+				public_value : ('undefined' == typeof(d.public_value)) ? undefined : d.public_value.dump()
+			};
 		}
-  };
 
+		return  rd;
+	}
+	this.type = function () {return 'Collection';}
+
+	this.json = function () { return JSON.stringify(this.dump()); }
 
 	this.attach = function(objorname){
 		var data = self;
@@ -253,18 +295,13 @@ function Collection(init){
 			var target = self.element(path);
 			if (!target) return undefined;
 			target.alter(val);
-			return {
-				target:target
-			};
+			return target;
 		},
 		add: function (path, params) {
 			var target = self.element(path);
 			if (!target) return undefined;
 			target.add (params.name, params.value);
-			return {
-				name: params.name,
-				target:target.element(params.name)
-			}
+			return target;
 		},
 		remove: function (path, params) {
 			var st = struct_tree(path);
@@ -273,10 +310,7 @@ function Collection(init){
 			var target = st.pop();
 			if (!target) return undefined;
 			target.destroy(params.name);
-			return {
-				target: target.element(params.name),
-				name: params.name
-			};
+			return target.element(params.name);
 		}
 	};
 
@@ -287,7 +321,7 @@ function Collection(init){
 			var it = ops[i];
 			if (it && it.action) {
 				var target = operations[it.action].call(this, it.path, it.params);
-				res.push ({ action:it.action, target:target, path:it.path});
+				res.push ({ action:it.action, target:target, path:it.path });
 			}
 		}
 		var update_struct = { alias : transaction.alias(), batch : res };
@@ -296,8 +330,24 @@ function Collection(init){
 	}
 
 	this.onNewTransaction = new HookCollection();
+}
 
-	this.parse(init);
+Collection.fromString = function (json) {
+	try {
+		return Collection.fromObj(JSON.parse(json));
+	}catch (e) {return undefined;}
+}
+
+Collection.fromObj = function (obj) {
+	if (!obj) return undefined;
+	if (obj instanceof Array) return undefined;
+	var c = new Collection(obj.access_level);
+	for (var i in obj) {
+		if (i == 'type' || i == 'access_level') continue;
+		c.add(i, Factory(obj[i].restricted_value), Factory(obj[i].public_value));
+	}
+	return c;
+
 }
 
 /*
@@ -339,5 +389,5 @@ module.exports = {
 	Scalar : Scalar,
 	Collection : Collection,
 	HookCollection : HookCollection,
-	generate_from_json : generate_from_json 
+	Factory: Factory
 }
