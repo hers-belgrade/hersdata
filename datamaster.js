@@ -78,7 +78,15 @@ function Scalar(restricted_value, public_value, access_level) {
 	set_from_vals (restricted_value, public_value, access_level);
 
 	var self = this;
-	this.alter = function (ra, pa, al) { set_from_vals(ra, pa, al); }
+	this.alter = function (json_or_struct) { 
+		try {
+			if ('string' === typeof(json_or_struct)) json_or_struct = JSON.parse(json_or_struct);
+			set_from_obj(json_or_struct);
+			return true;
+		}catch (e) {
+			return false;
+		}
+	}
 	this.stringify = function (al) {
 		return {
 			type: this.type(),
@@ -127,13 +135,13 @@ Scalar.fromObj = function (v) {
 function Collection(access_level){
 	var data = {};
 	var self = this;
-	function struct_tree (path) {
+	function struct_tree (path, c_al) {
 		var ret = [self];
 		if (path.length == 0) return ret;
 		var p = path.slice(0);
 		var target = self;
 		while (p.length) {
-			target = target.element(p.shift());
+			target = target.element(p.shift(), c_al);
 			ret.push(target);
 			if (!target) return ret;
 		}
@@ -156,27 +164,39 @@ function Collection(access_level){
 	}
 
   this.add = function(name,restricted_value, public_value, access_level){
+		if (!name) throw ("No name in add to collection procedure ...");
 		/// todo: checks missing
+
+		if (restricted_value && typeof(restricted_value.type) === 'string') restricted_value = Factory(restricted_value);
+		if (public_value && typeof(public_value.type) === 'string') public_value = Factory(public_value);
+		//restricted_value && console.log(restricted_value.type());
+		//public_value && console.log(public_value.type());
 		data[name] = {
 			restricted_value : restricted_value,
 			public_value : public_value,
 			access_level : access_level
 		};
+
+		//console.log('----', this.dump(), '+++++');
   };
 
 	/// TODO: struct review missing ....
-  this.destroy = function(name){
-    var rel = restricted_data[name];
-		var pel = public_data[name];
+  this.destroy = function(name, c_al){
+		if ('string' === typeof(name)) {
+			var target = is_access_ok(access_level, c_al) ? 'restricted_value' : 'public_value';
+			delete data[name][target];
+			return;
+		}
+		if (!(name instanceof Array)) return undefined;
 
-		if (rel) {
-			delete restricted_data[name];
-			rel.destroy();
+		var p = name.slice();
+		var target = this.element(name, c_al);
+		if (p.length) {
+			var nnn = p.pop();
+			var prnt = this.element(p, c_al);
+			prnt.destroy(nnn);
 		}
-		if (pel) {
-			delete public_data[name];
-			pel.destroy();
-		}
+		if (target) target.destroy();
   };
 
 	this.element = function(name, al){
@@ -196,9 +216,9 @@ function Collection(access_level){
 				public_value : ('undefined' == typeof(d.public_value)) ? undefined : d.public_value.dump()
 			};
 		}
-
 		return  rd;
 	}
+
 	this.type = function () {return 'Collection';}
 
 	this.json = function () { return JSON.stringify(this.dump()); }
@@ -290,27 +310,36 @@ function Collection(access_level){
 	}
 
 
+	/*
+	 *  params are: {
+	 *  	path, name,access_level, value (if required by operation)
+	 *  }
+   */
 	var operations = {
-		alter : function (path, val) {
-			var target = self.element(path);
-			if (!target) return undefined;
-			target.alter(val);
-			return target;
+		alter : function (params){
+			var target = self.element(params.path, params.access_level);
+			target && target.alter(params.value);
+			return { 
+				target:target,
+				path:params.path
+			}
 		},
-		add: function (path, params) {
-			var target = self.element(path);
-			if (!target) return undefined;
-			target.add (params.name, params.value);
-			return target;
+		add: function (params) {
+			var target = self.element(params.path, params.access_level);
+			if (target && target.add) {
+				target.add(params.name, params.value.restricted_value, params.value.public_value, params.value.access_level);
+			}
+			return {
+				target : target.element(params.name),
+				path : params.path,
+				name : params.name
+			}
 		},
-		remove: function (path, params) {
-			var st = struct_tree(path);
-			if (st.length < 2) return undefined;
-			var el = st.pop();
-			var target = st.pop();
-			if (!target) return undefined;
-			target.destroy(params.name);
-			return target.element(params.name);
+		remove: function (params) {
+			self.destroy(params.path);
+			return {
+				path : params.path
+			}
 		}
 	};
 
@@ -320,10 +349,12 @@ function Collection(access_level){
 		for (var i in ops) {
 			var it = ops[i];
 			if (it && it.action) {
-				var target = operations[it.action].call(this, it.path, it.params);
-				res.push ({ action:it.action, target:target, path:it.path });
+				var target = operations[it.action].call(this, it.params);
+				if (!target) continue;
+				res.push ({ action:it.action, target:target.target, path:target.path });
 			}
 		}
+
 		var update_struct = { alias : transaction.alias(), batch : res };
 		this.onNewTransaction.fire(update_struct);
 		return update_struct;
@@ -375,7 +406,7 @@ function Transaction (alias) {
 			for (var i in td) this.append(td[i]);
 			return;
 		}
-		if (td.path && td.action) { ///treat as a simple map ...
+		if (td.action) { ///treat as a simple map ...
 			ta.push (td);
 			return;
 		}
