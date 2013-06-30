@@ -40,6 +40,7 @@ module.exports = {
 	Series : datamaster.Series,
 	Scalar : datamaster.Scalar,
 	HookCollection : datamaster.HookCollection,
-	Transaction : datamaster.Transaction
+	Transaction : datamaster.Transaction,
+	Factory : datamaster.Factory
 };
 
