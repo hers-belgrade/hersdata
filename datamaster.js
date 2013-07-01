@@ -200,7 +200,7 @@ function Collection(access_level){
   };
 
 	this.element = function(name, al){
-		if ('string' === typeof(name)) {
+		if ('object' !== typeof(name)) {
 			var d = data[name] || {};
 			return (is_access_ok(access_level, al)) ? d.restricted_value: d.public_value;
 		}
@@ -327,7 +327,12 @@ function Collection(access_level){
 		add: function (params) {
 			var target = self.element(params.path, params.access_level);
 			if (target && target.add) {
-				target.add(params.name, params.value.restricted_value, params.value.public_value, params.value.access_level);
+				target.add(
+						params.name,
+						params.value.restricted_value, 
+						params.value.public_value, 
+						params.value.access_level
+				);
 			}
 			return {
 				target : target.element(params.name),
@@ -351,7 +356,7 @@ function Collection(access_level){
 			if (it && it.action) {
 				var target = operations[it.action].call(this, it.params);
 				if (!target) continue;
-				res.push ({ action:it.action, target:target.target, path:target.path });
+				res.push ({ action:it.action, target:target.target, path:target.path, name:target.name });
 			}
 		}
 
