@@ -377,8 +377,9 @@ Collection.fromString = function (json) {
 }
 
 Collection.fromObj = function (obj) {
-	if (!obj) return undefined;
 	if (obj instanceof Array) return undefined;
+	obj = obj || {};
+
 	var c = new Collection(obj.access_level);
 	for (var i in obj) {
 		if (i == 'type' || i == 'access_level') continue;
