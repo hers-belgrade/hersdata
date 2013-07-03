@@ -223,7 +223,7 @@ function Collection(access_level){
 
 	this.json = function () { return JSON.stringify(this.dump()); }
 
-	this.attach = function(objorname){
+	this.attach = function(objorname, config){
 		var data = self;
 		var ret = {};
 		var m;
@@ -306,6 +306,8 @@ function Collection(access_level){
 				})(i,p,data);
 			}
 		}
+
+		if ('function' === typeof(ret.init)) { ret.init(config || {}); }
 		return ret;
 	}
 
