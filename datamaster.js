@@ -1,4 +1,5 @@
 /// we should use portable version of HookCollection?
+var utils = require('util');
 var fs = require('fs');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
@@ -45,7 +46,11 @@ function is_access_ok (s_als, c_als) {
 
 
 //// alter, and add functions are not checked against access_level, make sure you guard them from attached functionality
-function Scalar(restricted_value, public_value, access_level) {
+function Scalar(res_val, pub_val, access_lvl) {
+  var restricted_value = res_val;
+  var public_value = pub_val;
+  var access_level = access_lvl;
+
 	function throw_if_any_invalid (ra,pa,al) {
 		throw_if_invalid_scalar (ra);
 		throw_if_invalid_scalar (pa);
@@ -75,17 +80,11 @@ function Scalar(restricted_value, public_value, access_level) {
 		public_value = pa;
 		access_level = al;
 	}
-	set_from_vals (restricted_value, public_value, access_level);
+	set_from_vals (res_val, pub_val, access_lvl);
 
 	var self = this;
-	this.alter = function (json_or_struct) { 
-		try {
-			if ('string' === typeof(json_or_struct)) json_or_struct = JSON.parse(json_or_struct);
-			set_from_obj(json_or_struct);
-			return true;
-		}catch (e) {
-			return false;
-		}
+	this.alter = function (r_v,p_v,a_l) { 
+    set_from_vals(r_v,p_v,a_l);
 	}
 	this.stringify = function (al) {
 		return {
@@ -98,12 +97,14 @@ function Scalar(restricted_value, public_value, access_level) {
 	this.json = function () { return JSON.stringify(this.dump()); }
 
 	this.dump = function () {
-		return {
-			type: this.type(),
-			restricted_value : restricted_value,
-			public_value : public_value,
-			access_level : access_level
-		}
+		return [
+			this.type(),
+      {
+        restricted_value : restricted_value,
+        public_value : public_value,
+        access_level : access_level
+      }
+		];
 	}
 
 	this.value = function (al) {
@@ -132,59 +133,39 @@ Scalar.fromObj = function (v) {
 	return new Scalar (v.restricted_value, v.public_value, v.access_level);
 }
 
-function Collection(access_level){
+function Collection(){
 	var data = {};
 	var self = this;
-	function struct_tree (path, c_al) {
+	function struct_tree (path) {
 		var ret = [self];
 		if (path.length == 0) return ret;
 		var p = path.slice(0);
 		var target = self;
 		while (p.length) {
-			target = target.element(p.shift(), c_al);
+			target = target.element(p.shift());
 			ret.push(target);
 			if (!target) return ret;
 		}
 		return ret;
 	}
 
-
 	this.value = function (c_al, path) {
 		if (path) {
-			var t = this.element(path, c_al);
+			var t = this.element(path);
 			return (t)?t.value(c_al):undefined;
 		}
-
-		var ret = {};
-		var choice = is_access_ok(access_level, c_al) ? 'restricted_value' : 'public_value';
-		for (var i in data) {
-			if (data[i][choice]) ret[i] = data[i][choice].value(c_al);
-		}
-		return ret;
+    return this;
 	}
 
-  this.add = function(name,restricted_value, public_value, access_level){
+  this.add = function(name,entity){
 		if (!name) throw ("No name in add to collection procedure ...");
-		/// todo: checks missing
-
-		if (restricted_value && typeof(restricted_value.type) === 'string') restricted_value = Factory(restricted_value);
-		if (public_value && typeof(public_value.type) === 'string') public_value = Factory(public_value);
-		//restricted_value && console.log(restricted_value.type());
-		//public_value && console.log(public_value.type());
-		data[name] = {
-			restricted_value : restricted_value,
-			public_value : public_value,
-			access_level : access_level
-		};
-
-		//console.log('----', this.dump(), '+++++');
+    data[name] = entity;
   };
 
 	/// TODO: struct review missing ....
-  this.destroy = function(name, c_al){
+  this.destroy = function(name){
 		if ('string' === typeof(name)) {
-			var target = is_access_ok(access_level, c_al) ? 'restricted_value' : 'public_value';
-			delete data[name][target];
+			delete data[name];
 			return;
 		}
 		if (!(name instanceof Array)) return undefined;
@@ -199,24 +180,18 @@ function Collection(access_level){
 		if (target) target.destroy();
   };
 
-	this.element = function(name, al){
+	this.element = function(name){
 		if ('object' !== typeof(name)) {
-			var d = data[name] || {};
-			return (is_access_ok(access_level, al)) ? d.restricted_value: d.public_value;
+      return data[name];
 		}
-		return (name instanceof Array) ? struct_tree(name, al).pop() : undefined;
+		return (name instanceof Array) ? struct_tree(name).pop() : undefined;
   };
 	this.dump = function() {
-		var rd = {type : this.type(), access_level: access_level};
-
+    var ent = {};
 		for (var i in data) {
-			var d = data[i] || {};
-			rd[i] = {
-				restricted_value : ('undefined' == typeof(d.restricted_value)) ? undefined : d.restricted_value.dump() ,
-				public_value : ('undefined' == typeof(d.public_value)) ? undefined : d.public_value.dump()
-			};
+      ent[i] = data[i].dump();
 		}
-		return  rd;
+		return [this.type(),ent];
 	}
 
 	this.type = function () {return 'Collection';}
@@ -311,12 +286,6 @@ function Collection(access_level){
 		return ret;
 	}
 
-
-	/*
-	 *  params are: {
-	 *  	path, name,access_level, value (if required by operation)
-	 *  }
-   */
 	var operations = {
 		alter : function (params){
 			var target = self.element(params.path, params.access_level);
@@ -326,45 +295,57 @@ function Collection(access_level){
 				path:params.path
 			}
 		},
-		add: function (params) {
-			var target = self.element(params.path, params.access_level);
+		addcollection: function (path) {
+      var name = path.splice(-1);
+      if(!name.length){
+        throw "Cannot add without a name in the path";
+      }
+      name = name[0];
+			var target = self.element(path);
 			if (target && target.add) {
-				target.add(
-						params.name,
-						params.value.restricted_value, 
-						params.value.public_value, 
-						params.value.access_level
-				);
-			}
-			return {
-				target : target.element(params.name),
-				path : params.path,
-				name : params.name
-			}
+				target.add(name,new Collection());
+			}else{
+        console.trace();
+        throw 'No collection at path '+params.path;
+      }
 		},
-		remove: function (params) {
-			self.destroy(params.path);
-			return {
-				path : params.path
-			}
+		setscalar: function (path,valaccessarry) {
+      var name = path.splice(-1);
+      if(!name.length){
+        throw "Cannot add without a name in the path";
+      }
+      name = name[0];
+			var target = self.element(path);
+      var e = target.element(name);
+      if (e){
+       if(e.type()==='Scalar'){
+        e.alter(valaccessarry[0],valaccessarry[1],valaccessarry[2]);
+        return;
+        }else{
+          throw "Cannot set scalar on "+path.join('/')+name+" that is of type "+e.type();
+        }
+      }
+			if (target && target.add) {
+				target.add(name,new Scalar(valaccessarry[0],valaccessarry[1],valaccessarry[2]));
+			}else{
+        console.trace();
+        throw 'No collection at path '+params.path;
+      }
+		},
+		remove: function (path) {
+      self.destroy(self.element(path));
 		}
 	};
 
-	this.commit = function (transaction) {
-		var ops = transaction.operations();
-		var res = [];
-		for (var i in ops) {
-			var it = ops[i];
-			if (it && it.action) {
-				var target = operations[it.action].call(this, it.params);
-				if (!target) continue;
-				res.push ({ action:it.action, target:target.target, path:target.path, name:target.name });
+	this.commit = function (txnalias,txnprimitives) {
+		for (var i in txnprimitives) {
+			var it = txnprimitives[i];
+			if (utils.isArray(it) && it.length) {
+        console.log('performing',it);
+				operations[it[0]].call(this, it[1], it[2]);
 			}
 		}
-
-		var update_struct = { alias : transaction.alias(), batch : res };
-		this.onNewTransaction.fire(update_struct);
-		return update_struct;
+    this.onNewTransaction.fire(txnalias,txnprimitives);
 	}
 
 	this.onNewTransaction = new HookCollection();
@@ -376,55 +357,8 @@ Collection.fromString = function (json) {
 	}catch (e) {return undefined;}
 }
 
-Collection.fromObj = function (obj) {
-	if (obj instanceof Array) return undefined;
-	obj = obj || {};
-
-	var c = new Collection(obj.access_level);
-	for (var i in obj) {
-		if (i == 'type' || i == 'access_level') continue;
-		c.add(i, Factory(obj[i].restricted_value), Factory(obj[i].public_value));
-	}
-	return c;
-
-}
-
-/*
- * alias: signature of transaction, should be populated auto by some overriden techniques ....
- * config : {
- * 	pre_commit_params: raise an alias_begins event with these params
- * 	post_commit_params:raise an alias_done event with these params
- * }
- */
-function Transaction (alias) {
-	var ta = [];
-	this.alias = function () {return alias;} //keep alias as a private info ....
-
-	/* append a transaction primitive: td = {
-	 * 	action: [add | remove | alter]
-	 * 	path:   [array of strings which will lead you to nested data element]
-	 * 	args: action arguments, respect designated target arguments ...
-	 * }
-	 * or an array of transaction primitives
-	 *
-	 */
-	this.append  = function (td) {
-		if (!td) return;
-		if (td instanceof Array) { //we got array of maps
-			for (var i in td) this.append(td[i]);
-			return;
-		}
-		if (td.action) { ///treat as a simple map ...
-			ta.push (td);
-			return;
-		}
-		return;
-	}
-	this.operations = function () {return ta;}
-}
 
 module.exports = {
-	Transaction : Transaction,
 	Scalar : Scalar,
 	Collection : Collection,
 	HookCollection : HookCollection,
