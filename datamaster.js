@@ -154,7 +154,11 @@ function Collection(){
 			var t = this.element(path);
 			return (t)?t.value(c_al):undefined;
 		}
-    return this;
+		var ret = {};
+		for (var i in data) {
+			ret[i] = data[i].value(c_al);
+		}
+		return ret;
 	}
 
   this.add = function(name,entity){
