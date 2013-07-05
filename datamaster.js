@@ -194,7 +194,7 @@ function Collection(a_l){
     }
   };
 
-	function struct_tree (path) {
+	function struct_tree (path,c_al) {
     var me =  is_access_ok(access_level,c_al) ? self : new DeadCollection();
 		var ret = [me];
 		if (path.length == 0) return ret;
