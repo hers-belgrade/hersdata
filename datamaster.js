@@ -195,10 +195,11 @@ function Collection(a_l){
   };
 
 	function struct_tree (path) {
-		var ret = [self];
+    var me =  is_access_ok(access_level,c_al) ? self : new DeadCollection();
+		var ret = [me];
 		if (path.length == 0) return ret;
 		var p = path.slice(0);
-		var target = self;
+		var target = me;
 		while (p.length) {
 			target = target.element(p.shift());
 			ret.push(target);
@@ -212,7 +213,11 @@ function Collection(a_l){
 			var t = this.element(path);
 			return (t)?t.value(c_al):undefined;
 		}
-    return is_access_ok(access_level,c_al) ? this : new DeadCollection();
+		var ret = {};
+		for (var i in data) {
+			ret[i] = data[i].value(c_al);
+		}
+		return ret;
 	}
 
   this.add = function(name,entity){
