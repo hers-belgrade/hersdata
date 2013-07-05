@@ -44,6 +44,37 @@ function is_access_ok (s_als, c_als) {
 	return false;
 }
 
+function traverse(hash,path,cb){
+  for(var i in hash){
+    var e = hash[i];
+    var p = path.concat([i]);
+    var cbr = cb(p,e);
+    if(cbr===true){
+      return;
+    }
+    if(e.type()==='Collection'){
+      traverse(e,p,cb);
+    }
+  }
+}
+
+function keyexistsintree(exists,newkey){
+  if(typeof newkey === 'undefined'){
+    exists.exists = false;
+    return function(){
+      exists.exists = false;
+      return true;
+    }
+  }
+  return function(path,element){
+    if(exists.exists){return true;}//stop the traversal
+    if(element.access_level()===newkey){
+      exists.exists = true;
+      return true;
+    }
+  };
+};
+
 
 //// alter, and add functions are not checked against access_level, make sure you guard them from attached functionality
 function Scalar(res_val, pub_val, access_lvl) {
@@ -82,16 +113,18 @@ function Scalar(res_val, pub_val, access_lvl) {
 	}
 	set_from_vals (res_val, pub_val, access_lvl);
 
-	var self = this;
+  this.access_level = function(){
+    return access_level;
+  };
 	this.alter = function (r_v,p_v,a_l) { 
     set_from_vals(r_v,p_v,a_l);
-	}
+	};
 	this.stringify = function (al) {
-		return {
-			type: this.type(),
-			value:this.value(al)
-		}
-	}
+		return [
+			this.type(),
+			this.value(al)
+		];
+	};
 
 	//use this for serialization
 	this.json = function () { return JSON.stringify(this.dump()); }
@@ -133,9 +166,34 @@ Scalar.fromObj = function (v) {
 	return new Scalar (v.restricted_value, v.public_value, v.access_level);
 }
 
-function Collection(){
+function Collection(a_l){
+  var access_level = a_l;
+  this.access_level = function(){
+    return access_level;
+  };
 	var data = {};
+
 	var self = this;
+
+  var newkeys = [];
+  var removedkeys = [];
+
+  function check_for_new_key(newkey){
+    var exists = {};
+    traverse([],data,keyexistsintree(exists,newkey));
+    if(!exists.exists){
+      newkeys.push(newkey);
+    }
+  };
+
+  function check_for_key_removal(removedkey){
+    var exists = {};
+    traverse([],data,keyexistsintree(exists,newkey));
+    if(!exists.exists){
+      removedkeys.push(newkey);
+    }
+  };
+
 	function struct_tree (path) {
 		var ret = [self];
 		if (path.length == 0) return ret;
@@ -154,7 +212,7 @@ function Collection(){
 			var t = this.element(path);
 			return (t)?t.value(c_al):undefined;
 		}
-    return this;
+    return is_access_ok(access_level,c_al) ? this : new DeadCollection();
 	}
 
   this.add = function(name,entity){
@@ -163,21 +221,24 @@ function Collection(){
   };
 
 	/// TODO: struct review missing ....
-  this.destroy = function(name){
-		if ('string' === typeof(name)) {
-			delete data[name];
-			return;
-		}
+  this.remove = function(name){
 		if (!(name instanceof Array)) return undefined;
 
 		var p = name.slice();
-		var target = this.element(name, c_al);
-		if (p.length) {
-			var nnn = p.pop();
-			var prnt = this.element(p, c_al);
-			prnt.destroy(nnn);
+    var target = self;
+    var targetname;
+		while (p.length) {
+      targetname = p.splice(0,1)[0];
+      target = data[targetname];
 		}
+    if(name.length===1){
+      delete data[name[0]];
+    }
 		if (target) target.destroy();
+  };
+
+  this.destroy = function(name){
+    this.onNewTransaction.destruct();
   };
 
 	this.element = function(name){
@@ -287,14 +348,6 @@ function Collection(){
 	}
 
 	var operations = {
-		alter : function (params){
-			var target = self.element(params.path, params.access_level);
-			target && target.alter(params.value);
-			return { 
-				target:target,
-				path:params.path
-			}
-		},
 		addcollection: function (path) {
       var name = path.splice(-1);
       if(!name.length){
@@ -303,7 +356,14 @@ function Collection(){
       name = name[0];
 			var target = self.element(path);
 			if (target && target.add) {
-				target.add(name,new Collection());
+        check_for_new_key(access_level);
+        var nc = new Collection(access_level);
+				target.add(name,nc);
+        nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives){
+          var path = chldcollectionpath.slice();
+          path.unshift(name);
+          self.onNewTransaction.fire(path,txnalias,txnprimitives);
+        });
 			}else{
         console.trace();
         throw 'No collection at path '+params.path;
@@ -333,7 +393,7 @@ function Collection(){
       }
 		},
 		remove: function (path) {
-      self.destroy(self.element(path));
+      self.remove(path);
 		}
 	};
 
@@ -345,7 +405,7 @@ function Collection(){
 				operations[it[0]].call(this, it[1], it[2]);
 			}
 		}
-    this.onNewTransaction.fire(txnalias,txnprimitives);
+    this.onNewTransaction.fire([],txnalias,txnprimitives);
 	}
 
 	this.onNewTransaction = new HookCollection();
@@ -355,6 +415,20 @@ Collection.fromString = function (json) {
 	try {
 		return Collection.fromObj(JSON.parse(json));
 	}catch (e) {return undefined;}
+}
+
+function DeadCollection(){
+  Collection.apply(this);
+  this.add = function(){
+  };
+  this.remove = function(){
+  };
+  this.value = function(){
+    return new DeadCollection();
+  };
+  this.element = function(){
+    return new DeadCollection();
+  }
 }
 
 

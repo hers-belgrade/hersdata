@@ -40,7 +40,7 @@ module.exports = {
 	Series : datamaster.Series,
 	Scalar : datamaster.Scalar,
 	HookCollection : datamaster.HookCollection,
-	Transaction : datamaster.Transaction,
-	Factory : datamaster.Factory
+	Factory : datamaster.Factory,
+  Hive : require('./datahive')
 };
 
