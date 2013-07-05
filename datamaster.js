@@ -4,33 +4,8 @@ var fs = require('fs');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
-
-function Factory (json_or_obj) {
-	var v;
-	if ('string' === typeof(json_or_obj)) {
-		try {
-			v = JSON.parse(json_or_obj);
-		}catch (e) {}
-	}else if ('object' === typeof(json_or_obj)){
-		v = (json_or_obj instanceof Array) ? undefined : json_or_obj;
-	}
-	if (!v) return undefined;
-	switch (v.type) {
-		case 'Scalar' : return Scalar.fromObj(v);
-		case 'Collection':return Collection.fromObj(v);
-	}
-}
-
-
 function throw_if_invalid_scalar(val) {
 	if ('object' === typeof(val)) throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
-}
-
-function throw_if_invalid_access_level (val) {
-	var tov = typeof(val);
-	if ('undefined' === tov) return;
-	if (val instanceof Array) return;
-	throw "Access can not be nothing but an array or an undefined "+JSON.stringify(arguments);
 }
 
 function is_access_ok (s_als, c_als) {
@@ -76,7 +51,6 @@ function keyexistsintree(exists,newkey){
 };
 
 
-//// alter, and add functions are not checked against access_level, make sure you guard them from attached functionality
 function Scalar(res_val, pub_val, access_lvl) {
   var restricted_value = res_val;
   var public_value = pub_val;
@@ -85,22 +59,7 @@ function Scalar(res_val, pub_val, access_lvl) {
 	function throw_if_any_invalid (ra,pa,al) {
 		throw_if_invalid_scalar (ra);
 		throw_if_invalid_scalar (pa);
-		throw_if_invalid_access_level (al);
-	}
-
-	function set_from_obj(obj) {
-		if ('object' != typeof (obj)) {
-			throw "Can not call set_from_obj with arg of type "+typeof(obj)+" "+JSON.stringify(arguments);
-			return;
-		}
-
-		if (obj instanceof Array) {
-			throw "Can not call set_from_obj with arg of type Array "+JSON.stringify(arguments);
-			return;
-		}
-
-		throw_if_any_invalid(obj.restricted_value, obj.public_value, obj.access_level);
-		set_from_vals(obj.restricted_value, obj.public_value, obj.access_level);
+		throw_if_invalid_scalar (al);
 	}
 
 	function set_from_vals (ra,pa,al) {
@@ -119,26 +78,20 @@ function Scalar(res_val, pub_val, access_lvl) {
 	this.alter = function (r_v,p_v,a_l) { 
     set_from_vals(r_v,p_v,a_l);
 	};
-	this.stringify = function (al) {
-		return [
-			this.type(),
-			this.value(al)
-		];
-	};
-
-	//use this for serialization
-	this.json = function () { return JSON.stringify(this.dump()); }
-
-	this.dump = function () {
-		return [
-			this.type(),
-      {
-        restricted_value : restricted_value,
-        public_value : public_value,
-        access_level : access_level
+  this.toMasterPrimitives = function(path){
+    return ['set',path,[restricted_value,public_value,access_level]];
+  }
+  this.toCopyPrimitives = function(path){
+    if(typeof access_level !== 'undefined'){
+      if(typeof public_value !== 'undefined'){
+        return [['set',path,public_value],access_level,['set',path,restricted_value]];
+      }else{
+        return [['remove',path],access_level,['set',path,restricted_value]];
       }
-		];
-	}
+    }else{
+      return [['set',path,restricted_value]];
+    }
+  }
 
 	this.value = function (al) {
 		return (is_access_ok(access_level, al)) ? restricted_value : public_value;
@@ -149,21 +102,6 @@ function Scalar(res_val, pub_val, access_lvl) {
 		restricted_value = undefined;
 		access_level = undefined;
 	}
-}
-
-//use this for deserialisation
-Scalar.fromString = function(s) {
-	try {
-		return Scalar.fromObj(JSON.parse(s));
-	}catch (e) {
-		return undefined;
-	}
-}
-
-Scalar.fromObj = function (v) {
-	if (!v) return undefined;
-	if (v instanceof Array) return undefined;
-	return new Scalar (v.restricted_value, v.public_value, v.access_level);
 }
 
 function Collection(a_l){
@@ -252,17 +190,37 @@ function Collection(a_l){
 		}
 		return (name instanceof Array) ? struct_tree(name).pop() : undefined;
   };
-	this.dump = function() {
-    var ent = {};
-		for (var i in data) {
-      ent[i] = data[i].dump();
-		}
-		return [this.type(),ent];
-	}
+  this.toMasterPrimitives = function(path){
+    path = path || [];
+    var ret = [['set',path,access_level]];
+    for(var i in data){
+      var p = path.concat(i);
+      ret.push(data[i].toMasterPrimitives(p));
+    }
+    return ret;
+  };
+  this.toCopyPrimitives = function(path){
+    var ret = [];
+    path = path || [];
+    if(typeof access_level !== 'undefined'){
+      ret.push(['set',path,access_level]);
+      for(var i in data){
+        var p = path.concat(i);
+        ret.push(data[i].toCopyPrimitives(p));
+      }
+      ret = [[],access_level,ret];
+    }else{
+      ret.push(['set',path]);
+      for(var i in data){
+        var p = path.concat(i);
+        ret.push(data[i].toCopyPrimitives(p));
+      }
+      return ret;
+    }
+    return ret;
+  };
 
 	this.type = function () {return 'Collection';}
-
-	this.json = function () { return JSON.stringify(this.dump()); }
 
 	this.attach = function(objorname, config){
 		var data = self;
@@ -353,28 +311,7 @@ function Collection(a_l){
 	}
 
 	var operations = {
-		addcollection: function (path) {
-      var name = path.splice(-1);
-      if(!name.length){
-        throw "Cannot add without a name in the path";
-      }
-      name = name[0];
-			var target = self.element(path);
-			if (target && target.add) {
-        check_for_new_key(access_level);
-        var nc = new Collection(access_level);
-				target.add(name,nc);
-        nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives){
-          var path = chldcollectionpath.slice();
-          path.unshift(name);
-          self.onNewTransaction.fire(path,txnalias,txnprimitives);
-        });
-			}else{
-        console.trace();
-        throw 'No collection at path '+params.path;
-      }
-		},
-		setscalar: function (path,valaccessarry) {
+    set: function(path,param){
       var name = path.splice(-1);
       if(!name.length){
         throw "Cannot add without a name in the path";
@@ -382,35 +319,67 @@ function Collection(a_l){
       name = name[0];
 			var target = self.element(path);
       var e = target.element(name);
-      if (e){
-       if(e.type()==='Scalar'){
-        e.alter(valaccessarry[0],valaccessarry[1],valaccessarry[2]);
-        return;
+      if(utils.isArray(param)){
+        //Scalar case
+        check_for_new_key(param[2]);
+        if (e){
+          if(e.type()==='Scalar'){
+            var oldkey = e.access_level();
+            e.alter(param[0],param[1],param[2]);
+            if(param[2]!==oldkey){
+              check_for_key_removal(oldkey);
+            }
+            return;
+          }else{
+            throw "Cannot set scalar on "+path.join('/')+name+" that is of type "+e.type();
+          }
+        }
+        if (target && target.add) {
+          target.add(name,new Scalar(param[0],param[1],param[2]));
         }else{
-          throw "Cannot set scalar on "+path.join('/')+name+" that is of type "+e.type();
+          console.trace();
+          throw 'No collection at path '+path;
+        }
+      }else{
+        //Collection case
+        check_for_new_key(param);
+        if (e){
+         if(e.type()==='Collection'){
+          e.setKey(param);
+          return;
+          }else{
+            throw "Cannot set key on "+path.join('/')+name+" that is of type "+e.type();
+          }
+        }
+        if (target && target.add) {
+          var nc = new Collection(param);
+          target.add(name,nc);
+          nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives){
+            var path = chldcollectionpath.slice();
+            path.unshift(name);
+            self.onNewTransaction.fire(path,txnalias,txnprimitives);
+          });
+        }else{
+          console.trace();
+          throw 'No collection at path '+path;
         }
       }
-			if (target && target.add) {
-				target.add(name,new Scalar(valaccessarry[0],valaccessarry[1],valaccessarry[2]));
-			}else{
-        console.trace();
-        throw 'No collection at path '+params.path;
-      }
-		},
+    },
 		remove: function (path) {
       self.remove(path);
 		}
 	};
 
 	this.commit = function (txnalias,txnprimitives) {
+    var datacopytxnprimitives = [];
 		for (var i in txnprimitives) {
 			var it = txnprimitives[i];
 			if (utils.isArray(it) && it.length) {
         console.log('performing',it);
-				operations[it[0]].call(this, it[1], it[2]);
+				datacopytxnprimitives.push(operations[it[0]].call(this, it[1], it[2]));
 			}
 		}
-    this.onNewTransaction.fire([],txnalias,txnprimitives);
+    this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives);
 	}
 
 	this.onNewTransaction = new HookCollection();
@@ -440,6 +409,5 @@ function DeadCollection(){
 module.exports = {
 	Scalar : Scalar,
 	Collection : Collection,
-	HookCollection : HookCollection,
-	Factory: Factory
+	HookCollection : HookCollection
 }
