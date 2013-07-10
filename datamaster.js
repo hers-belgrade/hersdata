@@ -82,14 +82,10 @@ function Scalar(res_val, pub_val, access_lvl) {
     return ['set',path,[restricted_value,public_value,access_level]];
   }
   this.toCopyPrimitives = function(path){
-    if(typeof access_level !== 'undefined'){
-      if(typeof public_value !== 'undefined'){
-        return [['set',path,public_value],access_level,['set',path,restricted_value]];
-      }else{
-        return [['remove',path],access_level,['set',path,restricted_value]];
-      }
+    if(typeof public_value !== 'undefined'){
+      return [[access_level,['set',path,public_value],['set',path,restricted_value]]];
     }else{
-      return [['set',path,restricted_value]];
+      return [[access_level,undefined,['set',path,restricted_value]]];
     }
   }
 
@@ -146,6 +142,10 @@ function Collection(a_l){
 		return ret;
 	}
 
+  this.setAccessLevel = function(a_l){
+    access_level = a_l;
+  };
+
 	this.value = function (c_al, path) {
 		if (path) {
 			var t = this.element(path);
@@ -159,29 +159,21 @@ function Collection(a_l){
 	}
 
   this.add = function(name,entity){
-		if (!name) throw ("No name in add to collection procedure ...");
-    data[name] = entity;
+		if (typeof name === 'undefined') throw ("No name in add to collection procedure ...");
+    data[name+''] = entity;
   };
 
 	/// TODO: struct review missing ....
   this.remove = function(name){
-		if (!(name instanceof Array)) return undefined;
-
-		var p = name.slice();
-    var target = self;
-    var targetname;
-		while (p.length) {
-      targetname = p.splice(0,1)[0];
-      target = data[targetname];
-		}
-    if(name.length===1){
-      delete data[name[0]];
+    if(typeof data[name] !== 'undefined'){
+      data[name].destroy();
     }
-		if (target) target.destroy();
+    delete data[name];
   };
 
   this.destroy = function(name){
     this.onNewTransaction.destruct();
+    this.onNewFunctionality.destruct();
   };
 
 	this.element = function(name){
@@ -202,42 +194,32 @@ function Collection(a_l){
   this.toCopyPrimitives = function(path){
     var ret = [];
     path = path || [];
-    if(typeof access_level !== 'undefined'){
-      ret.push(['set',path,access_level]);
-      for(var i in data){
-        var p = path.concat(i);
-        ret.push(data[i].toCopyPrimitives(p));
-      }
-      ret = [[],access_level,ret];
-    }else{
-      ret.push(['set',path]);
-      for(var i in data){
-        var p = path.concat(i);
-        ret.push(data[i].toCopyPrimitives(p));
-      }
-      return ret;
+    ret.push([access_level,['remove',path],['set',path,{}]]);
+    for(var i in data){
+      var p = path.concat(i);
+      ret = ret.concat(data[i].toCopyPrimitives(p));
     }
     return ret;
   };
 
 	this.type = function () {return 'Collection';}
 
-	this.attach = function(objorname, config){
+	this.attach = function(functionalityname, config, key){
 		var data = self;
 		var ret = {};
 		var m;
-		switch(typeof objorname){
+		switch(typeof functionalityname){
 			case 'string':
-				m = require(objorname);
+				m = require(functionalityname);
 				break;
 			case 'object':
-				m = objorname;
+				m = functionalityname;
 				break;
 			default:
-				return {};
+				return;// {};
 		}
 		if(typeof m.errors !== 'object'){
-			throw objorname+" does not have the 'errors' map";
+			throw functionalityname+" does not have the 'errors' map";
 		}
 		function localerrorhandler(originalerrcb){
 			var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
@@ -265,7 +247,7 @@ function Collection(a_l){
 			var p = m[i];
 			if((typeof p === 'function')){
 				ret[i] = (function(mname,_p,_env){
-					return function(obj,errcb,feedback){
+					return function(obj,errcb,callername){
 						var pa = [];
 						if(_p.params){
 							if(_p.params==='originalobj'){
@@ -292,6 +274,8 @@ function Collection(a_l){
 							}
 						}
 						pa.push(localerrorhandler(errcb));
+            pa.push(callername);
+            /*
 						pa.push(function(eventname){
 							var eventparams = Array.prototype.slice(arguments,1);
 							var ff = feedback[eventname];
@@ -300,6 +284,7 @@ function Collection(a_l){
 							}
 							ff.apply(m,eventparams);
 						});
+            */
 						_p.apply(_env,pa);
 					}
 				})(i,p,data);
@@ -307,7 +292,8 @@ function Collection(a_l){
 		}
 
 		if ('function' === typeof(ret.init)) { ret.init(config || {}); }
-		return ret;
+    this.onNewFunctionality.fire([functionalityname],ret,key);
+		//return ret;
 	}
 
 	var operations = {
@@ -329,13 +315,15 @@ function Collection(a_l){
             if(param[2]!==oldkey){
               check_for_key_removal(oldkey);
             }
-            return;
+            return e.toCopyPrimitives(path.concat([name]));
           }else{
-            throw "Cannot set scalar on "+path.join('/')+name+" that is of type "+e.type();
+            throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
           }
         }
         if (target && target.add) {
-          target.add(name,new Scalar(param[0],param[1],param[2]));
+          var ns = new Scalar(param[0],param[2],param[1]);
+          target.add(name,ns);
+          return ns.toCopyPrimitives(path.concat([name]));
         }else{
           console.trace();
           throw 'No collection at path '+path;
@@ -345,20 +333,40 @@ function Collection(a_l){
         check_for_new_key(param);
         if (e){
          if(e.type()==='Collection'){
-          e.setKey(param);
-          return;
-          }else{
-            throw "Cannot set key on "+path.join('/')+name+" that is of type "+e.type();
-          }
+           e.setAccessLevel(param);
+           return e.toCopyPrimitives(path.concat([name]));
+         }else{
+           throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
+         }
         }
         if (target && target.add) {
           var nc = new Collection(param);
           target.add(name,nc);
-          nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives){
+          nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives){
+            var tp = txnprimitives.slice();
+            var dcp = datacopytxnprimitives.slice();
+            //console.log('before transform',tp,dcp);
+            for(var i = 0; i<tp.length; i++){
+              var _t = tp[i];
+              if(utils.isArray(_t[1])){
+                _t[1] = _t[1].unshift(name);
+              }
+            }
+            for(var i = 0; i<dcp.length; i++){
+              var _t = dcp[i];
+              if(utils.isArray(_t[1])){
+                _t[1] = _t[1].unshift(name);
+              }
+            }
+            //console.log('after transform',tp,dcp);
+            self.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives);
+          });
+          nc.onNewFunctionality.attach(function(chldcollectionpath,functionalityalias,functionality){
             var path = chldcollectionpath.slice();
             path.unshift(name);
-            self.onNewTransaction.fire(path,txnalias,txnprimitives);
+            self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
           });
+          return nc.toCopyPrimitives(path.concat([name]));
         }else{
           console.trace();
           throw 'No collection at path '+path;
@@ -366,23 +374,39 @@ function Collection(a_l){
       }
     },
 		remove: function (path) {
-      self.remove(path);
+      var name = path.splice(-1);
+      if(!name.length){
+        console.trace();
+        throw "Cannot remove without a name in the path";
+      }
+      name = name[0];
+			var target = self.element(path);
+      if(target){
+        target.remove(name);
+        return [[access_level,undefined,['remove',path.concat([name])]]];
+      }
+      return [];
 		}
 	};
 
 	this.commit = function (txnalias,txnprimitives) {
     var datacopytxnprimitives = [];
+    console.log('performing',txnalias,txnprimitives);
 		for (var i in txnprimitives) {
 			var it = txnprimitives[i];
 			if (utils.isArray(it) && it.length) {
-        console.log('performing',it);
-				datacopytxnprimitives.push(operations[it[0]].call(this, it[1], it[2]));
+        //console.log('performing',it);
+        var cpp = operations[it[0]].call(this, it[1], it[2]);
+        for(var i in cpp){
+          datacopytxnprimitives.push(cpp[i]);
+        }
 			}
 		}
     this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives);
 	}
 
 	this.onNewTransaction = new HookCollection();
+	this.onNewFunctionality = new HookCollection();
 }
 
 Collection.fromString = function (json) {
