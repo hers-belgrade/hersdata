@@ -74,9 +74,9 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
 //sessionkeyname : session
 //(sessionkeyname is randomgenerated in constructor)
 //if sessionkeyname is not found, 
-//hersdataidentityname : username
-//if hersdataidentityname is not found, the method returns
-//if hersdataidentityname value is found, the users are searched for this value
+//name : username
+//if name is not found, the method returns
+//if name value is found, the users are searched for this value
 //if a user is not found, expected key is
 //roles: array of role names
 //the roles declared will be given to the newly created ConsumerIdentity
@@ -95,7 +95,8 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
   var f = this.functionalities[functionalityname];
   if(f){
     if(typeof f.key !== 'undefined'){
-      if(!user.keyring.contains(f.key)){
+      if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
+        console.log('keyfail with',f.key,ic[0]);
         return;
       }
     }
@@ -106,6 +107,7 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
     fm(paramobj,function(errcode,errmess){},ic[0].name);
   }else{
     if(typeof paramobj === 'function'){
+      //return ic[1]; // this is the Consumer that couldn't run a function
       return ic[1].dumpqueue(paramobj);
     }
   }

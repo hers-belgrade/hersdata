@@ -65,8 +65,8 @@ Consumer.prototype.dumpqueue = function(cb){
 function ConsumerIdentity(name,roles){
   this.name = name;
   this.roles = roles;
-  this.keys = new KeyRing();
-  this.keys.take(roles);
+  this.keyring = new KeyRing();
+  this.keyring.take(roles);
   this.consumers = {};
   this.datacopy = {};
 };
@@ -85,7 +85,7 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
     if(!(utils.isArray(_p)&&_p.length)){
       continue;
     }
-    var myp = _p[this.keys.contains(_p[0]) ? 2 : 1];
+    var myp = _p[this.keyring.contains(_p[0]) ? 2 : 1];
     if(!(utils.isArray(myp)&&myp.length)){
       continue;
     }
@@ -100,7 +100,6 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
     break;
   }
   if(empty){
-    console.log('empty',this);
     return;
   }
   var primitives = [];
@@ -180,7 +179,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
     this.counter.inc();
     sess = randomstring()+'.'+this.counter.value();
   }
-  var name = credentials.hersdataidentityname;
+  var name = credentials.name;
   var rolearray = credentials.roles;
   var rkr = new KeyRing();
   if(rolearray && utils.isArray(rolearray)){
@@ -192,10 +191,18 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
       user.reset();
     }
   }else{
-    user = (name ? new ConsumerIdentity(name,rkr) : this.anonymous);
+    console.log('creating consumeridentity for',name);
+    if(name){
+      user = new ConsumerIdentity(name,rkr);
+      this.identities[name] = user;
+    }else{
+      user = this.anonymous;
+    }
+    console.log('that is',user);
   }
   var c = new Consumer();
   user.consumers[sess] = c;
+  console.log('finally',user,c);
   return [user,c];
 };
 ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
