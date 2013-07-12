@@ -1,9 +1,32 @@
+var RandomBytes = require('crypto').randomBytes;
 var KeyRing = require('./keyring');
 var utils = require('util');
+var BigCounter = require('./BigCounter');
+
+function randomstring(){
+  return RandomBytes(12).toString('hex');
+};
 
 consumerTimeout = 2*60*1000;
-function Consumer(){
+
+function Consumer(destructcb){
   this.queue = [];
+  this.destructCb = (typeof destructcb === 'undefined') ? function(){} : destructcb;
+};
+Consumer.prototype.add = function(txnid,primitives){
+  if(this.id && !this.id.isPredecessorOf(txnid)){
+    throw id.toString()+' not a predecessor of '+txnid.toString();
+    this.id.reset();
+    this.queue = [];
+    return;
+  }
+  if(this.queuecb){
+    this.queuecb(primitives);
+    delete this.queuecb;
+  }else{
+    this.queue  = this.queue.concat(primitives);
+  }
+  this.id = txnid;
 };
 Consumer.prototype.resetTimer = function(){
   if(this.timer){
@@ -23,6 +46,21 @@ Consumer.prototype.die = function(){
     }
   }
 };
+Consumer.prototype.dumpqueue = function(cb){
+  if(typeof cb !== 'function'){
+    return;
+  }
+  if(this.queue.length){
+    var ret = this.queue.slice();
+    this.queue = [];
+    cb(ret);
+  }else{
+    if(typeof this.queuecb === 'function'){
+      this.queuecb();
+    }
+    this.queuecb = cb;
+  }
+};
 
 function ConsumerIdentity(name,roles){
   this.name = name;
@@ -35,19 +73,13 @@ function ConsumerIdentity(name,roles){
 ConsumerIdentity.prototype.refresh = function(session){
   var c = this.consumers[session];
   if(!c){
-    return false;
+    return;
   }
   c.resetTimer();
-  return true;
+  return c;
 };
-ConsumerIdentity.prototype.broadcastPrimitive = function(primitive){
-  console.log('broadcasting',primitive);
-  for(var i in this.consumers){
-    this.consumers[i].queue.push(primitive);
-  }
-};
-ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives){
-  this.broadcastPrimitive(['starting',txnalias]);
+ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives){
+  var ret = [];
   for(var i in datacopytxnprimitives){
     var _p = datacopytxnprimitives[i];
     if(!(utils.isArray(_p)&&_p.length)){
@@ -57,6 +89,28 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
     if(!(utils.isArray(myp)&&myp.length)){
       continue;
     }
+    ret.push(myp);
+  }
+  return ret;
+};
+ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
+  var empty=true;
+  for(var i in this.consumers){
+    empty = false;
+    break;
+  }
+  if(empty){
+    console.log('empty',this);
+    return;
+  }
+  var primitives = [];
+  function addPrimitive(p){
+    primitives.push(p);
+  };
+  addPrimitive(['start',txnalias,txnid.value()]);
+  var dps = this.filterCopyPrimitives(datacopytxnprimitives);
+  for(var i in dps){
+    var myp = dps[i];
     var path = myp[1];
     var name = path.splice(-1);
     var target = this.datacopy;
@@ -94,61 +148,63 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
         break;
     }
     if(myp){
-      this.broadcastPrimitive(myp);
+      addPrimitive(myp);
     }
   }
-  this.broadcastPrimitive(['ending',txnalias]);
-  console.log(this.datacopy);
+  addPrimitive(['end',txnalias]);
+  for(var i in this.consumers){
+    this.consumers[i].add(txnid,primitives);
+  }
+  //console.log(this.datacopy);
 };
 
-function ConsumerLobby(authenticator){
-  this.authenticator = authenticator || function(credentials,cb){cb(credentials.split(','));};
+function ConsumerLobby(){
+  this.sessionkeyname = randomstring();
+  console.log(this.sessionkeyname);
+  this.counter = new BigCounter();
   this.identities = {};
   this.sess2name = {};
   this.anonymous = new ConsumerIdentity();
 }
-ConsumerLobby.prototype.identityFor = function(credentials,cb){
-  function invoke(){
-    cb.apply(null,arguments);
-  }
+ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   var sess = credentials[this.sessionkeyname];
   if(sess){
     var ci = this.consumerIdentityForSession(sess);
     if(ci){
-      if(ci.refresh(sess)){
-        invoke(ci);
-        return;
+      var c = ci.refresh(sess);
+      if(c){
+        return [ci,c];
       }
     }
+  }else{
+    this.counter.inc();
+    sess = randomstring()+'.'+this.counter.value();
   }
   var name = credentials.hersdataidentityname;
-  var crd = credentials.credentials;
-  var t = this;
-  function roleforname(rolearray){
-    var rkr = new KeyRing();
+  var rolearray = credentials.roles;
+  var rkr = new KeyRing();
+  if(rolearray && utils.isArray(rolearray)){
     rkr.addKeys(rolearray);
-    var user = t.identities[name];
-    console.log('for',name,'user is',user);
-    if(user){
-      if(user.roles.containsKeyRing(rkr)){
-        invoke(user);
-        return;
-      }
-    }else{
-      user = name ? t.anonymous : new ConsumerIdentity(name,rkr);
-      invoke(user);
+  }
+  var user = this.identities[name];
+  if(user){
+    if(!user.roles.containsKeyRing(rkr)){
+      user.reset();
     }
-  };
-  this.authenticator(crd,roleforname);
+  }else{
+    user = (name ? new ConsumerIdentity(name,rkr) : this.anonymous);
+  }
+  var c = new Consumer();
+  user.consumers[sess] = c;
+  return [user,c];
 };
-ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives){
+ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
   var ids = this.identities;
-  console.log('identities',this.identities);
   for(var i in ids){
     var id = ids[i];
-    id.processTransaction(txnalias,txnprimitives,datacopytxnprimitives);
+    id.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
   }
-  this.anonymous.processTransaction(txnalias,txnprimitives,datacopytxnprimitives);
+  this.anonymous.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
 };
 
 module.exports = ConsumerLobby;

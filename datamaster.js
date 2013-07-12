@@ -1,6 +1,7 @@
 /// we should use portable version of HookCollection?
 var utils = require('util');
 var fs = require('fs');
+var BigCounter = require('./BigCounter');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
@@ -389,9 +390,11 @@ function Collection(a_l){
 		}
 	};
 
+  var txnCounter = new BigCounter();
+
 	this.commit = function (txnalias,txnprimitives) {
     var datacopytxnprimitives = [];
-    console.log('performing',txnalias,txnprimitives);
+    //console.log('performing',txnalias,txnprimitives);
 		for (var i in txnprimitives) {
 			var it = txnprimitives[i];
 			if (utils.isArray(it) && it.length) {
@@ -402,8 +405,13 @@ function Collection(a_l){
         }
 			}
 		}
-    this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives);
-	}
+    txnCounter.inc();
+    this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnCounter.clone());
+	};
+
+  this.dump = function(){
+    return ['init',self.toMasterPrimitives(),self.toCopyPrimitives(),txnCounter.clone()];
+  };
 
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();

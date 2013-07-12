@@ -1,26 +1,33 @@
 var Consumers = require('./consumer');
-var RandomBytes = require('crypto').randomBytes;
 var util = require('util');
-function randomstring(){
-  return RandomBytes(12).toString('hex');
-};
 
 function DataHive(){
-  this.sessionkeyname = randomstring();
   this.functionalities = {};
-  console.log(this.sessionkeyname);
   this.master = new (require('./datamaster').Collection)();
   var t = this;
-  this.master.onNewTransaction.attach(function(path,txnalias,txnprimitives,datacopytxnprimitives){
+  var mytxnid = '_';
+  var lastinit = {};
+  function initcb(){
+    if(lastinit.txnid===mytxnid){
+      return lastinit.data;
+    }
+    lastinit.txnid = mytxnid;
+    lastinit.data = t.master.init();
+    return lastinit.data;
+  };
+  this.master.onNewTransaction.attach(function(path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+    mytxnid = txnid;
+    delete lastinit.txnid;
     //console.log(path,txnalias,txnprimitives,datacopytxnprimitives);
     //console.log('new txn',path,txnalias,util.inspect(datacopytxnprimitives,false,null,true));
-    t.consumers.processTransaction(txnalias,txnprimitives,datacopytxnprimitives);
+    t.consumers.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid,initcb);
   });
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
     console.log(path,fctnobj);
     t.functionalities[path] = {key:key,functionality:fctnobj};
   });
   this.consumers = new Consumers();
+  this.dataMasterInit = initcb;
 }
 DataHive.prototype.attach = function (objorname,config,key){
   return this.master.attach(objorname,config,key);
@@ -71,9 +78,37 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
 //if hersdataidentityname is not found, the method returns
 //if hersdataidentityname value is found, the users are searched for this value
 //if a user is not found, expected key is
-//credentials: credentialstring
-//credentialstring will be used for authenticating the user
-  var ci = this.consumers.identityFor(credentials,this.methodHandler(method,paramobj));
+//roles: array of role names
+//the roles declared will be given to the newly created ConsumerIdentity
+  var ic = this.consumers.identityAndConsumerFor(credentials,this.dataMasterInit);
+  if(!ic){
+    return;
+  }
+  var t = this;
+  var lios = method.lastIndexOf('/');
+  if(lios<0){
+    return;
+  }
+  var functionalityname = method.slice(0,lios);
+  var methodname = method.slice(lios+1);
+  console.log(functionalityname,methodname);
+  var f = this.functionalities[functionalityname];
+  if(f){
+    if(typeof f.key !== 'undefined'){
+      if(!user.keyring.contains(f.key)){
+        return;
+      }
+    }
+    var fm = f.functionality[methodname];
+    if(typeof fm !== 'function'){
+      return;
+    }
+    fm(paramobj,function(errcode,errmess){},ic[0].name);
+  }else{
+    if(typeof paramobj === 'function'){
+      return ic[1].dumpqueue(paramobj);
+    }
+  }
 };
 
 module.exports = DataHive;
