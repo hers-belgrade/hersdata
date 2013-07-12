@@ -84,10 +84,17 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
   if(!ic){
     return;
   }
+  function dumpq(){
+    console.log('typeof paramobj',typeof paramobj);
+    if(typeof paramobj === 'function'){
+      //return ic[1]; // this is the Consumer that couldn't run a function
+      return ic[1].dumpqueue(paramobj);
+    }
+  }
   var t = this;
   var lios = method.lastIndexOf('/');
   if(lios<0){
-    return;
+    return dumpq();
   }
   var functionalityname = method.slice(0,lios);
   var methodname = method.slice(lios+1);
@@ -106,10 +113,7 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
     }
     fm(paramobj,function(errcode,errmess){},ic[0].name);
   }else{
-    if(typeof paramobj === 'function'){
-      //return ic[1]; // this is the Consumer that couldn't run a function
-      return ic[1].dumpqueue(paramobj);
-    }
+    dumpq();
   }
 };
 

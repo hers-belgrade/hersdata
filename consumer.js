@@ -21,6 +21,7 @@ Consumer.prototype.add = function(txnid,primitives){
     return;
   }
   if(this.queuecb){
+    console.log('calling');
     this.queuecb(primitives);
     delete this.queuecb;
   }else{
@@ -47,6 +48,7 @@ Consumer.prototype.die = function(){
   }
 };
 Consumer.prototype.dumpqueue = function(cb){
+  console.log('should dump to',cb);
   if(typeof cb !== 'function'){
     return;
   }
@@ -188,6 +190,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   var user = this.identities[name];
   if(user){
     if(!user.roles.containsKeyRing(rkr)){
+      console.log(user.roles,'does not contain',rkr,'?');
       user.reset();
     }
   }else{
@@ -202,7 +205,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   }
   var c = new Consumer();
   user.consumers[sess] = c;
-  console.log('finally',user,c);
+  console.log('finally',user,c,rkr,rolearray);
   return [user,c];
 };
 ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
