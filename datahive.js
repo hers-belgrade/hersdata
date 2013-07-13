@@ -11,8 +11,10 @@ function DataHive(){
     if(lastinit.txnid===mytxnid){
       return lastinit.data;
     }
+    var dd = t.master.dump();
+    mytxnid = dd[dd.length-1];
+    lastinit.data = dd;
     lastinit.txnid = mytxnid;
-    lastinit.data = t.master.init();
     return lastinit.data;
   };
   this.master.onNewTransaction.attach(function(path,txnalias,txnprimitives,datacopytxnprimitives,txnid){

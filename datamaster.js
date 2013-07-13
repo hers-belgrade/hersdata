@@ -164,7 +164,6 @@ function Collection(a_l){
     data[name+''] = entity;
   };
 
-	/// TODO: struct review missing ....
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
       data[name].destroy();

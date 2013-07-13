@@ -1,6 +1,6 @@
 var RandomBytes = require('crypto').randomBytes;
 var KeyRing = require('./keyring');
-var utils = require('util');
+var Utils = require('util');
 var BigCounter = require('./BigCounter');
 
 function randomstring(){
@@ -84,11 +84,11 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
   var ret = [];
   for(var i in datacopytxnprimitives){
     var _p = datacopytxnprimitives[i];
-    if(!(utils.isArray(_p)&&_p.length)){
+    if(!(Utils.isArray(_p)&&_p.length)){
       continue;
     }
     var myp = _p[this.keyring.contains(_p[0]) ? 2 : 1];
-    if(!(utils.isArray(myp)&&myp.length)){
+    if(!(Utils.isArray(myp)&&myp.length)){
       continue;
     }
     ret.push(myp);
@@ -96,14 +96,6 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
   return ret;
 };
 ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
-  var empty=true;
-  for(var i in this.consumers){
-    empty = false;
-    break;
-  }
-  if(empty){
-    return;
-  }
   var primitives = [];
   function addPrimitive(p){
     primitives.push(p);
@@ -184,7 +176,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   var name = credentials.name;
   var rolearray = credentials.roles;
   var rkr = new KeyRing();
-  if(rolearray && utils.isArray(rolearray)){
+  if(rolearray && Utils.isArray(rolearray)){
     rkr.addKeys(rolearray);
   }
   var user = this.identities[name];
@@ -197,6 +189,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
     console.log('creating consumeridentity for',name);
     if(name){
       user = new ConsumerIdentity(name,rkr);
+      user.processTransaction.apply(user,initcb());
       this.identities[name] = user;
     }else{
       user = this.anonymous;
