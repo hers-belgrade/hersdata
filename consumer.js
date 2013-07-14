@@ -9,7 +9,8 @@ function randomstring(){
 
 consumerTimeout = 2*60*1000;
 
-function Consumer(destructcb){
+function Consumer(session,destructcb){
+  this.session = session;
   this.queue = [];
   this.destructCb = (typeof destructcb === 'undefined') ? function(){} : destructcb;
 };
@@ -50,16 +51,15 @@ Consumer.prototype.dumpqueue = function(cb){
   if(typeof cb !== 'function'){
     return;
   }
-  if(this.queue.length){
-    var ret = this.queue.slice();
-    this.queue = [];
-    cb(ret);
-  }else{
-    if(typeof this.queuecb === 'function'){
-      this.queuecb();
-    }
+  console.log('dumping',this);
+  var dq = [this.session,this.queue.splice(0)];
+  if(typeof this.queuecb === 'function'){
+    this.queuecb(dq);
     this.queuecb = cb;
+  }else{
+    cb(dq);
   }
+  console.log('dumped',this);
 };
 
 function ConsumerIdentity(name,roles){
@@ -148,6 +148,9 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
         }else{
           if(name && name.length){
             target[name] = myp[2];
+          }else{
+            console.log(this.name,'resetting datacopy');
+            this.datacopy = {};
           }
         }
         break;
@@ -177,18 +180,18 @@ function ConsumerLobby(){
   //console.log(this.sessionkeyname);
   this.counter = new BigCounter();
   this.identities = {};
-  this.sess2name = {};
+  this.sess2consumer = {};
+  this.sess2identity = {};
   this.anonymous = new ConsumerIdentity();
 }
 ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   var sess = credentials[this.sessionkeyname];
+  var s2c = this.sess2consumer;
+  var s2i = this.sess2identity;
   if(sess){
-    var ci = this.consumerIdentityForSession(sess);
+    var ci = s2c[sess];
     if(ci){
-      var c = ci.refresh(sess);
-      if(c){
-        return [ci,c];
-      }
+      return [s2i[sess],ci];
     }
   }else{
     this.counter.inc();
@@ -203,6 +206,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   var user = this.identities[name];
   if(user){
     if(!user.roles.containsKeyRing(rkr)){
+      console.log(user,'does not contain',rkr,'?');
       user.reset();
     }
   }else{
@@ -214,9 +218,18 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
       user = this.anonymous;
     }
   }
-  var c = new Consumer();
+  var sessionobj = {};
+  sessionobj[this.sessionkeyname] = randomstring();
+  function consdestroyed(){
+    delete user.consumers[sess];
+    delete s2c[sess];
+    delete s2i[sess];
+  };
+  var c = new Consumer(sessionobj,consdestroyed);
   c.add(user.txnid,user.initiationPrimitives());
   user.consumers[sess] = c;
+  s2c[sess] = c;
+  s2i[sess] = user;
   return [user,c];
 };
 ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
