@@ -52,12 +52,16 @@ Consumer.prototype.dumpqueue = function(cb){
     return;
   }
   console.log('dumping',this);
-  var dq = [this.session,this.queue.splice(0)];
+  var dq = this.queue.splice(0);
   if(typeof this.queuecb === 'function'){
-    this.queuecb(dq);
+    this.queuecb([this.session,dq]);
     this.queuecb = cb;
   }else{
-    cb(dq);
+    if(dq.length){
+      cb([this.session,dq]);
+    }else{
+      this.queuecb = cb;
+    }
   }
   console.log('dumped',this);
 };
