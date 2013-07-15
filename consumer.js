@@ -51,7 +51,7 @@ Consumer.prototype.dumpqueue = function(cb){
   if(typeof cb !== 'function'){
     return;
   }
-  console.log('dumping',this);
+  this.resetTimer();
   var dq = this.queue.splice(0);
   if(typeof this.queuecb === 'function'){
     this.queuecb([this.session,dq]);
@@ -63,7 +63,6 @@ Consumer.prototype.dumpqueue = function(cb){
       this.queuecb = cb;
     }
   }
-  console.log('dumped',this);
 };
 
 function ConsumerIdentity(name,roles){
@@ -73,14 +72,6 @@ function ConsumerIdentity(name,roles){
   this.keyring.take(roles);
   this.consumers = {};
   this.datacopy = {};
-};
-ConsumerIdentity.prototype.refresh = function(session){
-  var c = this.consumers[session];
-  if(!c){
-    return;
-  }
-  c.resetTimer();
-  return c;
 };
 ConsumerIdentity.prototype.initiationPrimitives = function(){
   var ret = [['start','init']];
@@ -190,17 +181,20 @@ function ConsumerLobby(){
   this.anonymous = new ConsumerIdentity();
 }
 ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
+  console.log('analyzing',credentials);
   var sess = credentials[this.sessionkeyname];
   var s2c = this.sess2consumer;
   var s2i = this.sess2identity;
   if(sess){
     var ci = s2c[sess];
     if(ci){
+      console.log('found for',sess,(s2i[sess]).name);
       return [s2i[sess],ci];
     }
   }else{
+    console.log(sess,'not found');
     this.counter.inc();
-    sess = randomstring()+'.'+this.counter.value();
+    sess = randomstring()+'.'+this.counter.toString();
   }
   var name = credentials.name;
   var rolearray = credentials.roles;
@@ -224,7 +218,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
     }
   }
   var sessionobj = {};
-  sessionobj[this.sessionkeyname] = randomstring();
+  sessionobj[this.sessionkeyname] = sess;
   function consdestroyed(){
     delete user.consumers[sess];
     delete s2c[sess];
@@ -232,6 +226,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   };
   var c = new Consumer(sessionobj,consdestroyed);
   c.add(user.txnid,user.initiationPrimitives());
+  console.log('created for',sess);
   user.consumers[sess] = c;
   s2c[sess] = c;
   s2i[sess] = user;
