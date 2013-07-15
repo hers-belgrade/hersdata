@@ -87,10 +87,8 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
     return;
   }
   function dumpq(){
-    console.log('typeof paramobj',typeof paramobj);
     if(typeof paramobj === 'function'){
-      //return ic[1]; // this is the Consumer that couldn't run a function
-      return ic[1].dumpqueue(paramobj);
+      ic[1].dumpqueue(paramobj);
     }
   }
   var t = this;

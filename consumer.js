@@ -22,7 +22,7 @@ Consumer.prototype.add = function(txnid,primitives){
     return;
   }
   if(this.queuecb){
-    this.queuecb(primitives);
+    this.queuecb([this.session,primitives]);
     delete this.queuecb;
   }else{
     this.queue  = this.queue.concat(primitives);
@@ -52,13 +52,12 @@ Consumer.prototype.dumpqueue = function(cb){
     return;
   }
   this.resetTimer();
-  var dq = this.queue.splice(0);
   if(typeof this.queuecb === 'function'){
-    this.queuecb([this.session,dq]);
+    this.queuecb([this.session,this.queue.splice(0)]);
     this.queuecb = cb;
   }else{
-    if(dq.length){
-      cb([this.session,dq]);
+    if(this.queue.length){
+      cb([this.session,this.queue.splice(0)]);
     }else{
       this.queuecb = cb;
     }
@@ -152,10 +151,10 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
         break;
       case 'remove':
         if(typeof target[name] !== 'undefined'){
-          console.log('deleting',name,'from',path);
+          //console.log('deleting',name,'from',path);
           delete target[name];
         }else{
-          console.log('Cannot remove',name,'from',path);
+          //console.log('Cannot remove',name,'from',path);
           myp = undefined;
         }
         break;
@@ -181,18 +180,16 @@ function ConsumerLobby(){
   this.anonymous = new ConsumerIdentity();
 }
 ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
-  console.log('analyzing',credentials);
+  //console.log('analyzing',credentials);
   var sess = credentials[this.sessionkeyname];
   var s2c = this.sess2consumer;
   var s2i = this.sess2identity;
   if(sess){
     var ci = s2c[sess];
     if(ci){
-      console.log('found for',sess,(s2i[sess]).name);
       return [s2i[sess],ci];
     }
   }else{
-    console.log(sess,'not found');
     this.counter.inc();
     sess = randomstring()+'.'+this.counter.toString();
   }
