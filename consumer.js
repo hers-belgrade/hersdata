@@ -79,7 +79,7 @@ ConsumerIdentity.prototype.refresh = function(session){
   return c;
 };
 ConsumerIdentity.prototype.initiationPrimitives = function(){
-  var ret = [];
+  var ret = [['start','init']];
   function add(path,value){
     ret.push(['set',path.slice(),value]);
   };
@@ -96,6 +96,7 @@ ConsumerIdentity.prototype.initiationPrimitives = function(){
     }
   };
   traverse([],this.datacopy);
+  ret.push(['end','init']);
   return ret;
 };
 ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives){
