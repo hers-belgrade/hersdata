@@ -64,12 +64,15 @@ function Scalar(res_val, pub_val, access_lvl) {
 	}
 
 	function set_from_vals (ra,pa,al) {
-		if (typeof(ra) === 'object') return set_from_obj(ra);
 		throw_if_any_invalid(ra,pa, al);
 
+    if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
+      return;
+    }
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
+    return this.toCopyPrimitives();
 	}
 	set_from_vals (res_val, pub_val, access_lvl);
 
@@ -77,7 +80,7 @@ function Scalar(res_val, pub_val, access_lvl) {
     return access_level;
   };
 	this.alter = function (r_v,p_v,a_l) { 
-    set_from_vals(r_v,p_v,a_l);
+    set_from_vals.call(this,r_v,p_v,a_l);
 	};
   this.toMasterPrimitives = function(path){
     return ['set',path,[restricted_value,public_value,access_level]];
@@ -110,25 +113,6 @@ function Collection(a_l){
 
 	var self = this;
 
-  var newkeys = [];
-  var removedkeys = [];
-
-  function check_for_new_key(newkey){
-    var exists = {};
-    traverse([],data,keyexistsintree(exists,newkey));
-    if(!exists.exists){
-      newkeys.push(newkey);
-    }
-  };
-
-  function check_for_key_removal(removedkey){
-    var exists = {};
-    traverse([],data,keyexistsintree(exists,newkey));
-    if(!exists.exists){
-      removedkeys.push(newkey);
-    }
-  };
-
 	function struct_tree (path,c_al) {
     var me =  is_access_ok(access_level,c_al) ? self : new DeadCollection();
 		var ret = [me];
@@ -144,7 +128,10 @@ function Collection(a_l){
 	}
 
   this.setAccessLevel = function(a_l){
-    access_level = a_l;
+    if(access_level!==a_l){
+      access_level = a_l;
+      return this.toCopyPrimitives();
+    }
   };
 
 	this.value = function (c_al, path) {
@@ -196,6 +183,7 @@ function Collection(a_l){
     path = path || [];
     ret.push([access_level,['remove',path],['set',path,{}]]);
     for(var i in data){
+      console.trace();
       var p = path.concat(i);
       ret = ret.concat(data[i].toCopyPrimitives(p));
     }
@@ -307,15 +295,10 @@ function Collection(a_l){
       var e = target.element(name);
       if(utils.isArray(param)){
         //Scalar case
-        check_for_new_key(param[2]);
         if (e){
           if(e.type()==='Scalar'){
             var oldkey = e.access_level();
-            e.alter(param[0],param[1],param[2]);
-            if(param[2]!==oldkey){
-              check_for_key_removal(oldkey);
-            }
-            return e.toCopyPrimitives(path.concat([name]));
+            return e.alter(param[0],param[1],param[2]);
           }else{
             throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
           }
@@ -330,11 +313,10 @@ function Collection(a_l){
         }
       }else{
         //Collection case
-        check_for_new_key(param);
         if (e){
          if(e.type()==='Collection'){
-           e.setAccessLevel(param);
-           return e.toCopyPrimitives(path.concat([name]));
+           console.log('access_level becomes',param,'name is',name,'params',param);
+           return e.setAccessLevel(param);
          }else{
            throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
          }
@@ -399,8 +381,10 @@ function Collection(a_l){
 			if (utils.isArray(it) && it.length) {
         //console.log('performing',it);
         var cpp = operations[it[0]].call(this, it[1], it[2]);
-        for(var i in cpp){
-          datacopytxnprimitives.push(cpp[i]);
+        if(utils.isArray(cpp)){
+          for(var i in cpp){
+            datacopytxnprimitives.push(cpp[i]);
+          }
         }
 			}
 		}

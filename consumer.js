@@ -94,6 +94,9 @@ ConsumerIdentity.prototype.initiationPrimitives = function(){
   return ret;
 };
 ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives){
+  console.log("\n\n\n");
+  console.log('filtering',Utils.inspect(datacopytxnprimitives,false,null,true));
+  console.log("\n\n\n");
   var ret = [];
   for(var i in datacopytxnprimitives){
     var _p = datacopytxnprimitives[i];
