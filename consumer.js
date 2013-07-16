@@ -94,9 +94,6 @@ ConsumerIdentity.prototype.initiationPrimitives = function(){
   return ret;
 };
 ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives){
-  console.log("\n\n\n");
-  console.log('filtering',Utils.inspect(datacopytxnprimitives,false,null,true));
-  console.log("\n\n\n");
   var ret = [];
   for(var i in datacopytxnprimitives){
     var _p = datacopytxnprimitives[i];
@@ -145,7 +142,7 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
           }
         }else{
           if(name && name.length){
-            target[name] = myp[2];
+            target[name] = (typeof myp[2] === 'object') ? {} : myp[2];
           }else{
             console.log(this.name,'resetting datacopy');
             this.datacopy = {};

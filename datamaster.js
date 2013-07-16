@@ -63,7 +63,7 @@ function Scalar(res_val, pub_val, access_lvl) {
 		throw_if_invalid_scalar (al);
 	}
 
-	function set_from_vals (ra,pa,al) {
+	function set_from_vals (ra,pa,al,path) {
 		throw_if_any_invalid(ra,pa, al);
 
     if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
@@ -72,15 +72,15 @@ function Scalar(res_val, pub_val, access_lvl) {
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
-    return this.toCopyPrimitives();
+    return this.toCopyPrimitives(path);
 	}
 	set_from_vals (res_val, pub_val, access_lvl);
 
   this.access_level = function(){
     return access_level;
   };
-	this.alter = function (r_v,p_v,a_l) { 
-    set_from_vals.call(this,r_v,p_v,a_l);
+	this.alter = function (r_v,p_v,a_l,path) { 
+    return set_from_vals.call(this,r_v,p_v,a_l,path);
 	};
   this.toMasterPrimitives = function(path){
     return ['set',path,[restricted_value,public_value,access_level]];
@@ -183,7 +183,6 @@ function Collection(a_l){
     path = path || [];
     ret.push([access_level,['remove',path],['set',path,{}]]);
     for(var i in data){
-      console.trace();
       var p = path.concat(i);
       ret = ret.concat(data[i].toCopyPrimitives(p));
     }
@@ -193,7 +192,6 @@ function Collection(a_l){
 	this.type = function () {return 'Collection';}
 
 	this.attach = function(functionalityname, config, key){
-		var data = self;
 		var ret = {};
 		var m;
 		switch(typeof functionalityname){
@@ -275,7 +273,7 @@ function Collection(a_l){
             */
 						_p.apply(_env,pa);
 					}
-				})(i,p,data);
+				})(i,p,self);
 			}
 		}
 
@@ -297,8 +295,7 @@ function Collection(a_l){
         //Scalar case
         if (e){
           if(e.type()==='Scalar'){
-            var oldkey = e.access_level();
-            return e.alter(param[0],param[1],param[2]);
+            return e.alter(param[0],param[1],param[2],path.concat([name]));
           }else{
             throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
           }
@@ -315,8 +312,7 @@ function Collection(a_l){
         //Collection case
         if (e){
          if(e.type()==='Collection'){
-           console.log('access_level becomes',param,'name is',name,'params',param);
-           return e.setAccessLevel(param);
+           return e.setAccessLevel(param,path.concat([name]));
          }else{
            throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
          }
@@ -383,7 +379,10 @@ function Collection(a_l){
         var cpp = operations[it[0]].call(this, it[1], it[2]);
         if(utils.isArray(cpp)){
           for(var i in cpp){
-            datacopytxnprimitives.push(cpp[i]);
+            var _cp = cpp[i];
+            if(utils.isArray(_cp)){
+              datacopytxnprimitives.push(_cp);
+            }
           }
         }
 			}
