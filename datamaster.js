@@ -191,7 +191,7 @@ function Collection(a_l){
 
 	this.type = function () {return 'Collection';}
 
-	this.attach = function(functionalityname, config, key){
+	this.attach = function(functionalityname, config, key, environmentmodulename){
 		var ret = {};
 		var m;
 		switch(typeof functionalityname){
