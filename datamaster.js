@@ -113,6 +113,10 @@ function Collection(a_l){
 
 	var self = this;
 
+  this.debug = function(caption){
+    console.log(caption,utils.inspect(data,false,null,true));
+  };
+
 	function struct_tree (path,c_al) {
     var me =  is_access_ok(access_level,c_al) ? self : new DeadCollection();
 		var ret = [me];
@@ -342,7 +346,8 @@ function Collection(a_l){
           nc.onNewFunctionality.attach(function(chldcollectionpath,functionalityalias,functionality){
             var path = chldcollectionpath.slice();
             path.unshift(name);
-            self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
+            self.onNewFunctionality.fire(path,functionalityalias,functionality);
+            //self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
           });
           return nc.toCopyPrimitives(path.concat([name]));
         }else{
@@ -374,6 +379,7 @@ function Collection(a_l){
     //console.log('performing',txnalias,txnprimitives);
 		for (var i in txnprimitives) {
 			var it = txnprimitives[i];
+      //console.log('should perform',it);
 			if (utils.isArray(it) && it.length) {
         //console.log('performing',it);
         var cpp = operations[it[0]].call(this, it[1], it[2]);
