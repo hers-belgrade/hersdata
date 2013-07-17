@@ -72,6 +72,15 @@ function ConsumerIdentity(name,roles){
   this.consumers = {};
   this.datacopy = {};
 };
+ConsumerIdentity.prototype.addKey = function(key){
+  this.keyring.addKey(key);
+};
+ConsumerIdentity.prototype.removeKey = function(key){
+  if(this.roles.contains(key)){
+    return;
+  }
+  this.keyring.removeKey(key);
+};
 ConsumerIdentity.prototype.initiationPrimitives = function(){
   var ret = [['start','init']];
   function add(path,value){
@@ -109,6 +118,7 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
   return ret;
 };
 ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){
+  //console.log('processing',txnalias,txnprimitives,datacopytxnprimitives,txnid);
   this.txnid = txnid;
   var primitives = [];
   function addPrimitive(p){

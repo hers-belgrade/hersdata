@@ -5,6 +5,14 @@ var BigCounter = require('./BigCounter');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
+function augmentpath(pathelem,txn){
+  if(utils.isArray(txn)&&utils.isArray(txn[1])){
+    var p = txn[1].slice();
+    p.unshift(pathelem);
+    txn[1] = p;
+  }
+}
+
 function throw_if_invalid_scalar(val) {
 	if ('object' === typeof(val)) throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
 }
@@ -168,6 +176,18 @@ function Collection(a_l){
   };
 
 	this.element = function(name){
+    if(utils.isArray(name)){
+      if(name.length<1){
+        return this;
+      }
+      if(name.length===1){
+        return data[name[0]];
+      }
+      if(data[name[0]]){
+        return (data[name[0]]).element(name.slice(1));
+      }
+    }
+    return;
 		if ('object' !== typeof(name)) {
       return data[name];
 		}
@@ -195,7 +215,7 @@ function Collection(a_l){
 
 	this.type = function () {return 'Collection';}
 
-	this.attach = function(functionalityname, config, key, environmentmodulename){
+	this.attach = function(functionalityname, config, key, environmentmodulename,consumers){
 		var ret = {};
 		var m;
 		switch(typeof functionalityname){
@@ -211,6 +231,11 @@ function Collection(a_l){
 		if(typeof m.errors !== 'object'){
 			throw functionalityname+" does not have the 'errors' map";
 		}
+    var environmentmodule;
+    try{
+      environmentmodule = require(environmentmodulename);
+    }
+    catch(e){}
 		function localerrorhandler(originalerrcb){
 			var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
 			return function(errorkey){
@@ -237,6 +262,7 @@ function Collection(a_l){
 			var p = m[i];
 			if((typeof p === 'function')){
 				ret[i] = (function(mname,_p,_env){
+          _consumers = consumers;
 					return function(obj,errcb,callername){
 						var pa = [];
 						if(_p.params){
@@ -265,6 +291,7 @@ function Collection(a_l){
 						}
 						pa.push(localerrorhandler(errcb));
             pa.push(callername);
+            pa.push(environmentmodule,_consumers);
             /*
 						pa.push(function(eventname){
 							var eventparams = Array.prototype.slice(arguments,1);
@@ -285,6 +312,26 @@ function Collection(a_l){
     this.onNewFunctionality.fire([functionalityname],ret,key);
 		//return ret;
 	}
+
+  function onChildTxn(name){
+    return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+      console.log(name,'has newTxn',txnalias);
+      var tp = txnprimitives.slice();
+      var dcp = datacopytxnprimitives.slice();
+      for(var i = 0; i<tp.length; i++){
+        augmentpath(name,tp[i]);
+      }
+      for(var i = 0; i<dcp.length; i++){
+        var _t = dcp[i];
+        augmentpath(name,_t[0]);
+        augmentpath(name,_t[2]);
+      }
+      //console.log('after transform',name,tp,utils.inspect(dcp,false,null,true));
+      txnCounter.inc();
+      console.log('firing',self.onNewTransaction,'because of',name);
+      self.onNewTransaction.fire([],txnalias,tp,dcp,txnCounter.clone());
+    };
+  };
 
 	var operations = {
     set: function(path,param){
@@ -324,25 +371,8 @@ function Collection(a_l){
         if (target && target.add) {
           var nc = new Collection(param);
           target.add(name,nc);
-          nc.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives){
-            var tp = txnprimitives.slice();
-            var dcp = datacopytxnprimitives.slice();
-            //console.log('before transform',tp,dcp);
-            for(var i = 0; i<tp.length; i++){
-              var _t = tp[i];
-              if(utils.isArray(_t[1])){
-                _t[1] = _t[1].unshift(name);
-              }
-            }
-            for(var i = 0; i<dcp.length; i++){
-              var _t = dcp[i];
-              if(utils.isArray(_t[1])){
-                _t[1] = _t[1].unshift(name);
-              }
-            }
-            //console.log('after transform',tp,dcp);
-            self.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives);
-          });
+          console.log('attaching to',name);
+          nc.onNewTransaction.attach(onChildTxn(name));
           nc.onNewFunctionality.attach(function(chldcollectionpath,functionalityalias,functionality){
             var path = chldcollectionpath.slice();
             path.unshift(name);

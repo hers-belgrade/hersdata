@@ -17,22 +17,37 @@ function DataHive(){
     lastinit.txnid = mytxnid;
     return lastinit.data;
   };
-  this.master.onNewTransaction.attach(function(path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+  this.master.onNewTransaction.attach(function masterTxnHandler(path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
     mytxnid = txnid;
     delete lastinit.txnid;
-    //console.log(path,txnalias,txnprimitives,datacopytxnprimitives);
-    //console.log('new txn',path,txnalias,util.inspect(datacopytxnprimitives,false,null,true));
+    console.log(path,txnalias,txnprimitives,datacopytxnprimitives);
+    //console.log('new txn',path,txnalias,util.inspect(datacopytxnprimitives,false,null,true),txnid);
     t.consumers.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid,initcb);
   });
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
     console.log(path,fctnobj);
     t.functionalities[path] = {key:key,functionality:fctnobj};
   });
-  this.consumers = new Consumers();
+  var consumers = new Consumers();
+  this.consumers = consumers;
   this.dataMasterInit = initcb;
+  this.consumerinterface = {
+    setKey : function(username,key){
+      var ci = consumers.identities[username];
+      if(ci){
+        ci.addKey(key);
+      }
+    },
+    removeKey : function(username,key){
+      var ci = consumers.identities[username];
+      if(ci){
+        ci.removeKey(key);
+      }
+    },
+  };
 }
-DataHive.prototype.attach = function (objorname,config,key){
-  return this.master.attach(objorname,config,key);
+DataHive.prototype.attach = function (objorname,config,key,environmentmodulename){
+  return this.master.attach(objorname,config,key,environmentmodulename,this.consumers);
 };
 DataHive.prototype.consumerIdentityForSession = function(sess){
   var consumername = this.sess2name[sess];
