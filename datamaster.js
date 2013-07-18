@@ -1,6 +1,7 @@
 /// we should use portable version of HookCollection?
 var utils = require('util');
 var fs = require('fs');
+var Path = require('path');
 var BigCounter = require('./BigCounter');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
@@ -14,51 +15,20 @@ function augmentpath(pathelem,txn){
 }
 
 function throw_if_invalid_scalar(val) {
-	if ('object' === typeof(val)) throw 'Scalar can be nothing but a string or a number '+JSON.stringify(arguments);
-}
-
-function is_access_ok (s_als, c_als) {
-	if (!s_als) return true;
-	if ('string' === typeof(c_als)) return (s_als.indexOf(c_als) > -1);
-	if (c_als instanceof Array) {
-		for (var i in c_als) {
-			if (s_als.indexOf(c_als[i]) > -1) return true;
-		}
-	}
-	return false;
-}
-
-function traverse(hash,path,cb){
-  for(var i in hash){
-    var e = hash[i];
-    var p = path.concat([i]);
-    var cbr = cb(p,e);
-    if(cbr===true){
-      return;
-    }
-    if(e.type()==='Collection'){
-      traverse(e,p,cb);
-    }
+  var tov = typeof val;
+	if (('string' !== tov)&&('number' !== tov)){
+    console.trace();
+    throw val+' can be nothing but a string or a number ';
   }
 }
 
-function keyexistsintree(exists,newkey){
-  if(typeof newkey === 'undefined'){
-    exists.exists = false;
-    return function(){
-      exists.exists = false;
-      return true;
-    }
+function throw_if_invalid_scalar_or_undefined(val){
+  var tov = typeof val;
+	if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)){
+    console.trace();
+    throw val+' can be nothing but a string or a number ';
   }
-  return function(path,element){
-    if(exists.exists){return true;}//stop the traversal
-    if(element.access_level()===newkey){
-      exists.exists = true;
-      return true;
-    }
-  };
-};
-
+}
 
 function Scalar(res_val, pub_val, access_lvl) {
   var restricted_value = res_val;
@@ -66,9 +36,9 @@ function Scalar(res_val, pub_val, access_lvl) {
   var access_level = access_lvl;
 
 	function throw_if_any_invalid (ra,pa,al) {
-		throw_if_invalid_scalar (ra);
-		throw_if_invalid_scalar (pa);
-		throw_if_invalid_scalar (al);
+		throw_if_invalid_scalar_or_undefined (ra);
+		throw_if_invalid_scalar_or_undefined (pa);
+		throw_if_invalid_scalar_or_undefined (al);
 	}
 
 	function set_from_vals (ra,pa,al,path) {
@@ -90,6 +60,9 @@ function Scalar(res_val, pub_val, access_lvl) {
 	this.alter = function (r_v,p_v,a_l,path) { 
     return set_from_vals.call(this,r_v,p_v,a_l,path);
 	};
+  this.value = function(){
+    return restricted_value;
+  };
   this.toMasterPrimitives = function(path){
     return ['set',path,[restricted_value,public_value,access_level]];
   }
@@ -131,8 +104,8 @@ function onChildFunctionality(name,onnf){
   return function(chldcollectionpath,functionalityalias,functionality){
     var path = chldcollectionpath.slice();
     path.unshift(name);
+    //console.log('new Functionality',path,functionalityalias);
     onnf.fire(path,functionalityalias,functionality);
-    //self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
   };
 }
 
@@ -160,8 +133,16 @@ function Collection(a_l){
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
       data[name].destroy();
+      delete data[name];
     }
-    delete data[name];
+  };
+
+  this.resetTxns = function(){
+    var ret = [];
+    for(var i in data){
+      ret.push(['remove',[i]]);
+    }
+    return ret;
   };
 
   this.destroy = function(name){
@@ -207,8 +188,7 @@ function Collection(a_l){
   var txnCounter = new BigCounter();
 
   this.add = function(name,entity){
-    var ton = typeof name;
-		if ((ton !== 'string')&&(ton !== 'number')) throw ("Name "+name+" cannot be used as a key in 'add to collection' ...");
+    throw_if_invalid_scalar(name);
     data[name+''] = entity;
     var toe = entity.type();
     if(toe==='Collection'){
@@ -307,16 +287,19 @@ Collection.prototype.perform_remove = function (path) {
   }
 }
 
-Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumers){
+Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumeritf){
   var self = this;
   var ret = {};
   var m;
+  var fqnname;
   switch(typeof functionalityname){
     case 'string':
       m = require(functionalityname);
+      fqnname = Path.basename(functionalityname);
       break;
     case 'object':
       m = functionalityname;
+      fqnname = 'object';
       break;
     default:
       return;// {};
@@ -355,7 +338,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     var p = m[i];
     if((typeof p === 'function')){
       ret[i] = (function(mname,_p,_env){
-        _consumers = consumers;
+        _consumeritf = consumeritf;
         return function(obj,errcb,callername){
           var pa = [];
           if(_p.params){
@@ -382,7 +365,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
               }
             }
           }
-          pa.push(localerrorhandler(errcb),callername,environmentmodule,_consumers);
+          pa.push(localerrorhandler(errcb),callername,environmentmodule,_consumeritf);
           /*
           pa.push(function(eventname){
             var eventparams = Array.prototype.slice(arguments,1);
@@ -396,12 +379,19 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
           _p.apply(_env,pa);
         }
       })(i,p,self);
+      ret['__DESTROY__'] = function(){
+        for(var i in ret){
+          delete ret[i];
+        }
+        m = undefined;
+        ret = undefined;
+      };
     }
   }
 
   if ('function' === typeof(ret.init)) { ret.init(config || {}); }
-  this.onNewFunctionality.fire([functionalityname],ret,key);
-  //return ret;
+  this.onNewFunctionality.fire([fqnname],ret,key);
+  return ret;
 };
 
 Collection.fromString = function (json) {

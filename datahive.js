@@ -1,5 +1,6 @@
 var Consumers = require('./consumer');
 var util = require('util');
+var RandomBytes = require('crypto').randomBytes;
 
 function DataHive(){
   this.functionalities = {};
@@ -32,6 +33,9 @@ function DataHive(){
   this.consumers = consumers;
   this.dataMasterInit = initcb;
   this.consumerinterface = {
+    newKey : function(){
+      return RandomBytes(12).toString('hex');
+    },
     setKey : function(username,key){
       var ci = consumers.identities[username];
       if(ci){
@@ -47,7 +51,7 @@ function DataHive(){
   };
 }
 DataHive.prototype.attach = function (objorname,config,key,environmentmodulename){
-  return this.master.attach(objorname,config,key,environmentmodulename,this.consumers);
+  return this.master.attach(objorname,config,key,environmentmodulename,this.consumerinterface);
 };
 DataHive.prototype.consumerIdentityForSession = function(sess){
   var consumername = this.sess2name[sess];
