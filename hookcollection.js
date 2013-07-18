@@ -26,7 +26,7 @@ HookCollection.prototype.attach = function(cb){
   if(typeof cb === 'function'){
 		this.inc();
     this.collection[this.counter]=cb;
-    console.log('attached',cb,'to',this.counter);
+    //console.log('attached',cb,'to',this.counter);
 		return this.counter;
   }
 };
@@ -37,11 +37,11 @@ HookCollection.prototype.fire = function(){
   var c = this.collection;
   var fordel=[];
   var pa = Array.prototype.slice.call(arguments);
-  console.log('firing on',c);
+  //console.log('firing on',c);
   for(var i in c){
     try{
       var fqn = c[i];
-      console.log('calling',fqn,'on',i);
+      //console.log('calling',fqn,'on',i);
       fqn.apply(null,pa);
     }
     catch(e){

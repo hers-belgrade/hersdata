@@ -101,15 +101,39 @@ function Scalar(res_val, pub_val, access_lvl) {
     }
   }
 
-	this.value = function (al) {
-		return (is_access_ok(access_level, al)) ? restricted_value : public_value;
-	}
 	this.type = function () { return 'Scalar'; }
 	this.destroy = function  () {
 		public_value = undefined;
 		restricted_value = undefined;
 		access_level = undefined;
 	}
+}
+
+function onChildTxn(name,onntxn,txnc){
+  return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+    var tp = txnprimitives.slice();
+    var dcp = datacopytxnprimitives.slice();
+    for(var i = 0; i<tp.length; i++){
+      augmentpath(name,tp[i]);
+    }
+    for(var i = 0; i<dcp.length; i++){
+      var _t = dcp[i];
+      augmentpath(name,_t[0]);
+      augmentpath(name,_t[2]);
+    }
+    //console.log('after transform',name,tp,utils.inspect(dcp,false,null,true));
+    txnc.inc();
+    onntxn.fire([],txnalias,tp,dcp,txnc.clone());
+  };
+};
+
+function onChildFunctionality(name,onnf){
+  return function(chldcollectionpath,functionalityalias,functionality){
+    var path = chldcollectionpath.slice();
+    path.unshift(name);
+    onnf.fire(path,functionalityalias,functionality);
+    //self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
+  };
 }
 
 function Collection(a_l){
@@ -119,48 +143,18 @@ function Collection(a_l){
   };
 	var data = {};
 
-	var self = this;
-
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
   };
 
-	function struct_tree (path,c_al) {
-    var me =  is_access_ok(access_level,c_al) ? self : new DeadCollection();
-		var ret = [me];
-		if (path.length == 0) return ret;
-		var p = path.slice(0);
-		var target = me;
-		while (p.length) {
-			target = target.element(p.shift());
-			ret.push(target);
-			if (!target) return ret;
-		}
-		return ret;
-	}
+	this.onNewTransaction = new HookCollection();
+	this.onNewFunctionality = new HookCollection();
 
   this.setAccessLevel = function(a_l){
     if(access_level!==a_l){
       access_level = a_l;
       return this.toCopyPrimitives();
     }
-  };
-
-	this.value = function (c_al, path) {
-		if (path) {
-			var t = this.element(path);
-			return (t)?t.value(c_al):undefined;
-		}
-		var ret = {};
-		for (var i in data) {
-			ret[i] = data[i].value(c_al);
-		}
-		return ret;
-	}
-
-  this.add = function(name,entity){
-		if (typeof name === 'undefined') throw ("No name in add to collection procedure ...");
-    data[name+''] = entity;
   };
 
   this.remove = function(name){
@@ -187,11 +181,6 @@ function Collection(a_l){
         return (data[name[0]]).element(name.slice(1));
       }
     }
-    return;
-		if ('object' !== typeof(name)) {
-      return data[name];
-		}
-		return (name instanceof Array) ? struct_tree(name).pop() : undefined;
   };
   this.toMasterPrimitives = function(path){
     path = path || [];
@@ -215,225 +204,205 @@ function Collection(a_l){
 
 	this.type = function () {return 'Collection';}
 
-	this.attach = function(functionalityname, config, key, environmentmodulename,consumers){
-		var ret = {};
-		var m;
-		switch(typeof functionalityname){
-			case 'string':
-				m = require(functionalityname);
-				break;
-			case 'object':
-				m = functionalityname;
-				break;
-			default:
-				return;// {};
-		}
-		if(typeof m.errors !== 'object'){
-			throw functionalityname+" does not have the 'errors' map";
-		}
-    var environmentmodule;
-    try{
-      environmentmodule = require(environmentmodulename);
-    }
-    catch(e){}
-		function localerrorhandler(originalerrcb){
-			var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
-			return function(errorkey){
-				var errorparams = Array.prototype.slice.call(arguments,1);
-				if(typeof m.errors[errorkey] !== 'object'){
-					throw 'Error key '+errorkey+' not specified in the error map';
-				}
-				var eo = m.errors[errorkey];
-				var errmess = eo.message;
-				var eop = eo.params;
-				if(eop && eop.length){
-					if(arguments.length!==eo.params.length+1){
-						throw 'Improper number of error parameters provided for '+errorkey;
-					}
-					var eopl = eop.length;
-					for(var i=0; i<eopl; i++){
-						errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),arguments[i+1]);
-					}
-				}
-				ecb(errorkey,errmess);
-			};
-		};
-		for(var i in m){
-			var p = m[i];
-			if((typeof p === 'function')){
-				ret[i] = (function(mname,_p,_env){
-          _consumers = consumers;
-					return function(obj,errcb,callername){
-						var pa = [];
-						if(_p.params){
-							if(_p.params==='originalobj'){
-								if(typeof obj !== 'object'){
-									throw 'First parameter to '+mname+' has to be an object';
-								}
-								pa.push(obj);
-							}else{
-								var pd = _p.defaults||{};
-								var _ps = _p.params;
-								if(typeof obj !== 'object'){
-									throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
-								}
-								for(var i=0; i<_ps.length; i++){
-									var __p = obj[_ps[i]];
-									if(typeof __p === 'undefined'){
-										var __pd = pd[_ps[i]];
-										if(typeof __pd === 'undefined'){
-											throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
-										}
-									}
-									pa.push(__p);
-								}
-							}
-						}
-						pa.push(localerrorhandler(errcb));
-            pa.push(callername);
-            pa.push(environmentmodule,_consumers);
-            /*
-						pa.push(function(eventname){
-							var eventparams = Array.prototype.slice(arguments,1);
-							var ff = feedback[eventname];
-							if(typeof ff !== 'function'){
-								throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
-							}
-							ff.apply(m,eventparams);
-						});
-            */
-						_p.apply(_env,pa);
-					}
-				})(i,p,self);
-			}
-		}
-
-		if ('function' === typeof(ret.init)) { ret.init(config || {}); }
-    this.onNewFunctionality.fire([functionalityname],ret,key);
-		//return ret;
-	}
-
-  function onChildTxn(name){
-    return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-      console.log(name,'has newTxn',txnalias);
-      var tp = txnprimitives.slice();
-      var dcp = datacopytxnprimitives.slice();
-      for(var i = 0; i<tp.length; i++){
-        augmentpath(name,tp[i]);
-      }
-      for(var i = 0; i<dcp.length; i++){
-        var _t = dcp[i];
-        augmentpath(name,_t[0]);
-        augmentpath(name,_t[2]);
-      }
-      //console.log('after transform',name,tp,utils.inspect(dcp,false,null,true));
-      txnCounter.inc();
-      console.log('firing',self.onNewTransaction,'because of',name);
-      self.onNewTransaction.fire([],txnalias,tp,dcp,txnCounter.clone());
-    };
-  };
-
-	var operations = {
-    set: function(path,param){
-      var name = path.splice(-1);
-      if(!name.length){
-        throw "Cannot add without a name in the path";
-      }
-      name = name[0];
-			var target = self.element(path);
-      var e = target.element(name);
-      if(utils.isArray(param)){
-        //Scalar case
-        if (e){
-          if(e.type()==='Scalar'){
-            return e.alter(param[0],param[1],param[2],path.concat([name]));
-          }else{
-            throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
-          }
-        }
-        if (target && target.add) {
-          var ns = new Scalar(param[0],param[2],param[1]);
-          target.add(name,ns);
-          return ns.toCopyPrimitives(path.concat([name]));
-        }else{
-          console.trace();
-          throw 'No collection at path '+path;
-        }
-      }else{
-        //Collection case
-        if (e){
-         if(e.type()==='Collection'){
-           return e.setAccessLevel(param,path.concat([name]));
-         }else{
-           throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
-         }
-        }
-        if (target && target.add) {
-          var nc = new Collection(param);
-          target.add(name,nc);
-          console.log('attaching to',name);
-          nc.onNewTransaction.attach(onChildTxn(name));
-          nc.onNewFunctionality.attach(function(chldcollectionpath,functionalityalias,functionality){
-            var path = chldcollectionpath.slice();
-            path.unshift(name);
-            self.onNewFunctionality.fire(path,functionalityalias,functionality);
-            //self.onNewTransaction.fire(path,txnalias,txnprimitives,datacopytxnprimitives);
-          });
-          return nc.toCopyPrimitives(path.concat([name]));
-        }else{
-          console.trace();
-          throw 'No collection at path '+path;
-        }
-      }
-    },
-		remove: function (path) {
-      var name = path.splice(-1);
-      if(!name.length){
-        console.trace();
-        throw "Cannot remove without a name in the path";
-      }
-      name = name[0];
-			var target = self.element(path);
-      if(target){
-        target.remove(name);
-        return [[access_level,undefined,['remove',path.concat([name])]]];
-      }
-      return [];
-		}
-	};
-
   var txnCounter = new BigCounter();
 
-	this.commit = function (txnalias,txnprimitives) {
-    var datacopytxnprimitives = [];
-    //console.log('performing',txnalias,txnprimitives);
-		for (var i in txnprimitives) {
-			var it = txnprimitives[i];
-      //console.log('should perform',it);
-			if (utils.isArray(it) && it.length) {
-        //console.log('performing',it);
-        var cpp = operations[it[0]].call(this, it[1], it[2]);
-        if(utils.isArray(cpp)){
-          for(var i in cpp){
-            var _cp = cpp[i];
-            if(utils.isArray(_cp)){
-              datacopytxnprimitives.push(_cp);
+  this.add = function(name,entity){
+    var ton = typeof name;
+		if ((ton !== 'string')&&(ton !== 'number')) throw ("Name "+name+" cannot be used as a key in 'add to collection' ...");
+    data[name+''] = entity;
+    var toe = entity.type();
+    if(toe==='Collection'){
+      entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter));
+      entity.onNewFunctionality.attach(onChildFunctionality(name,this.onNewFunctionality));
+    }
+  };
+
+
+  this.commit = (function(txnc){
+    return function (txnalias,txnprimitives) {
+      var datacopytxnprimitives = [];
+      //console.log('performing',txnalias,txnprimitives);
+      for (var i in txnprimitives) {
+        var it = txnprimitives[i];
+        //console.log('should perform',it);
+        if (utils.isArray(it) && it.length) {
+          //console.log('performing',it);
+          var cpp = this['perform_'+it[0]](it[1], it[2], txnc);
+          if(utils.isArray(cpp)){
+            for(var i in cpp){
+              var _cp = cpp[i];
+              if(utils.isArray(_cp)){
+                datacopytxnprimitives.push(_cp);
+              }
             }
           }
         }
-			}
-		}
-    txnCounter.inc();
-    this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnCounter.clone());
-	};
+      }
+      txnc.inc();
+      this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
+    };
+  })(txnCounter);
 
   this.dump = function(){
-    return ['init',self.toMasterPrimitives(),self.toCopyPrimitives(),txnCounter.clone()];
+    return ['init',this.toMasterPrimitives(),this.toCopyPrimitives(),txnCounter.clone()];
   };
-
-	this.onNewTransaction = new HookCollection();
-	this.onNewFunctionality = new HookCollection();
 }
+
+Collection.prototype.perform_set = function(path,param,txnc){
+  var name = path.splice(-1);
+  if(!name.length){
+    throw "Cannot add without a name in the path";
+  }
+  name = name[0];
+  var target = this.element(path);
+  var e = target.element(name);
+  if(utils.isArray(param)){
+    //Scalar case
+    if (e){
+      if(e.type()==='Scalar'){
+        return e.alter(param[0],param[1],param[2],path.concat([name]));
+      }else{
+        throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
+      }
+    }
+    if (target && target.add) {
+      var ns = new Scalar(param[0],param[2],param[1]);
+      target.add(name,ns);
+      return ns.toCopyPrimitives(path.concat([name]));
+    }else{
+      console.trace();
+      throw 'No collection at path '+path;
+    }
+  }else{
+    //Collection case
+    if (e){
+     if(e.type()==='Collection'){
+       return e.setAccessLevel(param,path.concat([name]));
+     }else{
+       throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
+     }
+    }
+    if (target && target.add) {
+      var nc = new Collection(param);
+      target.add(name,nc);
+      return nc.toCopyPrimitives(path.concat([name]));
+    }else{
+      console.trace();
+      throw 'No collection at path '+path;
+    }
+  }
+};
+
+Collection.prototype.perform_remove = function (path) {
+  var name = path.splice(-1);
+  if(!name.length){
+    console.trace();
+    throw "Cannot remove without a name in the path";
+  }
+  name = name[0];
+  var target = this.element(path);
+  if(target){
+    target.remove(name);
+    return [[this.access_level(),undefined,['remove',path.concat([name])]]];
+  }
+}
+
+Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumers){
+  var self = this;
+  var ret = {};
+  var m;
+  switch(typeof functionalityname){
+    case 'string':
+      m = require(functionalityname);
+      break;
+    case 'object':
+      m = functionalityname;
+      break;
+    default:
+      return;// {};
+  }
+  if(typeof m.errors !== 'object'){
+    throw functionalityname+" does not have the 'errors' map";
+  }
+  var environmentmodule;
+  try{
+    environmentmodule = require(environmentmodulename);
+  }
+  catch(e){}
+  function localerrorhandler(originalerrcb){
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
+    return function(errorkey){
+      var errorparams = Array.prototype.slice.call(arguments,1);
+      if(typeof m.errors[errorkey] !== 'object'){
+        throw 'Error key '+errorkey+' not specified in the error map';
+      }
+      var eo = m.errors[errorkey];
+      var errmess = eo.message;
+      var eop = eo.params;
+      if(eop && eop.length){
+        if(arguments.length!==eo.params.length+1){
+          throw 'Improper number of error parameters provided for '+errorkey;
+        }
+        var eopl = eop.length;
+        for(var i=0; i<eopl; i++){
+          errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),arguments[i+1]);
+        }
+      }
+      ecb(errorkey,errmess);
+    };
+  };
+  for(var i in m){
+    var p = m[i];
+    if((typeof p === 'function')){
+      ret[i] = (function(mname,_p,_env){
+        _consumers = consumers;
+        return function(obj,errcb,callername){
+          var pa = [];
+          if(_p.params){
+            if(_p.params==='originalobj'){
+              if(typeof obj !== 'object'){
+                throw 'First parameter to '+mname+' has to be an object';
+              }
+              pa.push(obj);
+            }else{
+              var pd = _p.defaults||{};
+              var _ps = _p.params;
+              if(typeof obj !== 'object'){
+                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+              }
+              for(var i=0; i<_ps.length; i++){
+                var __p = obj[_ps[i]];
+                if(typeof __p === 'undefined'){
+                  var __pd = pd[_ps[i]];
+                  if(typeof __pd === 'undefined'){
+                    throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
+                  }
+                }
+                pa.push(__p);
+              }
+            }
+          }
+          pa.push(localerrorhandler(errcb),callername,environmentmodule,_consumers);
+          /*
+          pa.push(function(eventname){
+            var eventparams = Array.prototype.slice(arguments,1);
+            var ff = feedback[eventname];
+            if(typeof ff !== 'function'){
+              throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
+            }
+            ff.apply(m,eventparams);
+          });
+          */
+          _p.apply(_env,pa);
+        }
+      })(i,p,self);
+    }
+  }
+
+  if ('function' === typeof(ret.init)) { ret.init(config || {}); }
+  this.onNewFunctionality.fire([functionalityname],ret,key);
+  //return ret;
+};
 
 Collection.fromString = function (json) {
 	try {
@@ -446,9 +415,6 @@ function DeadCollection(){
   this.add = function(){
   };
   this.remove = function(){
-  };
-  this.value = function(){
-    return new DeadCollection();
   };
   this.element = function(){
     return new DeadCollection();

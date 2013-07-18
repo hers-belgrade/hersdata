@@ -16,7 +16,8 @@ function Consumer(session,destructcb){
 };
 Consumer.prototype.add = function(txnid,primitives){
   if(this.id && !this.id.isPredecessorOf(txnid)){
-    throw id.toString()+' not a predecessor of '+txnid.toString();
+    console.trace();
+    throw this.id.toString()+' not a predecessor of '+txnid.toString();
     this.id.reset();
     this.queue = [];
     return;

@@ -20,7 +20,7 @@ function DataHive(){
   this.master.onNewTransaction.attach(function masterTxnHandler(path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
     mytxnid = txnid;
     delete lastinit.txnid;
-    console.log(path,txnalias,txnprimitives,datacopytxnprimitives);
+    //console.log(path,txnalias,txnprimitives,datacopytxnprimitives);
     //console.log('new txn',path,txnalias,util.inspect(datacopytxnprimitives,false,null,true),txnid);
     t.consumers.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid,initcb);
   });
