@@ -26,8 +26,9 @@ function DataHive(){
     t.consumers.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid,initcb);
   });
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
-    console.log(path,fctnobj);
-    t.functionalities[path] = {key:key,functionality:fctnobj};
+    //console.log(path,fctnobj);
+    t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
+    console.log(t.functionalities);
   });
   var consumers = new Consumers();
   this.consumers = consumers;
