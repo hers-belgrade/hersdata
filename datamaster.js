@@ -289,15 +289,13 @@ Collection.prototype.perform_set = function(path,param,txnc){
 };
 
 Collection.prototype.perform_remove = function (path) {
-  var name = path.splice(-1);
-  if(!name.length){
+  if(!path.length){
     console.trace();
     throw "Cannot remove without a name in the path";
   }
-  name = name[0];
-  var target = this.element(path);
+  var target = this.element(path.slice(0,-1));
   if(target){
-    target.remove(name);
+    target.remove(path.slice(-1));
     return [[this.access_level(),undefined,['remove',path]]];
   }
 }
