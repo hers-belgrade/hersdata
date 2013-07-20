@@ -6,6 +6,18 @@ var BigCounter = require('./BigCounter');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
+function deeparraycopy(array){
+  var ret = [];
+  for(var i in array){
+    if(utils.isArray(array[i])){
+      ret.push(deeparraycopy(array[i]));
+    }else{
+      ret.push(array[i]);
+    }
+  }
+  return ret;
+}
+
 function augmentpath(pathelem,txn){
   if(utils.isArray(txn)&&utils.isArray(txn[1])){
     var p = txn[1].slice();
@@ -18,7 +30,7 @@ function throw_if_invalid_scalar(val) {
   var tov = typeof val;
 	if (('string' !== tov)&&('number' !== tov)){
     console.trace();
-    throw val+' can be nothing but a string or a number ';
+    throw val+' can be nothing but a string or a number (found '+tov+')' ;
   }
 }
 
@@ -84,8 +96,8 @@ function Scalar(res_val, pub_val, access_lvl) {
 
 function onChildTxn(name,onntxn,txnc){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    var tp = txnprimitives.slice();
-    var dcp = datacopytxnprimitives.slice();
+    var tp = deeparraycopy(txnprimitives);
+    var dcp = deeparraycopy(datacopytxnprimitives);
     for(var i = 0; i<tp.length; i++){
       augmentpath(name,tp[i]);
     }
@@ -94,7 +106,6 @@ function onChildTxn(name,onntxn,txnc){
       augmentpath(name,_t[0]);
       augmentpath(name,_t[2]);
     }
-    //console.log('after transform',name,tp,utils.inspect(dcp,false,null,true));
     txnc.inc();
     onntxn.fire([],txnalias,tp,dcp,txnc.clone());
   };
@@ -161,6 +172,9 @@ function Collection(a_l){
       if(data[name[0]]){
         return (data[name[0]]).element(name.slice(1));
       }
+    }else{
+      console.trace();
+      throw "Path has to be an array";
     }
   };
   this.toMasterPrimitives = function(path){
@@ -229,18 +243,19 @@ function Collection(a_l){
 }
 
 Collection.prototype.perform_set = function(path,param,txnc){
-  var name = path.splice(-1);
+  var name = path.slice(-1);
   if(!name.length){
     throw "Cannot add without a name in the path";
   }
-  name = name[0];
-  var target = this.element(path);
+  //name = name[0];
+  var target = this.element(path.slice(0,-1));
   var e = target.element(name);
+  name = name[0];
   if(utils.isArray(param)){
     //Scalar case
     if (e){
       if(e.type()==='Scalar'){
-        return e.alter(param[0],param[1],param[2],path.concat([name]));
+        return e.alter(param[0],param[1],param[2],path);
       }else{
         throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
       }
@@ -248,7 +263,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
     if (target && target.add) {
       var ns = new Scalar(param[0],param[2],param[1]);
       target.add(name,ns);
-      return ns.toCopyPrimitives(path.concat([name]));
+      return ns.toCopyPrimitives(path);
     }else{
       console.trace();
       throw 'No collection at path '+path;
@@ -257,7 +272,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
     //Collection case
     if (e){
      if(e.type()==='Collection'){
-       return e.setAccessLevel(param,path.concat([name]));
+       return e.setAccessLevel(param,path);
      }else{
        throw "Cannot set key on "+path.join('/')+'/'+name+" that is of type "+e.type();
      }
@@ -265,7 +280,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
     if (target && target.add) {
       var nc = new Collection(param);
       target.add(name,nc);
-      return nc.toCopyPrimitives(path.concat([name]));
+      return nc.toCopyPrimitives(path);
     }else{
       console.trace();
       throw 'No collection at path '+path;
@@ -283,7 +298,7 @@ Collection.prototype.perform_remove = function (path) {
   var target = this.element(path);
   if(target){
     target.remove(name);
-    return [[this.access_level(),undefined,['remove',path.concat([name])]]];
+    return [[this.access_level(),undefined,['remove',path]]];
   }
 }
 
@@ -393,12 +408,6 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
 };
-
-Collection.fromString = function (json) {
-	try {
-		return Collection.fromObj(JSON.parse(json));
-	}catch (e) {return undefined;}
-}
 
 function DeadCollection(){
   Collection.apply(this);

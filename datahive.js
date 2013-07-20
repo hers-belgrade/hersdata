@@ -28,7 +28,7 @@ function DataHive(){
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
     //console.log(path,fctnobj);
     t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
-    console.log(t.functionalities);
+    //console.log(t.functionalities);
   });
   var consumers = new Consumers();
   this.consumers = consumers;

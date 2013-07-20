@@ -41,7 +41,7 @@ HookCollection.prototype.fire = function(){
   for(var i in c){
     try{
       var fqn = c[i];
-      //console.log('calling',fqn,'on',i);
+      //console.log('calling',fqn,'on',i,'with',pa);
       fqn.apply(null,pa);
     }
     catch(e){
