@@ -37,20 +37,22 @@ function Collection (){
   var txnBegins = new HookCollection();
   var txnEnds = new HookCollection();
 
-	var transaction_type_maps = {};
-
+	var transaction_handlers = {};
+	var current_transaction = undefined;
+	var affected_paths = undefined;
 
 	var reset = new HookCollection();
 
+	var predefined_path_hooks = [];
 
-	this.dump = function () {
+	this.registerPredefinedHook = function (path, cb) {
+		return predefined_path_hooks.push({path:path, cb:cb});
+	}
+
+	this.value = function () {
 		var ret = {};
 		for (var i in data) {
-			if (data[i] instanceof Scalar) {
-				ret[i] = data[i].value();
-			}else{
-				ret[i] = data[i].dump();
-			}
+			ret[i] = data[i].value();
 		}
 		return ret;
 	}
@@ -89,6 +91,7 @@ function Collection (){
 	}
 	var actions = {
 		'set' : function (op, d) {
+			//console.log('===', op);
 			if (op.length == 0 && isObj(d) && objKeys(d).length == 0) {
 				data = d;
 				reset.fire();
@@ -112,6 +115,9 @@ function Collection (){
 
 			var name = path.pop();
 			c_parent.set(name, d);
+			execute_transaction_handler('set', op, d);
+			affected_paths && affected_paths.push(op);
+			check_on_predefined('set', op, d);
 		},
 		'remove' : function (p) {
 			var prnt = this;
@@ -119,10 +125,14 @@ function Collection (){
 				var name = p[i];
 				if (i == p.length-1) break;
 				prnt = prnt.element(p[i]);
-				if (!prnt) return console.error('UNABLE TO FIND PATH ...');
+				if (!prnt) {
+					return console.error('UNABLE TO FIND PATH ...');
+				}
 			}
 			prnt.remove(name);
-			return;
+			execute_transaction_handler('remove', p);
+			affected_paths && affected_paths.push(p);
+			check_on_predefined('remove', p);
 		},
 		'start' : function (n) {
 			this.start(n);
@@ -163,16 +173,90 @@ function Collection (){
     if(typeof data[name] !== 'undefined'){
       data[name].destroy();
       delete data[name];
-      elementRemoved(name);
+      elementRemoved.fire(name);
     }
   };
 
+	this.register_transaction_handler = function (name, map) {
+		if (!transaction_handlers[name]) transaction_handlers[name] = [];
+		return transaction_handlers[name].push(map)-1;
+	}
+
+	this.unregister_transaction_handler = function (name,index) {
+		if (!transaction_handlers[name] || transaction_handlers[name].length < index) return;
+		transaction_handlers[name][index] = undefined;
+	}
+
+	function execute_transaction_handler (primitive,name, data) {
+		if (!current_transaction || !transaction_handlers[current_transaction]) return;
+		var th = transaction_handlers[current_transaction];
+		for (var i in th) ('function' === typeof((th[i] || {})[primitive])) && th[i][primitive](name,data);
+	}
+
+	function check_on_predefined (primitive, path, data) {
+		for (var i in predefined_path_hooks) {
+			var pph = predefined_path_hooks[i];
+			if (!pph.path || !('function' === typeof(pph.cb))) continue;
+			var pp, p; // pp: path_pattern, p: path
+			var args = [];
+		 	if (pph.path[pph.path.length-1] == '*') {
+				p = path.slice(0, pph.path.length-1);
+				pp = pph.path.slice(0, pph.path.length-1);
+			}	else {
+				p = path.slice(0);
+				pp = pph.path;
+			}
+
+			if (!pp || !p) continue;
+			if (pp.length != p.length) continue;
+			var ok = true;
+
+			for (var j in pp) {
+				if (pp[j] == '%') {
+					args.push(p[j]);
+					continue;
+				}
+				if (pp[j] != p[j]) {
+					ok = false;
+					break;
+				}
+			}
+			if (!ok) continue;
+			args = args.concat(path.slice(pph.path.length-1));
+			pph.cb(primitive, path, data, args);
+		}
+	}
+
   this.start = function(txnalias){
+		current_transaction = txnalias;
     txnBegins.fire(txnalias);
+		execute_transaction_handler('start');
+		affected_paths = [];
   };
 
   this.end = function(txnalias){
-    txnEnds.fire(txnalias);
+		var afd = {};
+
+
+		var ap = affected_paths.slice();
+		for (var i in ap) {
+			var cp = ap[i];
+			if (cp.length == 0) continue;
+			var t = afd;
+			for (var j = 0; j < cp.length-1; j++) {
+				if (!t[cp[j]]) t[cp[j]] = {};
+				t = t[cp[j]];
+			}
+			var el = this.element(affected_paths[i]);
+
+			t[cp[j]] = (el) ? el.value() : undefined;
+		}
+
+
+    txnEnds.fire(txnalias, affected_paths, afd);
+		execute_transaction_handler('end', affected_paths, afd);
+		current_transaction = undefined;
+		affected_paths = undefined;
   };
 
   this.destroy = function(){
@@ -195,13 +279,13 @@ function Collection (){
 			return;
 		}
 		try {
-		var action = txn.shift(), path = txn.shift(), data = (txn.length) ? txn.shift() : undefined;
-		//console.log(action, path, data);
-		if ('function' === typeof (actions[action])) {
-			actions[action].call(this,path, data);
-		}
+			var action = txn.shift(), path = txn.shift(), data = (txn.length) ? txn.shift() : undefined;
+			if ('function' === typeof (actions[action])) {
+				actions[action].call(this,path, data);
+			}
 		}catch (e) {
-			//console.log('ERROR ',e,txn);
+			console.log(e.stack);
+			console.log('ERROR ',e,txn);
 		}
 	}
 
