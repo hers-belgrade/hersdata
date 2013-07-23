@@ -43,10 +43,10 @@ function Collection (){
 
 	var reset = new HookCollection();
 
-	var predefined_path_hooks = [];
+	var path_filters = [];
 
-	this.registerPredefinedHook = function (path, cb) {
-		return predefined_path_hooks.push({path:path, cb:cb});
+	this.registerPathFilter = function (filter, cb) {
+		return path_filters.push({filter:filter , cb:cb});
 	}
 
 	this.value = function () {
@@ -194,36 +194,10 @@ function Collection (){
 	}
 
 	function check_on_predefined (primitive, path, data) {
-		for (var i in predefined_path_hooks) {
-			var pph = predefined_path_hooks[i];
-			if (!pph.path || !('function' === typeof(pph.cb))) continue;
-			var pp, p; // pp: path_pattern, p: path
-			var args = [];
-		 	if (pph.path[pph.path.length-1] == '*') {
-				p = path.slice(0, pph.path.length-1);
-				pp = pph.path.slice(0, pph.path.length-1);
-			}	else {
-				p = path.slice(0);
-				pp = pph.path;
-			}
-
-			if (!pp || !p) continue;
-			if (pp.length != p.length) continue;
-			var ok = true;
-
-			for (var j in pp) {
-				if (pp[j] == '%') {
-					args.push(p[j]);
-					continue;
-				}
-				if (pp[j] != p[j]) {
-					ok = false;
-					break;
-				}
-			}
-			if (!ok) continue;
-			args = args.concat(path.slice(pph.path.length-1));
-			pph.cb(primitive, path, data, args);
+		for (var i in path_filters) {
+			if (!path_filters[i] || !path_filters[i].filter || 'function' !== typeof(path_filters[i].cb)) continue;
+			var ret = path_filters[i].filter.test(primitive, path);
+			(ret > -1) && path_filters[i].cb(primitive, path, data, ret);
 		}
 	}
 
@@ -273,7 +247,6 @@ function Collection (){
   };
 
 	this.commit = function (txn) {
-		//console.log('got txn ', txn);
 		if (txn.length < 2) {
 			console.error('IVALID TXN length ', txn);
 			return;
@@ -303,3 +276,108 @@ function Collection (){
 		return ret;
 	}
 }
+
+
+function PathFilter (filter, primitive, operator) {
+	this.filter = filter;
+	this.primitive = primitive;
+	this.operator = operator;
+}
+
+PathFilter.prototype.test = function (primitive,path) {
+	if ( ('undefined' != typeof (this.primitive) && this.primitive != primitive) || (!this.filter))	return false;
+	var op = (this.operator) ? this.operator : PathFilter.OP_EQ;
+	switch (op) {
+		case PathFilter.OP_EQ:  return this.test_eq(path);
+		case PathFilter.OP_NEQ: return this.test_neq(path);
+		case PathFilter.OP_CON: return this.test_con(path);
+		case PathFilter.OP_NCON:return this.test_ncon(path);
+		case PathFilter.OP_ST:  return this.test_st(path);
+		case PathFilter.OP_ENDS:return this.test_ends(path);
+		default:return false;
+	}
+};
+
+(function () {
+
+	function test_item (a, b) {
+		return (a instanceof RegExp) ? a.test(b) : a == b;
+	}
+
+	PathFilter.prototype.test_eq = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+		if (path.length != this.filter.length) return -1;
+
+		var f = this.filter;
+		var ok = true;
+
+		for (var i in f) {
+			ok = test_item(f[i], path[i]);
+			if (!ok) return -1;
+		}
+		return 0;
+	}
+
+	PathFilter.prototype.test_neq = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+		if (path.length == this.filter.length) return -1;
+
+		var f = this.filter;
+		var ok = true;
+
+		for (var i in f) {
+			ok = !test_item(f[i], path[i]);
+			if (!ok) return -1;
+		}
+		return 0;
+	}
+
+	PathFilter.prototype.test_con = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+
+		var f = this.filter;
+
+		var start;
+		var fit = 0;
+		var pit = 0;
+
+		for (pit = 0; pit < path.length && fit < f.length; pit++) {
+			if (test_item(f[fit], path[pit])) {
+				if (fit == 0) start = pit;
+				fit++;
+			}else{
+				start = undefined;
+				fit = 0;
+			}
+		}
+
+		return ('undefined' === typeof(start)) ? -1 : start;
+	}
+
+	PathFilter.prototype.test_ncon = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+		return (this.test_con(path) > -1) ? -1 : 0;
+	}
+
+	PathFilter.prototype.test_st = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+		var f = this.filter;
+		if (path.length < f.length) return -1;
+		return this.test_eq(path.slice(0, f.length));
+	}
+
+	PathFilter.prototype.test_ends = function (path) {
+		if (!(path && path instanceof Array)) return -1;
+		if (path.length < f.length) return -1;
+		return this.test_eq(path.slice(path.length-f.length));
+	}
+})();
+
+
+
+PathFilter.OP_EQ = 1; 			//operator equal
+PathFilter.OP_CON = 2;			//operator contains
+PathFilter.OP_ST = 3;				//operator starts
+PathFilter.OP_ENDS = 4;			//ends
+PathFilter.OP_NCON = 5;			//operator not contains
+PathFilter.OP_NEQ = 6;			//operator not equal
