@@ -302,7 +302,7 @@ Collection.prototype.perform_remove = function (path) {
 
 Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumeritf){
   var self = this;
-  var ret = {};
+  var ret = config||{};
   var m;
   var fqnname;
   switch(typeof functionalityname){
@@ -350,48 +350,54 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   for(var i in m){
     var p = m[i];
     if((typeof p === 'function')){
-      ret[i] = (function(mname,_p,_env){
+      ret[i] = (function(mname,_p,_env,self,_envmod){
         _consumeritf = consumeritf;
-        return function(obj,errcb,callername){
-          var pa = [];
-          if(_p.params){
-            if(_p.params==='originalobj'){
-              if(typeof obj !== 'object'){
-                throw 'First parameter to '+mname+' has to be an object';
-              }
-              pa.push(obj);
-            }else{
-              var pd = _p.defaults||{};
-              var _ps = _p.params;
-              if(typeof obj !== 'object'){
-                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
-              }
-              for(var i=0; i<_ps.length; i++){
-                var __p = obj[_ps[i]];
-                if(typeof __p === 'undefined'){
-                  var __pd = pd[_ps[i]];
-                  if(typeof __pd === 'undefined'){
-                    throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
-                  }
+        if(mname!=='init'){
+          return function(obj,errcb,callername){
+            var pa = [];
+            if(_p.params){
+              if(_p.params==='originalobj'){
+                if(typeof obj !== 'object'){
+                  throw 'First parameter to '+mname+' has to be an object';
                 }
-                pa.push(__p);
+                pa.push(obj);
+              }else{
+                var pd = _p.defaults||{};
+                var _ps = _p.params;
+                if(typeof obj !== 'object'){
+                  throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+                }
+                for(var i=0; i<_ps.length; i++){
+                  var __p = obj[_ps[i]];
+                  if(typeof __p === 'undefined'){
+                    var __pd = pd[_ps[i]];
+                    if(typeof __pd === 'undefined'){
+                      throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
+                    }
+                  }
+                  pa.push(__p);
+                }
               }
             }
-          }
-          pa.push(localerrorhandler(errcb),callername,environmentmodule,_consumeritf);
-          /*
-          pa.push(function(eventname){
-            var eventparams = Array.prototype.slice(arguments,1);
-            var ff = feedback[eventname];
-            if(typeof ff !== 'function'){
-              throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
-            }
-            ff.apply(m,eventparams);
-          });
-          */
-          _p.apply(_env,pa);
+            pa.push(localerrorhandler(errcb),callername,_envmod,_consumeritf);
+            /*
+            pa.push(function(eventname){
+              var eventparams = Array.prototype.slice(arguments,1);
+              var ff = feedback[eventname];
+              if(typeof ff !== 'function'){
+                throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
+              }
+              ff.apply(m,eventparams);
+            });
+            */
+            _p.apply({data:_env,self:self},pa);
+          };
+        }else{
+          return function(errcb,callername){
+            _p.call({data:_env,self:self},localerrorhandler(errcb),callername,_envmod,_consumeritf);
+          };
         }
-      })(i,p,self);
+      })(i,p,self,ret,environmentmodule);
       ret['__DESTROY__'] = function(){
         for(var i in ret){
           delete ret[i];
@@ -402,7 +408,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     }
   }
 
-  if ('function' === typeof(ret.init)) { ret.init(config || {}); }
+  if ('function' === typeof(ret.init)) { ret.init(); }
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
 };
