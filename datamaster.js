@@ -36,7 +36,7 @@ function throw_if_invalid_scalar(val) {
 
 function throw_if_invalid_scalar_or_undefined(val){
   var tov = typeof val;
-	if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)){
+	if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)&&('boolean' !== tov)){
     console.trace();
     throw val+' can be nothing but a string or a number ';
   }
@@ -352,6 +352,11 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     if((typeof p === 'function')){
       ret[i] = (function(mname,_p,_env,self,_envmod){
         _consumeritf = consumeritf;
+				if (mname.charAt(0) == '_') {
+					return function () {
+						_p.apply({data:_env,self:self}, arguments);
+					}
+				}
         if(mname!=='init'){
           return function(obj,errcb,callername){
             var pa = [];

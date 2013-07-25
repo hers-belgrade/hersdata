@@ -37,6 +37,7 @@ Consumer.prototype.resetTimer = function(){
   var t = this;
   this.timer = setTimeout(function(){t.die()},consumerTimeout);
 }
+
 Consumer.prototype.die = function(){
   var dr = this.destructCb.apply(this);
   if(dr!==false){
@@ -48,10 +49,12 @@ Consumer.prototype.die = function(){
     }
   }
 };
+
 Consumer.prototype.dumpqueue = function(cb){
   if(typeof cb !== 'function'){
     return;
   }
+	//this.connected();
   this.resetTimer();
   if(typeof this.queuecb === 'function'){
     this.queuecb([this.session,this.queue.splice(0)]);
@@ -65,14 +68,23 @@ Consumer.prototype.dumpqueue = function(cb){
   }
 };
 
-function ConsumerIdentity(name,roles){
+function ConsumerIdentity(name,roles, connection_status_cb){
   this.name = name;
   this.roles = roles;
   this.keyring = new KeyRing();
   this.keyring.take(roles);
   this.consumers = {};
   this.datacopy = {};
+
+	var online = false;
+	this.checkOnLine = function () {
+		var old_ol = online;
+		online = (Object.keys(this.consumers).length > 0);
+		//console.log('ONLINE ? ',online);
+		(old_ol != online) && ('function' === typeof(connection_status_cb)) && connection_status_cb.call(this, online);
+	}
 };
+
 ConsumerIdentity.prototype.addKey = function(key){
   this.keyring.addKey(key);
 };
@@ -181,7 +193,7 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
   //console.log(this.datacopy);
 };
 
-function ConsumerLobby(){
+function ConsumerLobby(connection_status_cb){
   this.sessionkeyname = randomstring();
   //console.log(this.sessionkeyname);
   this.counter = new BigCounter();
@@ -189,6 +201,7 @@ function ConsumerLobby(){
   this.sess2consumer = {};
   this.sess2identity = {};
   this.anonymous = new ConsumerIdentity();
+	this.connection_status_cb = connection_status_cb;
 }
 ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   //console.log('analyzing',credentials);
@@ -218,7 +231,10 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
     }
   }else{
     if(name){
-      user = new ConsumerIdentity(name,rkr);
+			var self = this;
+      user = new ConsumerIdentity(name,rkr, function (online) {
+				('function' === typeof(self.connection_status_cb)) && self.connection_status_cb.call(self,this.name, online); 
+			});
       user.processTransaction.apply(user,initcb());
       this.identities[name] = user;
     }else{
@@ -231,13 +247,17 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
     delete user.consumers[sess];
     delete s2c[sess];
     delete s2i[sess];
+		user.checkOnLine();
   };
   var c = new Consumer(sessionobj,consdestroyed);
   c.add(user.txnid,user.initiationPrimitives());
   console.log('created for',sess);
+
   user.consumers[sess] = c;
   s2c[sess] = c;
   s2i[sess] = user;
+	user.checkOnLine();
+
   return [user,c];
 };
 ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,datacopytxnprimitives,txnid){

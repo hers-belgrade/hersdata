@@ -3,11 +3,14 @@ var util = require('util');
 var RandomBytes = require('crypto').randomBytes;
 
 function DataHive(){
+	var self = this;
   this.functionalities = {};
   this.master = new (require('./datamaster').Collection)();
   var t = this;
   var mytxnid = '_';
   var lastinit = {};
+
+	var connection_status_cbs = [];
   function initcb(){
     if(lastinit.txnid===mytxnid){
       return lastinit.data;
@@ -28,9 +31,22 @@ function DataHive(){
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
     //console.log(path,fctnobj);
     t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
-    //console.log(t.functionalities);
+
+		//ostaje samo pitanje detach-a funkcionalnosti ....
+		if ('function' === typeof(fctnobj['_connection_status'])) connection_status_cbs.push (fctnobj['_connection_status']);
+    //console.log('FUNCTIONALITIES .... ', t.functionalities);
   });
-  var consumers = new Consumers();
+  var consumers = new Consumers( function (name, c_status) {
+		for (var i in connection_status_cbs) connection_status_cbs[i](name, c_status);
+		/*
+		console.log('NAME ',name,' changed is online ', c_status)
+		for (var i in t.functionalities) {
+			var ff = t.functionalities[i];
+			//console.log(name, c_status);
+			('function' === typeof(ff.functionality['_connection_status'])) && ff.functionality['_connection_status'](name, c_status);
+		}
+		*/
+	});
   this.consumers = consumers;
   this.dataMasterInit = initcb;
   this.consumerinterface = {
@@ -51,6 +67,7 @@ function DataHive(){
     },
   };
 }
+
 DataHive.prototype.attach = function (objorname,config,key,environmentmodulename){
   return this.master.attach(objorname,config,key,environmentmodulename,this.consumerinterface);
 };
@@ -118,6 +135,8 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
   }
   var functionalityname = method.slice(0,lios);
   var methodname = method.slice(lios+1);
+
+	if (methodname.charAt(0) === '_') return;
   console.log(functionalityname,methodname);
   var f = this.functionalities[functionalityname];
   if(f){
@@ -136,5 +155,12 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
     dumpq();
   }
 };
+
+DataHive.prototype.notifyDisconnected = function (credentials) {
+	var ic = this.consumers.identityAndConsumerFor(credentials, this.dataMasterInit);
+	if (!ic) return;
+	ic[1].die();
+	ic[0].checkOnLine();
+}
 
 module.exports = DataHive;
