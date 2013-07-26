@@ -97,6 +97,7 @@ ConsumerIdentity.prototype.removeKey = function(key){
     return;
   }
   this.keyring.removeKey(key);
+	/// CHECK MY OBLIGATIONS FOR BOTH SYSTEM AND ENVIRONMENT
 };
 ConsumerIdentity.prototype.initiationPrimitives = function(){
   var ret = [['start','init']];

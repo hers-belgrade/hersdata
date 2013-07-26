@@ -357,6 +357,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 						_p.apply({data:_env,self:self}, arguments);
 					}
 				}
+
         if(mname!=='init'){
           return function(obj,errcb,callername){
             var pa = [];
