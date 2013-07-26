@@ -7,7 +7,7 @@ function randomstring(){
   return RandomBytes(12).toString('hex');
 };
 
-consumerTimeout = 2*60*1000;
+//consumerTimeout = 2*60*1000;
 
 function Consumer(session,destructcb){
   this.session = session;
@@ -30,13 +30,18 @@ Consumer.prototype.add = function(txnid,primitives){
   }
   this.id = txnid;
 };
+/*
 Consumer.prototype.resetTimer = function(){
   if(this.timer){
     clearTimeout(this.timer);
   }
   var t = this;
-  this.timer = setTimeout(function(){t.die()},consumerTimeout);
+  this.timer = setTimeout(function(){
+		console.log('WILL FORCE DIE ?');
+		t.die()
+	},consumerTimeout);
 }
+*/
 
 Consumer.prototype.die = function(){
   var dr = this.destructCb.apply(this);
@@ -54,8 +59,7 @@ Consumer.prototype.dumpqueue = function(cb){
   if(typeof cb !== 'function'){
     return;
   }
-	//this.connected();
-  this.resetTimer();
+  //this.resetTimer();
   if(typeof this.queuecb === 'function'){
     this.queuecb([this.session,this.queue.splice(0)]);
     this.queuecb = cb;
