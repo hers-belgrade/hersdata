@@ -84,7 +84,6 @@ function ConsumerIdentity(name,roles, connection_status_cb){
 	this.checkOnLine = function () {
 		var old_ol = online;
 		online = (Object.keys(this.consumers).length > 0);
-		//console.log('ONLINE ? ',online);
 		(old_ol != online) && ('function' === typeof(connection_status_cb)) && connection_status_cb.call(this, online);
 	}
 };
