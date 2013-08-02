@@ -300,7 +300,7 @@ Collection.prototype.perform_remove = function (path) {
   }
 }
 
-Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumeritf){
+Collection.prototype.attach = function(functionalityname, config, key, environment,consumeritf){
   var self = this;
   var ret = config||{};
   var m;
@@ -320,11 +320,16 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   if(typeof m.errors !== 'object'){
     throw functionalityname+" does not have the 'errors' map";
   }
-  var environmentmodule;
-  try{
-    environmentmodule = require(environmentmodulename);
-  }
-  catch(e){}
+  var env;
+	if ('string' === environment) {
+		try{
+			env= require(environment);
+		}
+		catch(e){}
+	}else{
+		env= environment;
+	}
+  
   function localerrorhandler(originalerrcb){
     var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
     return function(errorkey){
@@ -347,72 +352,74 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       ecb(errorkey,errmess);
     };
   };
-  for(var i in m){
-    var p = m[i];
-    if((typeof p === 'function')){
-      ret[i] = (function(mname,_p,_env,self,_envmod){
-        _consumeritf = consumeritf;
-				if (mname.charAt(0) == '_') {
-					return function () {
-						_p.apply({data:_env,self:self}, arguments);
-					}
-				}
 
-        if(mname!=='init'){
-          return function(obj,errcb,callername){
-            var pa = [];
-            if(_p.params){
-              if(_p.params==='originalobj'){
-                if(typeof obj !== 'object'){
-                  throw 'First parameter to '+mname+' has to be an object';
-                }
-                pa.push(obj);
-              }else{
-                var pd = _p.defaults||{};
-                var _ps = _p.params;
-                if(typeof obj !== 'object'){
-                  throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
-                }
-                for(var i=0; i<_ps.length; i++){
-                  var __p = obj[_ps[i]];
-                  if(typeof __p === 'undefined'){
-                    var __pd = pd[_ps[i]];
-                    if(typeof __pd === 'undefined'){
-                      throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
-                    }
-                  }
-                  pa.push(__p);
-                }
-              }
-            }
-            pa.push(localerrorhandler(errcb),callername,_envmod,_consumeritf);
-            /*
-            pa.push(function(eventname){
-              var eventparams = Array.prototype.slice(arguments,1);
-              var ff = feedback[eventname];
-              if(typeof ff !== 'function'){
-                throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
-              }
-              ff.apply(m,eventparams);
-            });
-            */
-            _p.apply({data:_env,self:self},pa);
-          };
-        }else{
-          return function(errcb,callername){
-            _p.call({data:_env,self:self},localerrorhandler(errcb),callername,_envmod,_consumeritf);
-          };
-        }
-      })(i,p,self,ret,environmentmodule);
-      ret['__DESTROY__'] = function(){
-        for(var i in ret){
-          delete ret[i];
-        }
-        m = undefined;
-        ret = undefined;
-      };
-    }
-  }
+	var my_mod = {};
+	var SELF = {data:self, self:ret, cbs: my_mod};
+	for (var j in env){
+		(function (j) {
+			my_mod[j] = function () {
+				return env[j].apply(SELF, arguments);
+			}
+		})(j);
+	}
+
+
+
+	for(var i in m){
+		var p = m[i];
+		if((typeof p !== 'function')) continue;
+		ret[i] = (function(mname,_p){
+			_consumeritf = consumeritf;
+			if (mname.charAt(0) == '_') {
+				return function () {
+					_p.apply(SELF, arguments);
+				}
+			}
+
+			if(mname!=='init'){
+				return function(obj,errcb,callername){
+					var pa = [];
+					if(_p.params){
+						if(_p.params==='originalobj'){
+							if(typeof obj !== 'object'){
+								throw 'First parameter to '+mname+' has to be an object';
+							}
+							pa.push(obj);
+						}else{
+							var pd = _p.defaults||{};
+							var _ps = _p.params;
+							if(typeof obj !== 'object'){
+								throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+							}
+							for(var i=0; i<_ps.length; i++){
+								var __p = obj[_ps[i]];
+								if(typeof __p === 'undefined'){
+									var __pd = pd[_ps[i]];
+									if(typeof __pd === 'undefined'){
+										throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
+									}
+								}
+								pa.push(__p);
+							}
+						}
+					}
+					pa.push(localerrorhandler(errcb),callername,_consumeritf);
+					_p.apply(SELF,pa);
+				};
+			}else{
+				return function(errcb,callername){
+					_p.call(SELF,localerrorhandler(errcb),callername,_consumeritf);
+				};
+			}
+		})(i,p);
+		ret['__DESTROY__'] = function(){
+			for(var i in ret){
+				delete ret[i];
+			}
+			m = undefined;
+			ret = undefined;
+		};
+	}
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.onNewFunctionality.fire([fqnname],ret,key);
