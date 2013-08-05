@@ -42,9 +42,10 @@ function throw_if_invalid_scalar_or_undefined(val){
   }
 }
 
-function Scalar(res_val, pub_val, access_lvl) {
-  var restricted_value = res_val;
+function Scalar(res_val,pub_val, access_lvl) {
+
   var public_value = pub_val;
+  var restricted_value = res_val;
   var access_level = access_lvl;
 
 	function throw_if_any_invalid (ra,pa,al) {
@@ -59,12 +60,14 @@ function Scalar(res_val, pub_val, access_lvl) {
     if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
       return;
     }
+
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
     return this.toCopyPrimitives(path);
 	}
 	set_from_vals (res_val, pub_val, access_lvl);
+
 
   this.access_level = function(){
     return access_level;
@@ -103,7 +106,7 @@ function onChildTxn(name,onntxn,txnc){
     }
     for(var i = 0; i<dcp.length; i++){
       var _t = dcp[i];
-      augmentpath(name,_t[0]);
+      augmentpath(name,_t[1]);
       augmentpath(name,_t[2]);
     }
     txnc.inc();
@@ -261,7 +264,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
       }
     }
     if (target && target.add) {
-      var ns = new Scalar(param[0],param[2],param[1]);
+      var ns = new Scalar(param[0],param[1],param[2]);
       target.add(name,ns);
       return ns.toCopyPrimitives(path);
     }else{
