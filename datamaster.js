@@ -134,6 +134,25 @@ function Collection(a_l){
     console.log(caption,utils.inspect(data,false,null,true));
   };
 
+	this.dataDebug = function () {
+		var ret = '{';
+		for (var i in data) {
+			ret += (i+': ');
+			if (data[i].type() == 'Scalar') { 
+				ret += data[i].value();
+			}else{
+				ret+= ('		'+data[i].dataDebug());
+			}
+			ret += '\n';
+		}
+		ret+='}';
+		return ret;
+	}
+
+	this.keys = function () {
+		return Object.keys(data);
+	}
+
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
 
@@ -177,7 +196,7 @@ function Collection(a_l){
       }
     }else{
       console.trace();
-      throw "Path has to be an array";
+      throw "Path has to be an array "+JSON.stringify(name);
     }
   };
   this.toMasterPrimitives = function(path){
