@@ -48,8 +48,14 @@ function DataHive(){
   this.consumers = consumers;
   this.dataMasterInit = initcb;
   this.consumerinterface = {
-    newKey : function(){
-      return RandomBytes(12).toString('hex');
+    newKey : function(keyring){
+			if (arguments.length == 0 || 'object' != typeof(keyring)) return RandomBytes(12).toString('hex');
+			var ret = '';
+			for (var i in keyring) {
+				if (ret.length) ret+=';'
+				ret += ('#'+keyring[i].tag+':'+keyring[i].val);
+			}
+			return ret;
     },
     setKey : function(username,key){
       var ci = consumers.identities[username];

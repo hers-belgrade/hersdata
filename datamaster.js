@@ -377,15 +377,22 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 
 	var my_mod = {};
 	var SELF = {data:self, self:ret, cbs: my_mod};
-	for (var j in env){
-		(function (j) {
-			my_mod[j] = function () {
-				return env[j].apply(SELF, arguments);
-			}
-		})(j);
+	if (m.requirements) {
+		if (!env) {
+			console.log('NO environment, use defaults');
+			env = m.requirements;
+		}
+		for (var j in m.requirements) {
+			(function (j) {
+				if ('function' != typeof(env[j]))  throw 'Requirements not met, missing '+j;
+				//console.log('setting requirement '+j+' to '+functionalityname);
+				my_mod[j] = function () {
+					return env[j].apply(SELF, arguments);
+				}
+			})(j);
+		}
+		console.log('Reqirement successfully set on: '+functionalityname);
 	}
-
-
 
 	for(var i in m){
 		var p = m[i];
