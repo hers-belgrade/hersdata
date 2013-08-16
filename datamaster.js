@@ -42,9 +42,10 @@ function throw_if_invalid_scalar_or_undefined(val){
   }
 }
 
-function Scalar(res_val, pub_val, access_lvl) {
-  var restricted_value = res_val;
+function Scalar(res_val,pub_val, access_lvl) {
+
   var public_value = pub_val;
+  var restricted_value = res_val;
   var access_level = access_lvl;
 
 	function throw_if_any_invalid (ra,pa,al) {
@@ -59,12 +60,14 @@ function Scalar(res_val, pub_val, access_lvl) {
     if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
       return;
     }
+
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
     return this.toCopyPrimitives(path);
 	}
 	set_from_vals (res_val, pub_val, access_lvl);
+
 
   this.access_level = function(){
     return access_level;
@@ -103,7 +106,7 @@ function onChildTxn(name,onntxn,txnc){
     }
     for(var i = 0; i<dcp.length; i++){
       var _t = dcp[i];
-      augmentpath(name,_t[0]);
+      augmentpath(name,_t[1]);
       augmentpath(name,_t[2]);
     }
     txnc.inc();
@@ -130,6 +133,25 @@ function Collection(a_l){
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
   };
+
+	this.dataDebug = function () {
+		var ret = '{';
+		for (var i in data) {
+			ret += (i+': ');
+			if (data[i].type() == 'Scalar') { 
+				ret += data[i].value();
+			}else{
+				ret+= ('		'+data[i].dataDebug());
+			}
+			ret += '\n';
+		}
+		ret+='}';
+		return ret;
+	}
+
+	this.keys = function () {
+		return Object.keys(data);
+	}
 
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
@@ -174,7 +196,7 @@ function Collection(a_l){
       }
     }else{
       console.trace();
-      throw "Path has to be an array";
+      throw "Path has to be an array "+JSON.stringify(name);
     }
   };
   this.toMasterPrimitives = function(path){
@@ -261,7 +283,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
       }
     }
     if (target && target.add) {
-      var ns = new Scalar(param[0],param[2],param[1]);
+      var ns = new Scalar(param[0],param[1],param[2]);
       target.add(name,ns);
       return ns.toCopyPrimitives(path);
     }else{
@@ -300,7 +322,7 @@ Collection.prototype.perform_remove = function (path) {
   }
 }
 
-Collection.prototype.attach = function(functionalityname, config, key, environmentmodulename,consumeritf){
+Collection.prototype.attach = function(functionalityname, config, key, environment,consumeritf){
   var self = this;
   var ret = config||{};
   var m;
@@ -320,11 +342,16 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   if(typeof m.errors !== 'object'){
     throw functionalityname+" does not have the 'errors' map";
   }
-  var environmentmodule;
-  try{
-    environmentmodule = require(environmentmodulename);
-  }
-  catch(e){}
+  var env;
+	if ('string' === environment) {
+		try{
+			env= require(environment);
+		}
+		catch(e){}
+	}else{
+		env= environment;
+	}
+  
   function localerrorhandler(originalerrcb){
     var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
     return function(errorkey){
@@ -347,72 +374,81 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       ecb(errorkey,errmess);
     };
   };
-  for(var i in m){
-    var p = m[i];
-    if((typeof p === 'function')){
-      ret[i] = (function(mname,_p,_env,self,_envmod){
-        _consumeritf = consumeritf;
-				if (mname.charAt(0) == '_') {
-					return function () {
-						_p.apply({data:_env,self:self}, arguments);
-					}
-				}
 
-        if(mname!=='init'){
-          return function(obj,errcb,callername){
-            var pa = [];
-            if(_p.params){
-              if(_p.params==='originalobj'){
-                if(typeof obj !== 'object'){
-                  throw 'First parameter to '+mname+' has to be an object';
-                }
-                pa.push(obj);
-              }else{
-                var pd = _p.defaults||{};
-                var _ps = _p.params;
-                if(typeof obj !== 'object'){
-                  throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
-                }
-                for(var i=0; i<_ps.length; i++){
-                  var __p = obj[_ps[i]];
-                  if(typeof __p === 'undefined'){
-                    var __pd = pd[_ps[i]];
-                    if(typeof __pd === 'undefined'){
-                      throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
-                    }
-                  }
-                  pa.push(__p);
-                }
-              }
-            }
-            pa.push(localerrorhandler(errcb),callername,_envmod,_consumeritf);
-            /*
-            pa.push(function(eventname){
-              var eventparams = Array.prototype.slice(arguments,1);
-              var ff = feedback[eventname];
-              if(typeof ff !== 'function'){
-                throw mname+' raised an unhadled event '+ff+' with params '+eventparams.join(',');
-              }
-              ff.apply(m,eventparams);
-            });
-            */
-            _p.apply({data:_env,self:self},pa);
-          };
-        }else{
-          return function(errcb,callername){
-            _p.call({data:_env,self:self},localerrorhandler(errcb),callername,_envmod,_consumeritf);
-          };
-        }
-      })(i,p,self,ret,environmentmodule);
-      ret['__DESTROY__'] = function(){
-        for(var i in ret){
-          delete ret[i];
-        }
-        m = undefined;
-        ret = undefined;
-      };
-    }
-  }
+	var my_mod = {};
+	var SELF = {data:self, self:ret, cbs: my_mod};
+	if (m.requirements) {
+		if (!env) {
+			console.log('NO environment, use defaults');
+			env = m.requirements;
+		}
+		for (var j in m.requirements) {
+			(function (j) {
+				if ('function' != typeof(env[j]))  throw 'Requirements not met, missing '+j;
+				//console.log('setting requirement '+j+' to '+functionalityname);
+				my_mod[j] = function () {
+					return env[j].apply(SELF, arguments);
+				}
+			})(j);
+		}
+		console.log('Reqirement successfully set on: '+functionalityname);
+	}
+
+	for(var i in m){
+		var p = m[i];
+		if((typeof p !== 'function')) continue;
+		ret[i] = (function(mname,_p){
+			_consumeritf = consumeritf;
+			if (mname.charAt(0) == '_') {
+				return function () {
+					_p.apply(SELF, arguments);
+				}
+			}
+
+			if(mname!=='init'){
+				return function(obj,errcb,callername){
+					var pa = [];
+					if(_p.params){
+						if(_p.params==='originalobj'){
+							if(typeof obj !== 'object'){
+								throw 'First parameter to '+mname+' has to be an object';
+							}
+							pa.push(obj);
+						}else{
+							var pd = _p.defaults||{};
+							var _ps = _p.params;
+							if(typeof obj !== 'object'){
+								throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+							}
+							for(var i=0; i<_ps.length; i++){
+								var __p = obj[_ps[i]];
+								if(typeof __p === 'undefined'){
+									var __pd = pd[_ps[i]];
+									if(typeof __pd === 'undefined'){
+										throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
+									}
+								}
+								pa.push(__p);
+							}
+						}
+					}
+					pa.push(localerrorhandler(errcb),callername,_consumeritf);
+					_p.apply(SELF,pa);
+				};
+			}else{
+				return function(errcb,callername){
+					_p.call(SELF,localerrorhandler(errcb),callername,_consumeritf);
+				};
+			}
+		})(i,p);
+		ret['__DESTROY__'] = function(){
+			for(var i in ret){
+				delete ret[i];
+			}
+			m = undefined;
+			ret = undefined;
+		};
+	}
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.onNewFunctionality.fire([fqnname],ret,key);

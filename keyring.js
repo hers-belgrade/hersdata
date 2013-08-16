@@ -15,6 +15,7 @@ KeyRing.prototype.take = function(keyring){
     }
   }
 };
+
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
     if(typeof this.keys[k] === 'undefined'){

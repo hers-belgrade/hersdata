@@ -84,7 +84,6 @@ function ConsumerIdentity(name,roles, connection_status_cb){
 	this.checkOnLine = function () {
 		var old_ol = online;
 		online = (Object.keys(this.consumers).length > 0);
-		//console.log('ONLINE ? ',online);
 		(old_ol != online) && ('function' === typeof(connection_status_cb)) && connection_status_cb.call(this, online);
 	}
 };
@@ -149,8 +148,8 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
     var path = myp[1].slice();
     var name = path.splice(-1);
     var target = this.datacopy;
-    for(var i=0; i<path.length; i++){
-      target = target[path[i]];
+    for(var j=0; j<path.length; j++){
+      target = target[path[j]];
       if(!target){
         break;
       }

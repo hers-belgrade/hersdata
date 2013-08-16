@@ -2,6 +2,15 @@ var Consumers = require('./consumer');
 var util = require('util');
 var RandomBytes = require('crypto').randomBytes;
 
+function call_on_all_functionalities (method) {
+	var args = Array.prototype.slice.call(arguments, 1);
+	console.log('will call on all functionalities ', method);
+	for (var i in this.functionalities) {
+		var ff = this.functionalities[i];
+		('function' === typeof(ff.functionality['_connection_status'])) && ff.functionality['_connection_status'].apply(this, args);
+	}
+}
+
 function DataHive(){
 	var self = this;
   this.functionalities = {};
@@ -31,27 +40,22 @@ function DataHive(){
   this.master.onNewFunctionality.attach(function(path,fctnobj,key){
     //console.log(path,fctnobj);
     t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
-
-		//ostaje samo pitanje detach-a funkcionalnosti ....
-		if ('function' === typeof(fctnobj['_connection_status'])) connection_status_cbs.push (fctnobj['_connection_status']);
-    //console.log('FUNCTIONALITIES .... ', t.functionalities);
   });
   var consumers = new Consumers( function (name, c_status) {
-		for (var i in connection_status_cbs) connection_status_cbs[i](name, c_status);
-		/*
 		console.log('NAME ',name,' changed is online ', c_status)
-		for (var i in t.functionalities) {
-			var ff = t.functionalities[i];
-			//console.log(name, c_status);
-			('function' === typeof(ff.functionality['_connection_status'])) && ff.functionality['_connection_status'](name, c_status);
-		}
-		*/
+		call_on_all_functionalities.call(t, '_connection_status', name, c_status);
 	});
   this.consumers = consumers;
   this.dataMasterInit = initcb;
   this.consumerinterface = {
-    newKey : function(){
-      return RandomBytes(12).toString('hex');
+    newKey : function(keyring){
+			if (arguments.length == 0 || 'object' != typeof(keyring)) return RandomBytes(12).toString('hex');
+			var ret = '';
+			for (var i in keyring) {
+				if (ret.length) ret+=';'
+				ret += ('#'+keyring[i].tag+':'+keyring[i].val);
+			}
+			return ret;
     },
     setKey : function(username,key){
       var ci = consumers.identities[username];
@@ -156,11 +160,22 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
   }
 };
 
-DataHive.prototype.notifyDisconnected = function (credentials) {
-	var ic = this.consumers.identityAndConsumerFor(credentials, this.dataMasterInit);
-	if (!ic) return;
-	ic[1].die();
-	ic[0].checkOnLine();
+
+var bridge_methods = {
+	'_connection_status' : function (credentials, connection_active) {
+		if (connection_active) return;
+		var ic = this.consumers.identityAndConsumerFor(credentials, this.dataMasterInit);
+		if (!ic) return;
+		ic[1].die();
+	}
+}
+
+DataHive.prototype.inneract = function (method) {
+	if ('function' === typeof(bridge_methods[method])) {
+		return bridge_methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
+	}else{
+		call_on_all_functionalities.apply(this, arguments);
+	}
 }
 
 module.exports = DataHive;
