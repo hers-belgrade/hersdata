@@ -34,10 +34,6 @@ function execCode(code){
 module.exports = {
   glueCode : glueCode,
   execCode : execCode,
-	//Collection : datamaster.Collection,
-	//Series : datamaster.Series,
-	//Scalar : datamaster.Scalar,
-	//HookCollection : datamaster.HookCollection,
   Hive : require('./datahive'),
 	helpers: require('./helpers')
 };
