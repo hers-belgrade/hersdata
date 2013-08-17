@@ -2,8 +2,6 @@ var util = require('util');
 var vm = require('vm');
 var fs = require('fs');
 
-var datamaster = require('./datamaster.js');
-
 /*NEED REWORK ....*/
 function codeAppendedFromFiles(paths){
   var code = '';
