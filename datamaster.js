@@ -376,7 +376,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   };
 
 	var my_mod = {};
-	var SELF = {data:self, self:ret, cbs: my_mod};
+	var SELF = {data:self, self:ret, cbs: my_mod, consumeritf:consumeritf};
 	if (m.requirements) {
 		if (!env) {
 			console.log('NO environment, use defaults');
