@@ -1,10 +1,8 @@
 /// we should use portable version of HookCollection?
 var utils = require('util');
-var fs = require('fs');
 var Path = require('path');
 var BigCounter = require('./BigCounter');
-var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
-eval(content);
+var HookCollection = require('hers_utils').HookCollection;
 
 function deeparraycopy(array){
   var ret = [];
@@ -469,6 +467,5 @@ function DeadCollection(){
 
 module.exports = {
 	Scalar : Scalar,
-	Collection : Collection,
-	HookCollection : HookCollection
+	Collection : Collection
 }
