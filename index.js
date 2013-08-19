@@ -15,7 +15,7 @@ function codeAppendedFromFiles(paths){
 }
 
 function glueCode(paths){
-  var code = codeAppendedFromFiles([__dirname+'/hooks.js',__dirname+'/datacopy.js',__dirname+'/datamaster.js']);
+  var code = codeAppendedFromFiles([__dirname+'/hooks.js',__dirname+'/datamaster.js']);
   if(util.isArray(paths)){
     code += codeAppendedFromFiles(paths);
   }
