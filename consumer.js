@@ -74,10 +74,7 @@ Consumer.prototype.dumpqueue = function(cb){
 
 function ConsumerIdentity(name,roles, connection_status_cb){
   this.name = name;
-  this.roles = roles;
-  this.keyring = new KeyRing();
-  this.keyring.take(roles);
-  this.consumers = {};
+  this.reset(roles);
   this.datacopy = {};
 
 	var online = false;
@@ -97,6 +94,12 @@ ConsumerIdentity.prototype.removeKey = function(key){
   }
   this.keyring.removeKey(key);
 	/// CHECK MY OBLIGATIONS FOR BOTH SYSTEM AND ENVIRONMENT
+};
+ConsumerIdentity.prototype.reset = function(roles){
+  this.roles = roles;
+  this.keyring = new KeyRing();
+  this.keyring.take(roles);
+  this.consumers = {};
 };
 ConsumerIdentity.prototype.initiationPrimitives = function(){
   var ret = [['start','init']];
@@ -231,7 +234,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   if(user){
     if(!user.roles.containsKeyRing(rkr)){
       console.log(user,'does not contain',rkr,'?');
-      user.reset();
+      user.reset(rkr);
     }
   }else{
     if(name){
