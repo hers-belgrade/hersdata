@@ -353,8 +353,12 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	}
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
     return function(errorkey){
+      if(!errorkey){
+        ecb(0,'ok');
+        return;
+      }
       var errorparams = Array.prototype.slice.call(arguments,1);
       if(typeof m.errors[errorkey] !== 'object'){
         throw 'Error key '+errorkey+' not specified in the error map';
@@ -371,7 +375,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
           errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),arguments[i+1]);
         }
       }
-      ecb(errorkey,errmess);
+      ecb(errorkey,errorparams,errmess);
     };
   };
 
@@ -379,7 +383,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	var SELF = {data:self, self:ret, cbs: my_mod, consumeritf:consumeritf};
 	if (m.requirements) {
 		if (!env) {
-			console.log('NO environment, use defaults');
+			//console.log('NO environment, use defaults');
 			env = m.requirements;
 		}
 		for (var j in m.requirements) {
@@ -391,7 +395,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 				}
 			})(j);
 		}
-		console.log('Reqirement successfully set on: '+functionalityname);
+		//console.log('Reqirement successfully set on: '+functionalityname);
 	}
 
 	for(var i in m){

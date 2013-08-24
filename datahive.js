@@ -94,10 +94,10 @@ DataHive.prototype.methodHandler = function(method,paramobj){
   }
   var functionalityname = method.slice(0,lios);
   var methodname = method.slice(lios+1);
-  console.log(functionalityname,methodname);
   return function(user){
     var f = t.functionalities[functionalityname];
     if(f){
+      console.log('calling',methodname,'on',functionalityname);
       if(typeof f.key !== 'undefined'){
         if(!user.keyring.contains(f.key)){
           return;
@@ -108,10 +108,12 @@ DataHive.prototype.methodHandler = function(method,paramobj){
         return;
       }
       fm(paramobj,function(errcode,errmess){},user.name);
+    }else{
+      console.log('functionality',functionalityname,'does not exist');
     }
   };
 }
-DataHive.prototype.interact = function (credentials,method,paramobj){
+DataHive.prototype.interact = function (credentials,method,paramobj,cb){
 //credentials is the impersonation object
 //expected keys are (in order of expectancy)
 //sessionkeyname : session
@@ -141,9 +143,9 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
   var methodname = method.slice(lios+1);
 
 	if (methodname.charAt(0) === '_') return;
-  console.log(functionalityname,methodname);
   var f = this.functionalities[functionalityname];
   if(f){
+    console.log('calling',methodname,'on',functionalityname);
     if(typeof f.key !== 'undefined'){
       if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
         console.log('keyfail with',f.key,ic[0]);
@@ -154,8 +156,9 @@ DataHive.prototype.interact = function (credentials,method,paramobj){
     if(typeof fm !== 'function'){
       return;
     }
-    fm(paramobj,function(errcode,errmess){},ic[0].name);
+    fm(paramobj,cb?cb:function(errcode,errmess){},ic[0].name);
   }else{
+    console.log('functionality',functionalityname,'does not exist on',this.functionalities);
     dumpq();
   }
 };
