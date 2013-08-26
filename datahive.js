@@ -145,7 +145,6 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
 	if (methodname.charAt(0) === '_') return;
   var f = this.functionalities[functionalityname];
   if(f){
-    console.log('calling',methodname,'on',functionalityname);
     if(typeof f.key !== 'undefined'){
       if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
         console.log('keyfail with',f.key,ic[0]);
@@ -154,8 +153,10 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
     }
     var fm = f.functionality[methodname];
     if(typeof fm !== 'function'){
+      console.log('there is no functionality on',functionalityname);
       return;
     }
+    console.log('calling',methodname,'on',functionalityname);
     fm(paramobj,cb?cb:function(errcode,errmess){},ic[0].name);
   }else{
     console.log('functionality',functionalityname,'does not exist on',this.functionalities);
