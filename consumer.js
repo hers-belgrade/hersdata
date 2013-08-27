@@ -133,6 +133,7 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
     if(!(Utils.isArray(myp)&&myp.length)){
       continue;
     }
+    console.log(myp);
     ret.push(myp);
   }
   return ret;

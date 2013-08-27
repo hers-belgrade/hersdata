@@ -401,14 +401,16 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	for(var i in m){
 		var p = m[i];
 		if((typeof p !== 'function')) continue;
+    var _cnsitf=consumeritf;
 		ret[i] = (function(mname,_p){
-			_consumeritf = consumeritf;
 			if (mname.charAt(0) == '_') {
 				return function () {
 					_p.apply(SELF, arguments);
 				}
 			}
 
+      var __cnsitf = _cnsitf;
+      var _SELF = SELF;
 			if(mname!=='init'){
 				return function(obj,errcb,callername){
 					var pa = [];
@@ -435,13 +437,15 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								pa.push(__p);
 							}
 						}
-					}
-					pa.push(localerrorhandler(errcb),callername,_consumeritf);
-					_p.apply(SELF,pa);
+            pa.push(localerrorhandler(errcb),callername,__cnsitf);
+					}else{
+            pa.push(localerrorhandler(errcb),callername,__cnsitf);
+          }
+					_p.apply(_SELF,pa);
 				};
 			}else{
 				return function(errcb,callername){
-					_p.call(SELF,localerrorhandler(errcb),callername,_consumeritf);
+					_p.call(_SELF,localerrorhandler(errcb),callername,__cnsitf);
 				};
 			}
 		})(i,p);
@@ -457,6 +461,27 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
+};
+
+Collection.prototype.maintainDataCopy = function(key,datacopy){
+  var cf = (function commitFn(){
+    var dc = datacopy;
+    var k = key;
+    return function(datacopytxns){
+      for(var i in datacopytxns){
+        var _p = datacopytxns[i];
+        var myp = _p[((_p[0]&&key===_p[0]) ? 1 : 2)];
+        if(myp && myp.length){
+          dc.commit(myp.slice());
+        }
+      }
+    };
+  })();
+  var d = this.dump();
+  cf(d[2]);
+  this.onNewTransaction.attach(function(){
+    cf(arguments[3].slice());
+  });
 };
 
 function DeadCollection(){
