@@ -135,18 +135,12 @@ function Collection(a_l){
   };
 
 	this.dataDebug = function () {
-		var ret = '{';
-		for (var i in data) {
-			ret += (i+': ');
-			if (data[i].type() == 'Scalar') { 
-				ret += data[i].value();
-			}else{
-				ret+= ('		'+data[i].dataDebug());
-			}
-			ret += '\n';
-		}
-		ret+='}';
-		return ret;
+    var ret = {};
+    for(var i in data){
+      var _d = data[i];
+      ret[i] = (_d.type() === 'Scalar')?_d.value() : _d.dataDebug();
+    }
+    return ret;
 	}
 
 	this.keys = function () {
