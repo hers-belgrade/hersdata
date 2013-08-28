@@ -48,6 +48,14 @@ function Scalar(res_val,pub_val, access_lvl) {
   var restricted_value = res_val;
   var access_level = access_lvl;
 
+  this.toCopyPrimitives = function(path){
+    if(typeof public_value !== 'undefined'){
+      return [[access_level,['set',path,public_value],['set',path,restricted_value]]];
+    }else{
+      return [[access_level,undefined,['set',path,restricted_value]]];
+    }
+  }
+
 	function throw_if_any_invalid (ra,pa,al) {
 		throw_if_invalid_scalar_or_undefined (ra);
 		throw_if_invalid_scalar_or_undefined (pa);
@@ -56,18 +64,16 @@ function Scalar(res_val,pub_val, access_lvl) {
 
 	function set_from_vals (ra,pa,al,path) {
 		throw_if_any_invalid(ra,pa, al);
-
     if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
       return;
     }
-
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
     return this.toCopyPrimitives(path);
 	}
-	set_from_vals (res_val, pub_val, access_lvl);
 
+	set_from_vals.call(this,res_val, pub_val, access_lvl);
 
   this.access_level = function(){
     return access_level;
@@ -80,13 +86,6 @@ function Scalar(res_val,pub_val, access_lvl) {
   };
   this.toMasterPrimitives = function(path){
     return ['set',path,[restricted_value,public_value,access_level]];
-  }
-  this.toCopyPrimitives = function(path){
-    if(typeof public_value !== 'undefined'){
-      return [[access_level,['set',path,public_value],['set',path,restricted_value]]];
-    }else{
-      return [[access_level,undefined,['set',path,restricted_value]]];
-    }
   }
 
 	this.type = function () { return 'Scalar'; }
