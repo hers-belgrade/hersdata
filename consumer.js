@@ -133,7 +133,6 @@ ConsumerIdentity.prototype.filterCopyPrimitives = function(datacopytxnprimitives
     if(!(Utils.isArray(myp)&&myp.length)){
       continue;
     }
-    console.log(myp);
     ret.push(myp);
   }
   return ret;
@@ -175,7 +174,6 @@ ConsumerIdentity.prototype.processTransaction = function(txnalias,txnprimitives,
           if(name && name.length){
             target[name] = (typeof myp[2] === 'object') ? {} : myp[2];
           }else{
-            console.log(this.name,'resetting datacopy');
             this.datacopy = {};
           }
         }
@@ -259,7 +257,6 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   };
   var c = new Consumer(sessionobj,consdestroyed);
   c.add(user.txnid,user.initiationPrimitives());
-  console.log('created for',sess);
 
   user.consumers[sess] = c;
   s2c[sess] = c;

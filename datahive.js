@@ -4,7 +4,6 @@ var RandomBytes = require('crypto').randomBytes;
 
 function call_on_all_functionalities (method) {
 	var args = Array.prototype.slice.call(arguments, 1);
-	console.log('will call on all functionalities ', method);
 	for (var i in this.functionalities) {
 		var ff = this.functionalities[i];
 		('function' === typeof(ff.functionality['_connection_status'])) && ff.functionality['_connection_status'].apply(this, args);
@@ -42,7 +41,6 @@ function DataHive(){
     t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
   });
   var consumers = new Consumers( function (name, c_status) {
-		console.log('NAME ',name,' changed is online ', c_status)
 		call_on_all_functionalities.call(t, '_connection_status', name, c_status);
 	});
   this.consumers = consumers;
@@ -97,7 +95,6 @@ DataHive.prototype.methodHandler = function(method,paramobj){
   return function(user){
     var f = t.functionalities[functionalityname];
     if(f){
-      console.log('calling',methodname,'on',functionalityname);
       if(typeof f.key !== 'undefined'){
         if(!user.keyring.contains(f.key)){
           return;
@@ -156,7 +153,6 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
       console.log('there is no functionality on',functionalityname);
       return;
     }
-    console.log('calling',methodname,'on',functionalityname);
     fm(paramobj,cb?cb:function(errcode,errmess){},ic[0].name);
   }else{
     console.log('functionality',functionalityname,'does not exist on',this.functionalities);

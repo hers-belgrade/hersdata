@@ -380,18 +380,19 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   };
 
 	var my_mod = {};
-	var SELF = {data:self, self:ret, cbs: my_mod, consumeritf:consumeritf};
+	var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf);
 	if (m.requirements) {
 		if (!env) {
 			//console.log('NO environment, use defaults');
 			env = m.requirements;
 		}
 		for (var j in m.requirements) {
-			(function (j) {
-				if ('function' != typeof(env[j]))  throw 'Requirements not met, missing '+j;
+			(function (_j) {
+        var _e = env;
+				if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
 				//console.log('setting requirement '+j+' to '+functionalityname);
-				my_mod[j] = function () {
-					return env[j].apply(SELF, arguments);
+				my_mod[_j] = function () {
+					return _e[_j].apply(SELF(), arguments);
 				}
 			})(j);
 		}
@@ -401,16 +402,13 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	for(var i in m){
 		var p = m[i];
 		if((typeof p !== 'function')) continue;
-    var _cnsitf=consumeritf;
 		ret[i] = (function(mname,_p){
 			if (mname.charAt(0) == '_') {
 				return function () {
-					_p.apply(SELF, arguments);
+					_p.apply(SELF(), arguments);
 				}
 			}
 
-      var __cnsitf = _cnsitf;
-      var _SELF = SELF;
 			if(mname!=='init'){
 				return function(obj,errcb,callername){
 					var pa = [];
@@ -437,15 +435,15 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								pa.push(__p);
 							}
 						}
-            pa.push(localerrorhandler(errcb),callername,__cnsitf);
+            pa.push(localerrorhandler(errcb),callername);
 					}else{
-            pa.push(localerrorhandler(errcb),callername,__cnsitf);
+            pa.push(localerrorhandler(errcb),callername);
           }
-					_p.apply(_SELF,pa);
+					_p.apply(SELF(),pa);
 				};
 			}else{
 				return function(errcb,callername){
-					_p.call(_SELF,localerrorhandler(errcb),callername,__cnsitf);
+					_p.call(SELF(),localerrorhandler(errcb),callername);
 				};
 			}
 		})(i,p);
@@ -470,9 +468,20 @@ Collection.prototype.maintainDataCopy = function(key,datacopy){
     return function(datacopytxns){
       for(var i in datacopytxns){
         var _p = datacopytxns[i];
-        var myp = _p[((_p[0]&&key===_p[0]) ? 1 : 2)];
+        //console.log(_p);
+        var myp = _p[(_p[0] ? ((k===_p[0]) ? 2 : 1) : 2)];
+        /*
+        if(_p[0]){
+          console.log('private data for key',_p[0],'is',myp,'because',k);
+        }
+        if(typeof myp === 'undefined'){
+          console.log(_p,k,myp);
+        }
+        */
         if(myp && myp.length){
           dc.commit(myp.slice());
+        }else{
+          //console.log(_p,k,myp);
         }
       }
     };
