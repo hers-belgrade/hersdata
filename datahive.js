@@ -123,7 +123,13 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
 //roles: array of role names
 //the roles declared will be given to the newly created ConsumerIdentity
   var ic = this.consumers.identityAndConsumerFor(credentials,this.dataMasterInit);
+  if(typeof paramobj !== 'function'){
+    console.log('interact',credentials,method,paramobj);
+  }
   if(!ic){
+    console.log('No identity for',credentials);
+    if(typeof paramobj === 'function'){paramobj();}
+    if(typeof cb === 'function'){cb();}
     return;
   }
   function dumpq(){
