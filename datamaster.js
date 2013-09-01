@@ -398,7 +398,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 		ret[i] = (function(mname,_p){
 			if (mname.charAt(0) == '_') {
 				return function () {
-					_p.apply(SELF(), arguments);
+					return _p.apply(SELF(), arguments);
 				}
 			}
 
