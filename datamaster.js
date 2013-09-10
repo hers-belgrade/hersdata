@@ -372,6 +372,13 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     };
   };
 
+	if ('function' === typeof(m.validate_config)) {
+		if (!m.validate_config(config)) {
+			console.log('Configuration validation failed, functionality: '+functionalityname, config);
+			return null;
+		}
+	}	
+
 	var my_mod = {};
 	var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf);
 	if (m.requirements) {
