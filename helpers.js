@@ -1,3 +1,9 @@
+function readScalar (coll, path) {
+	if (!coll || !path) return undefined;
+	var el = coll.element(path);
+	if (!el) return undefined;
+	return el.value();
+}
 function reset(path, val) {
 	return [
 		['remove', path],
@@ -31,5 +37,6 @@ function public_hash_txn (hash, path_prefix, do_not_remove_path_prefix) {
 }
 module.exports = {
 	reset:reset,
-	public_hash_txn:public_hash_txn
+	public_hash_txn:public_hash_txn,
+	readScalar : readScalar
 }
