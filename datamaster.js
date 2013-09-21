@@ -439,9 +439,9 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								pa.push(__p);
 							}
 						}
-            pa.push(localerrorhandler(errcb),callername, consumeritf);
+            pa.push(localerrorhandler(errcb),callername);
 					}else{
-            pa.push(localerrorhandler(errcb),callername, consumeritf);
+            pa.push(localerrorhandler(errcb),callername);
           }
 					_p.apply(SELF(),pa);
 				};
