@@ -58,7 +58,7 @@ function DataHive(){
     setKey : function(username,key){
       var ci = consumers.identities[username];
       if(ci){
-        ci.addKey(key);
+        ci.addKey(key,initcb);
       }
     },
     removeKey : function(username,key){
@@ -124,7 +124,7 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
 //the roles declared will be given to the newly created ConsumerIdentity
   var ic = this.consumers.identityAndConsumerFor(credentials,this.dataMasterInit);
   if(typeof paramobj !== 'function'){
-    console.log('interact',credentials,method,paramobj);
+    //console.log('interact',credentials,method,paramobj);
   }
   if(!ic){
     console.log('No identity for',credentials);
@@ -172,11 +172,13 @@ var bridge_methods = {
 		if (connection_active) return;
 		var ic = this.consumers.identityAndConsumerFor(credentials, this.dataMasterInit);
 		if (!ic) return;
+    console.log('bridge _connection_status',credentials.name,'should die');
 		ic[1].die();
 	}
 }
 
 DataHive.prototype.inneract = function (method) {
+  console.log('inneract',method);
 	if ('function' === typeof(bridge_methods[method])) {
 		return bridge_methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
 	}else{

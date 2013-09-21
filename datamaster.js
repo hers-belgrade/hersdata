@@ -84,6 +84,9 @@ function Scalar(res_val,pub_val, access_lvl) {
   this.value = function(){
     return restricted_value;
   };
+  this.debugValue = function(){
+    return restricted_value+'/'+access_level+'/'+public_value;
+  };
   this.toMasterPrimitives = function(path){
     return ['set',path,[restricted_value,public_value,access_level]];
   }
@@ -134,10 +137,10 @@ function Collection(a_l){
   };
 
 	this.dataDebug = function () {
-    var ret = {};
+    var ret = {_key:access_level};
     for(var i in data){
       var _d = data[i];
-      ret[i] = (_d.type() === 'Scalar')?_d.value() : _d.dataDebug();
+      ret[i] = (_d.type() === 'Scalar') ? _d.debugValue() : _d.dataDebug();
     }
     return ret;
 	}
@@ -149,10 +152,10 @@ function Collection(a_l){
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
 
-  this.setAccessLevel = function(a_l){
+  this.setAccessLevel = function(a_l,path){
     if(access_level!==a_l){
       access_level = a_l;
-      return this.toCopyPrimitives();
+      return this.toCopyPrimitives(path);
     }
   };
 
@@ -209,6 +212,7 @@ function Collection(a_l){
       var p = path.concat(i);
       ret = ret.concat(data[i].toCopyPrimitives(p));
     }
+    //console.log('copyPrimitives',utils.inspect(ret,false,null,false));
     return ret;
   };
 
