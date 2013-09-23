@@ -3,6 +3,10 @@ var KeyRing = require('./keyring');
 var Utils = require('util');
 var BigCounter = require('./BigCounter');
 
+var errors = {
+  NO_USER: {message: 'No user found'}
+};
+
 function randomstring(){
   return RandomBytes(12).toString('hex');
 };
@@ -20,12 +24,12 @@ Consumer.prototype.add = function(txnid,primitives){
     if(!isupdate){
       if(!this.id.isPredecessorOf(txnid)){
         console.trace();
-        throw this.id.toString()+' not a predecessor of '+txnid.toString();
+        throw 'At '+this.name+' '+this.id.toString()+' not a predecessor of '+txnid.toString();
       }
     }else{
       if(!this.id.equals(txnid)){
         console.trace();
-        throw this.id.toString()+' not equal to '+txnid.toString();
+        throw 'At '+this.name+' '+this.id.toString()+' not equal to '+txnid.toString();
       }
     }
   }
@@ -33,6 +37,7 @@ Consumer.prototype.add = function(txnid,primitives){
     //console.log('dumping',[this.session,primitives]);
     this.queuecb([this.session,primitives]);
     delete this.queuecb;
+    this.to = setTimeout((function(_t){var t=_t; return function(){t.die();};})(this),15000);
   }else{
     if(!isupdate){
       this.queue  = this.queue.concat(primitives);
@@ -70,7 +75,6 @@ Consumer.prototype.dumpqueue = function(cb){
   if(this.to){
     clearTimeout(this.to);
   }
-  this.to = setTimeout((function(_t){var t=_t; return function(){t.die();};})(this),15000);
   if(typeof cb !== 'function'){
     return;
   }
@@ -303,17 +307,85 @@ ConsumerIdentity.prototype.overlayTransaction = function(txnalias,txnprimitives,
   //console.log(Utils.inspect(this.datacopy,false,null,false));
 };
 
-function ConsumerLobby(connection_status_cb){
+function ConsumerLobby(data){
   this.sessionkeyname = randomstring();
   //console.log(this.sessionkeyname);
   this.counter = new BigCounter();
-  this.identities = {};
+  var identities = {};
+  this.identities = identities;
   this.sess2consumer = {};
   this.sess2identity = {};
   this.anonymous = new ConsumerIdentity();
-	this.connection_status_cb = connection_status_cb;
+	this.connection_status_cb = function(){/*console.log('connection_status_cb',arguments);*/};
+  this.functionalities = {};
+  var mytxnid = '_';
+  var lastinit = {};
+  this.txnlistener = data.onNewTransaction.attach((function(_t){
+    var t = _t;
+    return function (path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+      mytxnid = txnid;
+      delete lastinit.data;
+      t.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
+    };
+  })(this));
+  var initcb = (function(_d){
+    var data = _d;
+    return function(){
+      if(lastinit.txnid===mytxnid){
+        return lastinit.data;
+      }
+      var dd = data.dump();
+      mytxnid = dd[dd.length-1];
+      lastinit.data = dd;
+      lastinit.txnid = mytxnid;
+      return lastinit.data;
+    };
+  })(data);
+  var consumerinterface = {
+    newKey : function(keyring){
+			if (arguments.length == 0 || 'object' != typeof(keyring)) return RandomBytes(12).toString('hex');
+			var ret = '';
+			for (var i in keyring) {
+				if (ret.length) ret+=';'
+				ret += ('#'+keyring[i].tag+':'+keyring[i].val);
+			}
+			return ret;
+    },
+    setKey : function(username,key){
+      var ci = identities[username];
+      if(ci){
+        ci.addKey(key,initcb);
+      }
+    },
+    removeKey : function(username,key){
+      var ci = identities[username];
+      if(ci){
+        ci.removeKey(key);
+      }
+    },
+  };
+  this.fqnlistener = data.onNewFunctionality.attach((function(_fqns,_citf){
+    var functionalities=_fqns,consumerinterface=_citf;
+    return function(path,fctnobj,key){
+      if(!fctnobj.consumeritf){
+        fctnobj.consumeritf = consumerinterface;
+      }
+      functionalities[path.join('/')] = {key:key,functionality:fctnobj};
+    };
+  })(this.functionalities,consumerinterface));
+  this.changeconsumercount = (function(_data){
+    var data = _data;
+    return function(delta){
+      var cc = data.element(['consumercount']).value();
+      data.commit('consumer down',[
+        ['set',['consumercount'],[cc+delta,undefined,'admin']]
+      ]);
+    };
+  })(data);
+
+  this.initcb = initcb;
 }
-ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
+ConsumerLobby.prototype.identityAndConsumerFor = function(credentials){
   //console.log('analyzing',credentials);
   var sess = credentials[this.sessionkeyname];
   var s2c = this.sess2consumer;
@@ -342,18 +414,21 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials,initcb){
   }else{
     if(name){
 			var self = this;
-      user = new ConsumerIdentity(name,rkr, (function(_ids){
+      user = new ConsumerIdentity(name,rkr, (function(_ids,_ccc){
         var ids = _ids;
+        var changeconsumercount = _ccc;
         return function (online) {
 				('function' === typeof(self.connection_status_cb)) && self.connection_status_cb.call(self,this.name, online); 
         if(!online){
           delete ids[this.name];
+          changeconsumercount(-1);
           for(var i in this){
             this[i] = null;
           }
         }
-			};})(this.identities));
-      user.processTransaction.apply(user,initcb());
+			};})(this.identities,this.changeconsumercount));
+      this.changeconsumercount(1);
+      user.processTransaction.apply(user,this.initcb());
       this.identities[name] = user;
     }else{
       user = this.anonymous;
@@ -389,11 +464,74 @@ ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,dat
     id.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
   }
   this.anonymous.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
+  /*
   var mu1 = process.memoryUsage().rss;
   console.log('consumer names',cnms,'count',ccnt);
   if(mu1!==mu){
     console.log('processTransaction memleak',Math.floor((mu1-mu)/1024/1024),'MB','usage',Math.floor(mu1/1024/1024),'MB');
   }
+  */
 };
 
-module.exports = ConsumerLobby;
+function init(){
+  this.self.lobby = new ConsumerLobby(this.data);
+  this.data.commit('consumers init',[
+    ['set',['consumercount'],[0,undefined,'admin']]
+  ]);
+};
+
+function invoke(params,statuscb){
+  var ic = this.self.lobby.identityAndConsumerFor(params);
+  if(!ic){
+    return statuscb('NO_USER');
+  }
+  //console.log('invoke',params);
+  var lios = params.path.lastIndexOf('/');
+  if(lios<0){
+    return dumpq();
+  }
+  var functionalityname = params.path.slice(0,lios);
+  var methodname = params.path.slice(lios+1);
+
+	if (methodname.charAt(0) === '_') return;
+  var f = this.self.lobby.functionalities[functionalityname];
+  if(f){
+    if(typeof f.key !== 'undefined'){
+      if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
+        console.log('keyfail with',f.key,ic[0]);
+        return;
+      }
+    }
+    var fm = f.functionality[methodname];
+    if(typeof fm !== 'function'){
+      console.log('there is no functionality on',functionalityname);
+      return;
+    }
+    fm(params.params,params.statuscb,ic[0].name);
+  }else{
+    console.log('functionality',functionalityname,'does not exist on',this.self.lobby.functionalities);
+    dumpq();
+  }
+};
+invoke.params = 'originalobj';
+
+function dumpQueue(params){
+  var ic = this.self.lobby.identityAndConsumerFor(params);
+  if(ic){
+    ic[1].dumpqueue(params.cb);
+  }
+};
+dumpQueue.params = 'originalobj';
+
+function consumerDown(params){
+  console.log(params);
+};
+consumerDown.params = 'originalobj';
+
+module.exports = {
+  errors : errors,
+  init : init,
+  invoke : invoke,
+  dumpQueue : dumpQueue,
+  consumerDown : consumerDown
+};

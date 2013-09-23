@@ -319,7 +319,7 @@ Collection.prototype.perform_remove = function (path) {
   }
 }
 
-Collection.prototype.attach = function(functionalityname, config, key, environment,consumeritf){
+Collection.prototype.attach = function(functionalityname, config, key, environment){
   var self = this;
   var ret = config||{};
   var m;
@@ -384,7 +384,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	}	
 
 	var my_mod = {};
-	var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf);
+	var SELF = (function(s,r,m){var _s=s,_r=r,_m=m;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:ret.consumeritf};}})(self,ret,my_mod);
 	if (m.requirements) {
 		if (!env) {
 			//console.log('NO environment, use defaults');

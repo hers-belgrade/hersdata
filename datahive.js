@@ -1,4 +1,3 @@
-var Consumers = require('./consumer');
 var util = require('util');
 var RandomBytes = require('crypto').randomBytes;
 
@@ -11,9 +10,17 @@ function call_on_all_functionalities (method) {
 }
 
 function DataHive(){
+  this.data = new (require('./datamaster').Collection)();
+  this.consumers = this.data.attach('./consumer',{},'system');
+  this.system = this.data.attach('./system',{},'system');
+}
+
+function OldDataHive(){
 	var self = this;
   this.functionalities = {};
   this.master = new (require('./datamaster').Collection)();
+  this.consumers = this.master.attach('./consumer',{},'system');
+  return;
   var t = this;
   var mytxnid = '_';
   var lastinit = {};
@@ -40,10 +47,12 @@ function DataHive(){
     //console.log(path,fctnobj);
     t.functionalities[path.join('/')] = {key:key,functionality:fctnobj};
   });
+  /*
   var consumers = new Consumers( function (name, c_status) {
 		call_on_all_functionalities.call(t, '_connection_status', name, c_status);
 	});
-  this.consumers = consumers;
+  */
+  //this.consumers = consumers;
   this.dataMasterInit = initcb;
   this.consumerinterface = {
     newKey : function(keyring){
@@ -70,10 +79,10 @@ function DataHive(){
   };
 }
 
-DataHive.prototype.attach = function (objorname,config,key,environmentmodulename){
+OldDataHive.prototype.attach = function (objorname,config,key,environmentmodulename){
   return this.master.attach(objorname,config,key,environmentmodulename,this.consumerinterface);
 };
-DataHive.prototype.consumerIdentityForSession = function(sess){
+OldDataHive.prototype.consumerIdentityForSession = function(sess){
   var consumername = this.sess2name[sess];
   if(!consumername){
     return;
@@ -84,7 +93,7 @@ DataHive.prototype.consumerIdentityForSession = function(sess){
   }
   return ci;
 };
-DataHive.prototype.methodHandler = function(method,paramobj){
+OldDataHive.prototype.methodHandler = function(method,paramobj){
   var t = this;
   var lios = method.lastIndexOf('/');
   if(lios<0){
@@ -110,7 +119,7 @@ DataHive.prototype.methodHandler = function(method,paramobj){
     }
   };
 }
-DataHive.prototype.interact = function (credentials,method,paramobj,cb){
+OldDataHive.prototype.interact = function (credentials,method,paramobj,cb){
 //credentials is the impersonation object
 //expected keys are (in order of expectancy)
 //sessionkeyname : session
@@ -122,6 +131,12 @@ DataHive.prototype.interact = function (credentials,method,paramobj,cb){
 //if a user is not found, expected key is
 //roles: array of role names
 //the roles declared will be given to the newly created ConsumerIdentity
+  var po = {method:method,params:paramobj,cb:cb};
+  for(var i in credentials){
+    po[i] = credentials[i];
+  }
+  this.consumers.interact(po,function(){console.log('status',arguments);});
+  return;
   var ic = this.consumers.identityAndConsumerFor(credentials,this.dataMasterInit);
   if(typeof paramobj !== 'function'){
     //console.log('interact',credentials,method,paramobj);
@@ -177,8 +192,9 @@ var bridge_methods = {
 	}
 }
 
-DataHive.prototype.inneract = function (method) {
+OldDataHive.prototype.inneract = function (method) {
   console.log('inneract',method);
+  return;
 	if ('function' === typeof(bridge_methods[method])) {
 		return bridge_methods[method].apply(this, Array.prototype.slice.call(arguments, 1));
 	}else{
