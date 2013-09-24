@@ -4,7 +4,9 @@ var Utils = require('util');
 var BigCounter = require('./BigCounter');
 
 var errors = {
-  NO_USER: {message: 'No user found'}
+  NO_USER: {message: 'No user found'},
+  NO_FUNCTIONALITY: {message: 'No functionality'},
+  ACCESS_FORBIDDEN: {message: 'Access violation'}
 };
 
 function randomstring(){
@@ -33,11 +35,13 @@ Consumer.prototype.add = function(txnid,primitives){
       }
     }
   }
+  if(!this.to){
+    this.to = setTimeout((function(_t){var t=_t; return function(){t.die();};})(this),15000);
+  }
   if(this.queuecb){
     //console.log('dumping',[this.session,primitives]);
     this.queuecb([this.session,primitives]);
     delete this.queuecb;
-    this.to = setTimeout((function(_t){var t=_t; return function(){t.die();};})(this),15000);
   }else{
     if(!isupdate){
       this.queue  = this.queue.concat(primitives);
@@ -60,6 +64,10 @@ Consumer.prototype.add = function(txnid,primitives){
 };
 
 Consumer.prototype.die = function(){
+  if(!this.destructCb){//I'm already dead
+    console.log(this,'already dead');
+    return;
+  }
   var dr = this.destructCb.apply(this);
   if(dr!==false){
     if(this.to){
@@ -72,13 +80,13 @@ Consumer.prototype.die = function(){
 };
 
 Consumer.prototype.dumpqueue = function(cb){
-  if(this.to){
-    clearTimeout(this.to);
-  }
   if(typeof cb !== 'function'){
     return;
   }
-  //this.resetTimer();
+  if(this.to){
+    clearTimeout(this.to);
+    delete this.to;
+  }
   if(typeof this.queuecb === 'function'){
     this.queuecb([this.session,this.queue.splice(0)]);
     this.queuecb = cb;
@@ -464,13 +472,6 @@ ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,dat
     id.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
   }
   this.anonymous.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
-  /*
-  var mu1 = process.memoryUsage().rss;
-  console.log('consumer names',cnms,'count',ccnt);
-  if(mu1!==mu){
-    console.log('processTransaction memleak',Math.floor((mu1-mu)/1024/1024),'MB','usage',Math.floor(mu1/1024/1024),'MB');
-  }
-  */
 };
 
 function init(){
@@ -488,7 +489,7 @@ function invoke(params,statuscb){
   //console.log('invoke',params);
   var lios = params.path.lastIndexOf('/');
   if(lios<0){
-    return dumpq();
+    return statuscb('NO_FUNCTIONALITY');
   }
   var functionalityname = params.path.slice(0,lios);
   var methodname = params.path.slice(lios+1);
@@ -499,18 +500,18 @@ function invoke(params,statuscb){
     if(typeof f.key !== 'undefined'){
       if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
         console.log('keyfail with',f.key,ic[0]);
-        return;
+        return statuscb('ACCESS_FORBIDDEN');
       }
     }
     var fm = f.functionality[methodname];
     if(typeof fm !== 'function'){
       console.log('there is no functionality on',functionalityname);
-      return;
+      return statuscb('NO_FUNCTIONALITY');
     }
     fm(params.params,params.statuscb,ic[0].name);
   }else{
     console.log('functionality',functionalityname,'does not exist on',this.self.lobby.functionalities);
-    dumpq();
+    statuscb('NO_FUNCTIONALITY');
   }
 };
 invoke.params = 'originalobj';
