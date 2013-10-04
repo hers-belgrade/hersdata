@@ -8,7 +8,6 @@ function init(){
     ['set',['memoryusage'],[0,undefined,'system']],
     ['set',['memoryavailable'],[0,undefined,'system']]
   ]);
-  console.log(this.data);
   this.data.onNewTransaction.attach((function(_d){
     var data = _d;
     return function(){
