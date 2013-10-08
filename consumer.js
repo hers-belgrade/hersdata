@@ -510,7 +510,7 @@ function invoke(params,statuscb){
     }
     fm(params.params,params.statuscb,ic[0].name);
   }else{
-    console.log('functionality',functionalityname,'does not exist on',this.self.lobby.functionalities);
+    //console.log('functionality',functionalityname,'does not exist on',this.self.lobby.functionalities);
     statuscb('NO_FUNCTIONALITY');
   }
 };
