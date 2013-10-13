@@ -210,7 +210,8 @@ function Collection(a_l){
     ret.push([access_level,['remove',path],['set',path,{}]]);
     for(var i in data){
       var p = path.concat(i);
-      ret = ret.concat(data[i].toCopyPrimitives(p));
+      //ret = ret.concat(data[i].toCopyPrimitives(p));
+      Array.prototype.push.apply(ret,data[i].toCopyPrimitives(p));
     }
     //console.log('copyPrimitives',utils.inspect(ret,false,null,false));
     return ret;

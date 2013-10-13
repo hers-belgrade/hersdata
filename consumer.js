@@ -350,15 +350,6 @@ function ConsumerLobby(data){
     };
   })(data);
   var consumerinterface = {
-    newKey : function(keyring){
-			if (arguments.length == 0 || 'object' != typeof(keyring)) return RandomBytes(12).toString('hex');
-			var ret = '';
-			for (var i in keyring) {
-				if (ret.length) ret+=';'
-				ret += ('#'+keyring[i].tag+':'+keyring[i].val);
-			}
-			return ret;
-    },
     setKey : function(username,key){
       var ci = identities[username];
       if(ci){
@@ -518,15 +509,19 @@ function invoke(params,statuscb){
 invoke.params = 'originalobj';
 
 function dumpQueue(params){
+  var cb = params.cb;
+  if(typeof cb !=='function'){return;}
   var ic = this.self.lobby.identityAndConsumerFor(params);
   if(ic){
-    ic[1].dumpqueue(params.cb);
+    ic[1].dumpqueue(cb);
+  }else{
+    cb();
   }
 };
 dumpQueue.params = 'originalobj';
 
 function consumerDown(params){
-  console.log(params);
+  console.log('consumerDown',params);
 };
 consumerDown.params = 'originalobj';
 
