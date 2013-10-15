@@ -331,6 +331,10 @@ function ConsumerLobby(data){
   this.txnlistener = data.onNewTransaction.attach((function(_t){
     var t = _t;
     return function (path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+      console.log(txnalias,txnid.toString());
+      if((mytxnid!=='_')&&(!mytxnid.isPredecessorOf(txnid))){
+        console.log(txnalias,'is the problem',mytxnid.toString(),txnid.toString());
+      }
       mytxnid = txnid;
       delete lastinit.data;
       t.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
@@ -466,6 +470,11 @@ ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,dat
 };
 
 function init(){
+  if(!this.self.port){
+    throw "No port defined for an instance of consumer functionality";
+  }
+  this.self.server = new (require('./webserver'))(this,this.self.root||'.');
+  this.self.server.start(this.self.port);
   this.self.lobby = new ConsumerLobby(this.data);
   this.data.commit('consumers init',[
     ['set',['consumercount'],[0,undefined,'admin']]

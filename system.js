@@ -12,28 +12,24 @@ function init(){
     var data = _d;
     return function(){
       var actions = [];
-      var mu = _d.element(['memoryusage']).value();
+      var mu = data.element(['memoryusage']).value();
       var mmu = Math.floor(process.memoryUsage().rss/1024/1024);
       if(mu!==mmu){
           actions.push(['set',['memoryusage'],[mmu,undefined,'system']]);
       }
-      var ma = _d.element(['memoryavailable']).value();
+      var ma = data.element(['memoryavailable']).value();
       var mma = Math.floor(os.freemem()/1024/1024);
       if(ma!==mma){
           actions.push(['set',['memoryavailable'],[mma,undefined,'system']]);
       }
       if(actions.length){
-        _d.commit('memoryusagechanged',actions);
+        setTimeout(function(){data.commit('memoryusagechanged',actions);},1);
       }
     };
   })(this.data));
 };
 
-function connectionCountChanged(){
-};
-
 module.exports = {
   errors : errors,
-  init : init,
-  connectionCountChanged : connectionCountChanged
+  init : init
 };

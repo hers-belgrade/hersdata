@@ -112,7 +112,9 @@ function onChildTxn(name,onntxn,txnc){
       augmentpath(name,_t[2]);
     }
     txnc.inc();
+    console.log(txnalias,'firing on child',txnc.toString());
     onntxn.fire([],txnalias,tp,dcp,txnc.clone());
+    console.log(txnc.toString(),'fire done');
   };
 };
 
@@ -232,7 +234,7 @@ function Collection(a_l){
   };
 
 
-  this.commit = (function(txnc){
+  this.commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
       var datacopytxnprimitives = [];
       //console.log('performing',txnalias,txnprimitives);
@@ -241,7 +243,7 @@ function Collection(a_l){
         //console.log('should perform',it);
         if (utils.isArray(it) && it.length) {
           //console.log('performing',it);
-          var cpp = this['perform_'+it[0]](it[1], it[2], txnc);
+          var cpp = t['perform_'+it[0]](it[1], it[2], txnc);
           if(utils.isArray(cpp)){
             for(var i in cpp){
               var _cp = cpp[i];
@@ -253,9 +255,11 @@ function Collection(a_l){
         }
       }
       txnc.inc();
-      this.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
+      console.log(txnalias,'firing on self',txnc.toString());
+      t.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
+      console.log(txnc.toString(),'fire done');
     };
-  })(txnCounter);
+  })(this,txnCounter);
 
   this.dump = function(){
     return ['init',this.toMasterPrimitives(),this.toCopyPrimitives(),txnCounter.clone()];
@@ -464,6 +468,14 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
+};
+
+Collection.prototype.startHTTP = function(port,root){
+  return this.attach('./consumer',{port:port,root:root},'system');
+};
+
+Collection.prototype.startReplicator = function(port){
+  return this.attach(__dirname+'/replicator',{port:port});
 };
 
 Collection.prototype.maintainDataCopy = function(key,datacopy){

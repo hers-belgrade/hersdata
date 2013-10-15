@@ -1,19 +1,13 @@
-var util = require('util');
-var vm = require('vm');
-var fs = require('fs');
+var datamaster = require('./datamaster');
 
-function codeOf(filename){
-  try{
-    return fs.readFileSync(filename);
-  }
-  catch(e){
-    return '';
-  }
+function DataMaster(){
+  datamaster.Collection.call(this);
+  this.attach('./system',{});
 };
+DataMaster.prototype = new (datamaster.Collection)();
 
 module.exports = {
-  codeOf : codeOf,
-  Hive : require('./datahive'),
+  DataMaster:DataMaster,
 	helpers: require('./helpers')
 };
 
