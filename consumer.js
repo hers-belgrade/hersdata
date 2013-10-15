@@ -331,7 +331,7 @@ function ConsumerLobby(data){
   this.txnlistener = data.onNewTransaction.attach((function(_t){
     var t = _t;
     return function (path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-      console.log(txnalias,txnid.toString());
+      //console.log(txnalias,txnid.toString());
       if((mytxnid!=='_')&&(!mytxnid.isPredecessorOf(txnid))){
         console.log(txnalias,'is the problem',mytxnid.toString(),txnid.toString());
       }

@@ -112,9 +112,9 @@ function onChildTxn(name,onntxn,txnc){
       augmentpath(name,_t[2]);
     }
     txnc.inc();
-    console.log(txnalias,'firing on child',txnc.toString());
+    //console.log(txnalias,'firing on child',txnc.toString());
     onntxn.fire([],txnalias,tp,dcp,txnc.clone());
-    console.log(txnc.toString(),'fire done');
+    //console.log(txnc.toString(),'fire done');
   };
 };
 
@@ -255,9 +255,9 @@ function Collection(a_l){
         }
       }
       txnc.inc();
-      console.log(txnalias,'firing on self',txnc.toString());
+      //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
-      console.log(txnc.toString(),'fire done');
+      //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
 
