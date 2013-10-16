@@ -1,37 +1,9 @@
-function QueueProcessor(){
-  var q = [],job;
-  this.head =  function(){
-    if(job){return job;}
-    if(!q.length){return;}
-    job = q.shift();
-    return job;
-  };
-  this.busy = function(){
-    return typeof job !== 'undefined';
-  };
-  this.undoJob = function(){
-    q.unshift(job);
-    job = undefined;
-  };
-  this.jobDone = function(){
-    job = undefined;
-  };
-  this.push = function(newjob){
-    q.push(newjob);
-  };
-  this.clear = function(){
-    q = [];
-    job = undefined;
-  };
-};
-
 function ReplicatorCommunication(inputcb){
   this.lenBuf = new Buffer(4);
   this.lenBufread = 0;
   this.bytesToRead = -1;
   this.dataRead = '';
   this.inputcb = inputcb || function(){};
-  this.commands = new QueueProcessor();
 };
 ReplicatorCommunication.prototype.tell = function(obj){
   if(!this.socket){return;}
@@ -40,19 +12,6 @@ ReplicatorCommunication.prototype.tell = function(obj){
   objlen.writeUInt32LE(objstr.length,0);
   this.socket.write(objlen);
   this.socket.write(objstr);
-};
-ReplicatorCommunication.prototype.do_command = function(command,paramobj,cb){
-  this.commands.push([command,paramobj,cb]);
-  this.processcommand();
-};
-ReplicatorCommunication.prototype.processcommand = function(){
-  if(!this.socket){
-    return;
-  }
-  if(this.commands.busy()){
-    return;
-  }
-  var job = this.commands.head();
 };
 ReplicatorCommunication.prototype.listenTo = function(socket){
   var t = this;
@@ -64,7 +23,6 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
     t.lenBufread=0;
     t.bytesToRead=-1;
     t.dataRead='';
-    t.commands.clear();
     delete t.socket;
   });
 };
