@@ -3,15 +3,20 @@ var net = require('net');
 var errors = {
 };
 
-function send(socket,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
-  var objstr = JSON.stringify(Array.prototype.slice.call(arguments,1));
+function send(socket,object){
+  var objstr = JSON.stringify(object);
   var objlen = new Buffer(4);
   objlen.writeUInt32LE(objstr.length,0);
+  socket.write(objlen);
   socket.write(objstr);
 };
 
+function sendDCP(socket,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
+  send(socket,{dcp:[txnalias,txnprimitives,txnCounter]});
+};
+
 function init(){
-  console.log('replicator init',this.self);
+  //console.log('replicator init',this.self);
   var port = this.self.port;
   if(!port){
     throw "No port specified ";
@@ -23,7 +28,7 @@ function init(){
     sockmap[rp] = c;
     var dd = data.dump();
     dd.unshift(c);
-    send.apply(null,dd);
+    sendDCP.apply(null,dd);
     c.on('error',function(){
       delete sockmap[rp];
     });
@@ -36,7 +41,7 @@ function init(){
     var t = _t;
     return function(path,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
       for(var i in sockmap){
-        send(sockmap[i],txnalias,txnprimitives,datacopytxnprimitives,txnCounter);
+        sendDCP(sockmap[i],txnalias,txnprimitives,datacopytxnprimitives,txnCounter);
       }
     };
   })(this));
