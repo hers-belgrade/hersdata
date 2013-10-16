@@ -88,7 +88,7 @@ function Scalar(res_val,pub_val, access_lvl) {
     return restricted_value+'/'+access_level+'/'+public_value;
   };
   this.toMasterPrimitives = function(path){
-    return ['set',path,[restricted_value,public_value,access_level]];
+    return [['set',path,[restricted_value,public_value,access_level]]];
   }
 
 	this.type = function () { return 'Scalar'; }
@@ -202,7 +202,7 @@ function Collection(a_l){
     var ret = [['set',path,access_level]];
     for(var i in data){
       var p = path.concat(i);
-      ret.push(data[i].toMasterPrimitives(p));
+      Array.prototype.push.apply(ret,data[i].toMasterPrimitives(p));
     }
     return ret;
   };
