@@ -1,18 +1,15 @@
 var net = require('net');
+var ReplicatorCommunication = require('./replicatorcommunication');
 
 var errors = {
 };
 
-function send(socket,object){
-  var objstr = JSON.stringify(object);
-  var objlen = new Buffer(4);
-  objlen.writeUInt32LE(objstr.length,0);
-  socket.write(objlen);
-  socket.write(objstr);
+function ReplicatorServerCommunication(inputcb){
+  ReplicatorCommunication.call(this,inputcb);
 };
-
-function sendDCP(socket,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
-  send(socket,{dcp:[txnalias,txnprimitives,txnCounter]});
+ReplicatorServerCommunication.prototype = new ReplicatorCommunication;
+ReplicatorServerCommunication.prototype.sendDCP = function(txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
+  this.tell({dcp:[txnalias,txnprimitives,txnCounter]});
 };
 
 function init(){
@@ -21,27 +18,32 @@ function init(){
   if(!port){
     throw "No port specified ";
   }
-  var sockmap = {};
+  var commmap = {};
   var data = this.data;
+  var processInput = function(input){
+    if(input.command){
+      console.log('command!',input);
+    }
+  };
   var server = net.createServer(function(c){
     var rp = c.remotePort;
-    sockmap[rp] = c;
-    var dd = data.dump();
-    dd.unshift(c);
-    sendDCP.apply(null,dd);
+    var rsc = new ReplicatorServerCommunication(processInput);
+    rsc.listenTo(c);
+    commmap[rp] = rsc;
+    rsc.sendDCP.apply(rsc,data.dump());
     c.on('error',function(){
-      delete sockmap[rp];
+      delete commmap[rp];
     });
     c.on('end',function(){
-      delete sockmap[rp];
+      delete commmap[rp];
     });
   });
   server.listen(port);
   this.data.onNewTransaction.attach((function(_t){
     var t = _t;
     return function(path,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
-      for(var i in sockmap){
-        sendDCP(sockmap[i],txnalias,txnprimitives,datacopytxnprimitives,txnCounter);
+      for(var i in commmap){
+        commmap[i].sendDCP(txnalias,txnprimitives,datacopytxnprimitives,txnCounter);
       }
     };
   })(this));
