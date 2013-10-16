@@ -8,6 +8,7 @@ DataMaster.prototype = new (datamaster.Collection)();
 
 module.exports = {
   DataMaster:DataMaster,
+  ReplicatorClient:require('./replicatorclient'),
 	helpers: require('./helpers')
 };
 

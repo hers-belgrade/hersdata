@@ -222,6 +222,9 @@ function Collection(a_l){
 	this.type = function () {return 'Collection';}
 
   var txnCounter = new BigCounter();
+  this.txnCounterValue = function(){
+    return txnCounter.value();
+  };
 
   this.add = function(name,entity){
     throw_if_invalid_scalar(name);
@@ -269,7 +272,19 @@ function Collection(a_l){
 Collection.prototype.perform_set = function(path,param,txnc){
   var name = path.slice(-1);
   if(!name.length){
-    throw "Cannot add without a name in the path";
+    if(param===null){
+      param = undefined;
+    }
+    var to_p = typeof param;
+    switch(to_p){
+      case 'undefined':
+      case 'string':
+      case 'number':
+        this.setAccessLevel(param);
+        break;
+      default:
+        throw "Cannot add without a name in the path because "+to_p;
+    }
   }
   //name = name[0];
   var target = this.element(path.slice(0,-1));
@@ -438,7 +453,8 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								if(typeof __p === 'undefined'){
 									var __pd = pd[_ps[i]];
 									if(typeof __pd === 'undefined'){
-										throw 'Paramobj for '+mname+' needs a value for '+_ps[i];
+										errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
+                    return;
 									}
 								}
 								pa.push(__p);
@@ -478,35 +494,49 @@ Collection.prototype.startReplicator = function(port){
   return this.attach(__dirname+'/replicator',{port:port});
 };
 
-Collection.prototype.maintainDataCopy = function(key,datacopy){
-  var cf = (function commitFn(){
-    var dc = datacopy;
-    var k = key;
-    return function(datacopytxns){
+function isInArray(elem,array){
+  for(var i in array){
+    if(array[i]===elem){
+      return true;
+    }
+  }
+  return false;
+};
+
+function filterDataCopyPrimitive(p,keys){
+  //console.log(_p);
+  var myp = p[(p[0] ? (isInArray(p[0],keys) ? 2 : 1) : 2)];
+  /*
+  if(_p[0]){
+    console.log('private data for key',_p[0],'is',myp,'because',k);
+  }
+  if(typeof myp === 'undefined'){
+    console.log(_p,k,myp);
+  }
+  console.log(p,keys,myp);
+  */
+  return myp;
+}
+
+Collection.prototype.maintainDataCopy = function(keys,datacopy){
+  var cf = (function commitFn(dc,ks){
+    return function(txnalias,txnid,datacopytxns){
+      dc.commit(['start',txnalias,txnid]);
       for(var i in datacopytxns){
-        var _p = datacopytxns[i];
-        //console.log(_p);
-        var myp = _p[(_p[0] ? ((k===_p[0]) ? 2 : 1) : 2)];
-        /*
-        if(_p[0]){
-          console.log('private data for key',_p[0],'is',myp,'because',k);
-        }
-        if(typeof myp === 'undefined'){
-          console.log(_p,k,myp);
-        }
-        */
+        var myp = filterDataCopyPrimitive(datacopytxns[i],ks);
         if(myp && myp.length){
           dc.commit(myp.slice());
         }else{
           //console.log(_p,k,myp);
         }
       }
+      dc.commit(['end',txnalias]);
     };
-  })();
+  })(datacopy,keys.slice());
   var d = this.dump();
-  cf(d[2]);
-  this.onNewTransaction.attach(function(){
-    cf(arguments[3].slice());
+  cf('init',this.txnCounterValue(),d[2]);
+  return this.onNewTransaction.attach(function(){
+    cf(arguments[1],arguments[4],arguments[3].slice());
   });
 };
 

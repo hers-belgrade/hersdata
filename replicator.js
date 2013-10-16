@@ -7,6 +7,7 @@ function send(socket,txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
   var objstr = JSON.stringify(Array.prototype.slice.call(arguments,1));
   var objlen = new Buffer(4);
   objlen.writeUInt32LE(objstr.length,0);
+  socket.write(objlen);
   socket.write(objstr);
 };
 
