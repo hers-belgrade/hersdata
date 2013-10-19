@@ -1,9 +1,10 @@
 var Connect = require ('connect');
 var Url = require('url');
 var Path = require('path');
+var WebCollectionReplica = require('./WebCollectionReplica');
 
-function WebServer (consumers, root, pam) {
-  this.consumers = consumers;
+function WebServer (root, realm, pam) {
+  this.data = new WebCollectionReplica(realm);
 	this.root = root;
 	this.pam = pam;
 }
@@ -16,12 +17,14 @@ WebServer.prototype.start = function (port) {
 	port = port || 80;
 	var self = this;
   function connectionCountChanged(delta){
-    var cc = self.consumers.data.element(['connectioncount']).value();
-    self.consumers.data.commit('connection_count_changed',[
+    var cce = self.data.element(['connectioncount']);
+    if(!cce){return;}
+    var cc = self.data.element(['connectioncount']).value();
+    self.data.commit('connection_count_changed',[
       ['set',['connectioncount'],[cc+delta,undefined,'system']]
     ]);
   };
-  this.consumers.data.commit('web_server_starting',[
+  this.data.commit('web_server_starting',[
     ['set',['connectioncount'],[0,undefined,'system']]
   ]);
 	var map_resolver = function (req, res, next) {
@@ -75,7 +78,7 @@ WebServer.prototype.start = function (port) {
 					delete data.config;
 				}
 				try{
-					self.consumers.data.attach(fname,conf,key,environmentmodulename);
+					self.data.attach(fname,conf,key,environmentmodulename);
 				}
 				catch(e){
 					return report_error(e.stack+"\n"+e);
@@ -90,9 +93,9 @@ WebServer.prototype.start = function (port) {
 					res.connection.setTimeout(0);
 					req.connection.setTimeout(0);
 					//req.on('close', function () {self.master.inneract('_connection_status', data, false)});
-					req.on('close', function () {self.consumers.self.consumerDown(data)});
+					req.on('close', function () {self.data.removeUser(data)});
           data.cb = function(s){report_end (200,JSON.stringify(s));};
-					return self.consumers.self.dumpQueue(data);
+					return self.data.dumpQueue(data);
 				}
 				catch(e){
           console.log(e,e.stack);
@@ -125,8 +128,7 @@ WebServer.prototype.start = function (port) {
             }
           };
           po.statuscb = statuscb;
-					self.consumers.self.invoke(po,statuscb);
-					//report_end(200,('undefined' === typeof(ret)) ? 'ok' : JSON.stringify(ret));
+					self.data.invoke(po,statuscb);
 				}
 				catch(e){
 					console.log(e.stack);
@@ -154,4 +156,9 @@ WebServer.prototype.start = function (port) {
   });
 };
 
-module.exports = WebServer;
+//module.exports = WebServer;
+
+var serv = new WebServer(process.argv[3],process.argv[4]);
+serv.start(process.argv[2]);
+
+console.log(process.argv);

@@ -3,12 +3,6 @@ var KeyRing = require('./keyring');
 var Utils = require('util');
 var BigCounter = require('./BigCounter');
 
-var errors = {
-  NO_USER: {message: 'No user found'},
-  NO_FUNCTIONALITY: {message: 'No functionality'},
-  ACCESS_FORBIDDEN: {message: 'Access violation'}
-};
-
 function randomstring(){
   return RandomBytes(12).toString('hex');
 };
@@ -111,13 +105,15 @@ function ConsumerIdentity(name,roles, connection_status_cb){
 		(old_ol != online) && ('function' === typeof(connection_status_cb)) && connection_status_cb.call(this, online);
 	}
 };
-
-ConsumerIdentity.prototype.addKey = function(key,initcb){
+ConsumerIdentity.prototype.contains = function(key){
+  return this.keyring && this.keyring.contains(key);
+};
+ConsumerIdentity.prototype.addKey = function(key,data){
   if(this.keyring.contains(key)){
     return;
   }
   this.keyring.addKey(key);
-  this.overlayTransaction.apply(this,initcb());
+  this.overlayTransaction.apply(this,data.dump());
 };
 ConsumerIdentity.prototype.removeKey = function(key){
   if(this.roles.contains(key)){
@@ -316,6 +312,10 @@ ConsumerIdentity.prototype.overlayTransaction = function(txnalias,txnprimitives,
 };
 
 function ConsumerLobby(data){
+  this.data = data;
+  this.data.commit('consumers init',[
+    ['set',['consumercount'],[0,undefined,'admin']]
+  ]);
   this.sessionkeyname = randomstring();
   //console.log(this.sessionkeyname);
   this.counter = new BigCounter();
@@ -328,18 +328,20 @@ function ConsumerLobby(data){
   this.functionalities = {};
   var mytxnid = '_';
   var lastinit = {};
-  this.txnlistener = data.onNewTransaction.attach((function(_t){
-    var t = _t;
-    return function (path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-      //console.log(txnalias,txnid.toString());
-      if((mytxnid!=='_')&&(!mytxnid.isPredecessorOf(txnid))){
-        console.log(txnalias,'is the problem',mytxnid.toString(),txnid.toString());
-      }
-      mytxnid = txnid;
-      delete lastinit.data;
-      t.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
-    };
-  })(this));
+  var t = this;
+  var txnprocessor = function (path,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+    //console.log(txnalias,txnid.toString());
+    if((mytxnid!=='_')&&(!mytxnid.isPredecessorOf(txnid))){
+      console.log(txnalias,'is the problem',mytxnid.toString(),txnid.toString());
+    }
+    mytxnid = txnid;
+    delete lastinit.data;
+    t.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
+  };
+  this.txnlistener = data.onNewTransaction.attach(txnprocessor);
+  var dd = data.dump();
+  dd.unshift([]);
+  txnprocessor.apply(null,dd);
   var initcb = (function(_d){
     var data = _d;
     return function(){
@@ -468,76 +470,19 @@ ConsumerLobby.prototype.processTransaction = function(txnalias,txnprimitives,dat
   }
   this.anonymous.processTransaction(txnalias,txnprimitives,datacopytxnprimitives,txnid);
 };
-
-function init(){
-  if(!this.self.port){
-    throw "No port defined for an instance of consumer functionality";
-  }
-  this.self.server = new (require('./webserver'))(this,this.self.root||'.');
-  this.self.server.start(this.self.port);
-  this.self.lobby = new ConsumerLobby(this.data);
-  this.data.commit('consumers init',[
-    ['set',['consumercount'],[0,undefined,'admin']]
-  ]);
-};
-
-function invoke(params,statuscb){
-  var ic = this.self.lobby.identityAndConsumerFor(params);
-  if(!ic){
-    return statuscb('NO_USER');
-  }
-  //console.log('invoke',params);
-  var lios = params.path.lastIndexOf('/');
-  if(lios<0){
-    return statuscb('NO_FUNCTIONALITY');
-  }
-  var functionalityname = params.path.slice(0,lios);
-  var methodname = params.path.slice(lios+1);
-
-	if (methodname.charAt(0) === '_') return;
-  var f = this.self.lobby.functionalities[functionalityname];
-  if(f){
-    if(typeof f.key !== 'undefined'){
-      if(!(ic[0] && ic[0].keyring && ic[0].keyring.contains(f.key))){
-        console.log('keyfail with',f.key,ic[0]);
-        return statuscb('ACCESS_FORBIDDEN');
-      }
-    }
-    var fm = f.functionality[methodname];
-    if(typeof fm !== 'function'){
-      console.log('there is no functionality on',functionalityname);
-      return statuscb('NO_FUNCTIONALITY');
-    }
-    fm(params.params,params.statuscb,ic[0].name);
-  }else{
-    //console.log('functionality',functionalityname,'does not exist on',this.self.lobby.functionalities);
-    console.log('functionality',functionalityname,'does not exist');
-    statuscb('NO_FUNCTIONALITY');
-  }
-};
-invoke.params = 'originalobj';
-
-function dumpQueue(params){
+ConsumerLobby.prototype.dumpQueue = function(params){
   var cb = params.cb;
   if(typeof cb !=='function'){return;}
-  var ic = this.self.lobby.identityAndConsumerFor(params);
+  var ic = this.identityAndConsumerFor(params);
   if(ic){
     ic[1].dumpqueue(cb);
   }else{
     cb();
   }
 };
-dumpQueue.params = 'originalobj';
 
-function consumerDown(params){
+ConsumerLobby.prototype.consumerDown = function(params){
   console.log('consumerDown',params);
 };
-consumerDown.params = 'originalobj';
 
-module.exports = {
-  errors : errors,
-  init : init,
-  invoke : invoke,
-  dumpQueue : dumpQueue,
-  consumerDown : consumerDown
-};
+module.exports = ConsumerLobby;

@@ -2,6 +2,8 @@ var net = require('net');
 var ReplicatorCommunication = require('./replicatorcommunication');
 
 var errors = {
+  NO_FUNCTIONALITY: {message: 'No functionality'},
+  ACCESS_FORBIDDEN: {message: 'Access violation'}
 };
 
 function ReplicatorServerCommunication(inputcb){

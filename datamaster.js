@@ -3,6 +3,8 @@ var utils = require('util');
 var fs = require('fs');
 var Path = require('path');
 var BigCounter = require('./BigCounter');
+var child_process = require('child_process');
+var KeyRing = require('./keyring');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
@@ -42,6 +44,12 @@ function throw_if_invalid_scalar_or_undefined(val){
   }
 }
 
+function throw_if_any_invalid (ra,pa,al) {
+  throw_if_invalid_scalar_or_undefined (ra);
+  throw_if_invalid_scalar_or_undefined (pa);
+  throw_if_invalid_scalar_or_undefined (al);
+}
+
 function Scalar(res_val,pub_val, access_lvl) {
 
   var public_value = pub_val;
@@ -56,14 +64,11 @@ function Scalar(res_val,pub_val, access_lvl) {
     }
   }
 
-	function throw_if_any_invalid (ra,pa,al) {
-		throw_if_invalid_scalar_or_undefined (ra);
-		throw_if_invalid_scalar_or_undefined (pa);
-		throw_if_invalid_scalar_or_undefined (al);
-	}
-
 	function set_from_vals (ra,pa,al,path) {
-		throw_if_any_invalid(ra,pa, al);
+    ra = (ra===null) ? undefined : ra;
+    pa = (pa===null) ? undefined : pa;
+    al = (al===null) ? undefined : al;
+		throw_if_any_invalid(ra,pa,al);
     if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
       return;
     }
@@ -79,6 +84,9 @@ function Scalar(res_val,pub_val, access_lvl) {
     return access_level;
   };
 	this.alter = function (r_v,p_v,a_l,path) { 
+    r_v = (r_v===null) ? undefined : r_v;
+    p_v = (p_v===null) ? undefined : p_v;
+    a_l = (a_l===null) ? undefined : a_l;
     return set_from_vals.call(this,r_v,p_v,a_l,path);
 	};
   this.value = function(){
@@ -91,13 +99,15 @@ function Scalar(res_val,pub_val, access_lvl) {
     return [['set',path,[restricted_value,public_value,access_level]]];
   }
 
-	this.type = function () { return 'Scalar'; }
 	this.destroy = function  () {
 		public_value = undefined;
 		restricted_value = undefined;
 		access_level = undefined;
 	}
-}
+};
+Scalar.prototype.type = function(){
+  return 'Scalar';
+};
 
 function onChildTxn(name,onntxn,txnc){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
@@ -133,6 +143,7 @@ function Collection(a_l){
     return access_level;
   };
 	var data = {};
+  this.functionalities = {};
 
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
@@ -147,14 +158,11 @@ function Collection(a_l){
     return ret;
 	}
 
-	this.keys = function () {
-		return Object.keys(data);
-	}
-
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
+    if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
       return this.toCopyPrimitives(path);
@@ -219,8 +227,6 @@ function Collection(a_l){
     return ret;
   };
 
-	this.type = function () {return 'Collection';}
-
   var txnCounter = new BigCounter();
   this.txnCounterValue = function(){
     return txnCounter.value();
@@ -237,7 +243,7 @@ function Collection(a_l){
   };
 
 
-  this.commit = (function(t,txnc){
+  this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
       var datacopytxnprimitives = [];
       //console.log('performing',txnalias,txnprimitives);
@@ -267,7 +273,15 @@ function Collection(a_l){
   this.dump = function(){
     return ['init',this.toMasterPrimitives(),this.toCopyPrimitives(),txnCounter.clone()];
   };
-}
+};
+
+Collection.prototype.commit = function(txnalias,txnprimitives){
+  this._commit(txnalias,txnprimitives);
+};
+
+Collection.prototype.type = function(){
+	return 'Collection';
+};
 
 Collection.prototype.perform_set = function(path,param,txnc){
   var name = path.slice(-1);
@@ -317,6 +331,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
      }
     }
     if (target && target.add) {
+      if(param===null){param = undefined;}
       var nc = new Collection(param);
       target.add(name,nc);
       return nc.toCopyPrimitives(path);
@@ -337,9 +352,98 @@ Collection.prototype.perform_remove = function (path) {
     target.remove(path.slice(-1));
     return [[this.access_level(),undefined,['remove',path]]];
   }
-}
+};
 
-Collection.prototype.attach = function(functionalityname, config, key, environment){
+Collection.prototype.setUser = function(username,realmname,roles,cb){
+  if(!this.realms){
+    this.realms = {};
+  }
+  var realm = this.realms[realmname];
+  if(!realm){
+    realm = {};
+    this.realms[realmname] = realm;
+  }
+  var u = realm[username];
+  if(!u){
+    var kr = new KeyRing();
+    kr.addKeys(roles.split(','));
+    u = kr;
+    realm[username] = u;
+  }
+  if(typeof cb === 'function'){
+    cb(u);
+  }
+};
+
+Collection.prototype.findUser = function(username,realmname,cb){
+  if(!(this.realms&&this.realms[realmname])){
+    throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
+  }
+  //console.log(this.realms[realmname]);
+  var kr = this.realms[realmname][username];
+  if(!kr){
+    throw "Username "+username+"@"+realmname+" cannot be found because the corresponding Collection's realm "+realmname+" has no user named "+username;
+  }
+  cb(kr);
+};
+
+Collection.prototype.removeUser = function(username,realmname){
+  if(!this.realms){return;}
+  var realm = this.realms[realmname];
+  if(!realm){return;}
+  delete realm[username];
+};
+
+Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
+  path = path.split('/');
+  if(!path.length){return cb('NO_FUNCTIONALITY');}
+  var methodname = path[path.length-1];
+  //console.log(methodname);
+	if (methodname.charAt(0) === '_'){return cb('ACCESS_FORBIDDEN');}
+  var target = this.element(path.slice(0,-2));
+  if(target){
+    this.setUser(username,realmname,roles,function(u){
+      if(!u){return cb('NO_USER');}
+      var f = target.functionalities[path[path.length-2]];
+      if(f){
+        var key = f.key;
+        if((typeof key !== 'undefined')&&(!u.contains(key))){
+          return cb('ACCESS_FORBIDDEN');
+        }
+        f = f.f;
+        var m = f[methodname];
+        if(typeof m === 'function'){
+          //console.log('invoking',methodname,'for',username,'@',realmname,this.realms); 
+          m(paramobj,cb,username,realmname);
+        }
+      }else{
+        return cb('NO_FUNCTIONALITY');
+      }
+    });
+  }else{
+    return cb('NO_FUNCTIONALITY');
+  }
+};
+
+Collection.prototype.setKey = function(username,realmname,key){
+  if(!key){
+    throw "realmname problem?";
+  }
+  var t = this;
+  this.findUser(username,realmname,function(keyring){
+    keyring && keyring.addKey(key,t);
+  });
+  if(this.replicatingClients){
+    for(var i in this.replicatingClients){
+      var rc = this.replicatingClients[i];
+      if(rc._realmname === realmname){
+        rc.send({rpc:['setKey',username,realmname,key]});
+      }
+    }
+  }
+};
+
+Collection.prototype.attach = function(functionalityname, config, key, environment, consumeritf){
   var self = this;
   var ret = config||{};
   var m;
@@ -404,7 +508,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	}	
 
 	var my_mod = {};
-	var SELF = (function(s,r,m){var _s=s,_r=r,_m=m;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:ret.consumeritf};}})(self,ret,my_mod);
+	var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf||self);
 	if (m.requirements) {
 		if (!env) {
 			//console.log('NO environment, use defaults');
@@ -434,7 +538,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 			}
 
 			if(mname!=='init'){
-				return function(obj,errcb,callername){
+				return function(obj,errcb,callername,realmname){
 					var pa = [];
 					if(_p.params){
 						if(_p.params==='originalobj'){
@@ -460,15 +564,15 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								pa.push(__p);
 							}
 						}
-            pa.push(localerrorhandler(errcb),callername);
+            pa.push(localerrorhandler(errcb),callername,realmname);
 					}else{
-            pa.push(localerrorhandler(errcb),callername);
+            pa.push(localerrorhandler(errcb),callername,realmname);
           }
 					_p.apply(SELF(),pa);
 				};
 			}else{
-				return function(errcb,callername){
-					_p.call(SELF(),localerrorhandler(errcb),callername);
+				return function(errcb,callername,realmname){
+					_p.call(SELF(),localerrorhandler(errcb),callername,realmname);
 				};
 			}
 		})(i,p);
@@ -482,12 +586,75 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	}
 
   if ('function' === typeof(ret.init)) { ret.init(); }
+  this.functionalities[fqnname] = {f:ret,key:key};
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
 };
 
-Collection.prototype.startHTTP = function(port,root){
-  return this.attach('./consumer',{port:port,root:root},'system');
+Collection.prototype.startHTTP = function(port,root,name){
+  name = name || 'local';
+  if(!this.replicatingClients){
+    this.replicatingClients = {};
+  }
+  var cp = this.replicatingClients[name];
+  if(cp){
+    console.log('There already exists a replicator named',name,'on',this.dataDebug());
+    return;
+  }
+  var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
+  this.replicatingClients[name] = cp;
+  cp._realmname = name;
+  var t = this;
+  cp.on('message',function(input){
+    //console.log('Web server says',input);
+    t.processInput(this,input);
+  });
+  this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+  });
+  process.on('uncaughtException',function(e){
+    console.log(e.stack);
+    console.log(e);
+    cp.disconnect();
+  });
+  //return this.attach('./consumer',{port:port,root:root},'system');
+};
+
+Collection.prototype.processInput = function(sender,input){
+  var dcp = input.dcp;
+  if(dcp){
+    //console.log('commit',dcp[0],dcp[1]);
+    this.commit(dcp[0],dcp[1]);
+  }
+  var internal = input.internal;
+  if(internal){
+    switch(internal[0]){
+      case 'do_init':
+        sender._realmname = internal[1];
+        sender.send({dcp:this.dump()});
+        break;
+    }
+  }
+  var rpc = input.rpc;
+  if(rpc){
+    var methodname = rpc[0];
+    var method = this[methodname];
+    if(typeof method !=='function'){
+      return;
+    }
+    var args = rpc.slice(1);
+    var lastparam = rpc[rpc.length-1];
+    if(typeof lastparam === 'string' && lastparam.indexOf('#FunctionRef:')===0){
+      var fnref = lastparam.slice(13);
+      //console.log('#FunctionRef',fnref);
+      args[args.length-1] = function(){
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(fnref);
+        sender.send({commandresult:args});
+      };
+    }
+    method.apply(this,args);
+  }
 };
 
 Collection.prototype.startReplicator = function(port){
