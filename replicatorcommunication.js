@@ -29,10 +29,10 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
 ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}
   var i=(offset||0);
-  console.log('data',data.length,'long, reading from',i);
+  //console.log('data',data.length,'long, reading from',i);
   for(; (this.bytesToRead<0)&&(i<data.length)&&(this.lenBufread<4); i++,this.lenBufread++){
     this.lenBuf[this.lenBufread] = data[i];
-    console.log(this.lenBuf);
+    //console.log(this.lenBuf);
   }
   if(this.bytesToRead<0){
     if(this.lenBufread!==4){
@@ -40,7 +40,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     }
     this.bytesToRead = this.lenBuf.readUInt32LE(0);
   }
-  console.log('should read',this.bytesToRead,'bytes');
+  //console.log('should read',this.bytesToRead,'bytes');
   var canread = (data.length-i);
   if(canread>this.bytesToRead){
     canread=this.bytesToRead;
