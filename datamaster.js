@@ -242,7 +242,6 @@ function Collection(a_l){
     }
   };
 
-
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
       var datacopytxnprimitives = [];
@@ -591,6 +590,10 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   return ret;
 };
 
+Collection.prototype.createRemoteReplica = function(localname,realmname,url){
+  this.add(localname,new (require('./RemoteCollectionReplica'))(realmname,url));
+  //skipping the txn mechanism, it will be fired when the communication is established
+};
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
   if(!this.replicatingClients){
@@ -621,11 +624,6 @@ Collection.prototype.startHTTP = function(port,root,name){
 };
 
 Collection.prototype.processInput = function(sender,input){
-  var dcp = input.dcp;
-  if(dcp){
-    //console.log('commit',dcp[0],dcp[1]);
-    this.commit(dcp[0],dcp[1]);
-  }
   var internal = input.internal;
   if(internal){
     switch(internal[0]){
@@ -703,6 +701,7 @@ Collection.prototype.maintainDataCopy = function(keys,datacopy){
   var d = this.dump();
   cf('init',this.txnCounterValue(),d[2]);
   return this.onNewTransaction.attach(function(){
+    console.log('newTxn',arguments);
     cf(arguments[1],arguments[4],arguments[3].slice());
   });
 };

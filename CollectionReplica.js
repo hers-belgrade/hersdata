@@ -19,13 +19,22 @@ CollectionReplica.prototype = new Collection();
 CollectionReplica.prototype.constructor = CollectionReplica;
 CollectionReplica.prototype.prepareCallParams = function(ca){
   var cb = ca.pop();
-  if(typeof cb === 'function'){
+  var tocb = typeof cb;
+  if(tocb === 'function'){
     this.counter.inc();
     var cs = '#FunctionRef:'+this.counter.toString();
     this.cbs[cs] = cb;
     ca.push(cs);
+  }else{
+    if(tocb !== 'undefined'){
+      ca.push(cb);
+    }
   }
   return ca;
+};
+CollectionReplica.prototype.invoke = function(txnalias,txnprimitives){
+  Collection.prototype.commit.call(this,txnalias,txnprimitives);
+  this.send('rpc','_commit',txnalias,txnprimitives);
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,roles,cb) {
   this.send('rpc','invoke',path,paramobj,username,this.realmname,roles,cb);

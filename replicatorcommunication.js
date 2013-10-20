@@ -1,9 +1,9 @@
-function ReplicatorCommunication(inputcb){
+function ReplicatorCommunication(data){
   this.lenBuf = new Buffer(4);
   this.lenBufread = 0;
   this.bytesToRead = -1;
   this.dataRead = '';
-  this.inputcb = inputcb || function(){};
+  this.data = data;
 };
 ReplicatorCommunication.prototype.tell = function(obj){
   if(!this.socket){return;}
@@ -53,9 +53,10 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     this.lenBufread=0;
     if(this.socket){
       try{
-        this.dataRead = JSON.parse(this.dataRead,function(k,v){if(!isNaN(parseInt(k))&&v===null){return undefined;}return v;});
-        this.inputcb(this.dataRead);
-      }catch(e){}
+        this.data.processInput(this,JSON.parse(this.dataRead));
+      }catch(e){
+        console.log(e);
+      }
     }
     this.dataRead = '';
     if(this.socket){
