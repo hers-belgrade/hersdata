@@ -32,6 +32,7 @@ CollectionReplica.prototype.prepareCallParams = function(ca){
   return ca;
 };
 CollectionReplica.prototype.go = function(){
+  console.log(this,'should go');
   this.send('internal','need_init',this.realmname);
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){

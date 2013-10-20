@@ -33,14 +33,12 @@ function RemoteCollectionReplica(name,url){
   console.log('new RemoteCollectionReplica',name,url);
   var communication = new replicator_communication(this);
   this.commands = new QueueProcessor();
-  CollectionReplica.call(t,name,function(obj){
+  CollectionReplica.call(this,name,function(obj){
     communication.send(obj);
   });
   var t = this;
-  this.connectedcb = function(){};
   net.createConnection(url.port,url.address,function(){
     communication.listenTo(this);
-    t.connectedcb();
     this.on('close',function(){
       t.commands.clear();
     });
@@ -52,8 +50,4 @@ function RemoteCollectionReplica(name,url){
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
-RemoteCollectionReplica.prototype.go = function(url){
-  var t = this;
-};
-
 module.exports = RemoteCollectionReplica;

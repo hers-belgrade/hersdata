@@ -430,6 +430,7 @@ Collection.prototype.setKey = function(username,realmname,key){
   if(!key){
     throw "realmname problem?";
   }
+  console.log('setting key',key,'for',username+'@'+realmname);
   var t = this;
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.addKey(key,t);
