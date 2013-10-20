@@ -5,7 +5,7 @@ function ReplicatorCommunication(data){
   this.dataRead = '';
   this.data = data;
 };
-ReplicatorCommunication.prototype.tell = function(obj){
+ReplicatorCommunication.prototype.send = function(obj){
   if(!this.socket){return;}
   var objstr = JSON.stringify(obj);
   var objlen = new Buffer(4);

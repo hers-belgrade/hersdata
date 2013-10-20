@@ -6,11 +6,12 @@ var errors = {
   ACCESS_FORBIDDEN: {message: 'Access violation'}
 };
 
-function ReplicatorServerCommunication(inputcb){
+function ReplicatorCommunicationServerSide(inputcb){
   ReplicatorCommunication.call(this,inputcb);
 };
-ReplicatorServerCommunication.prototype = new ReplicatorCommunication;
-ReplicatorServerCommunication.prototype.sendDCP = function(txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
+ReplicatorCommunicationServerSide.prototype = new ReplicatorCommunication;
+ReplicatorCommunicationServerSide.prototype.constructor = ReplicatorCommunicationServerSide;
+ReplicatorCommunicationServerSide.prototype.sendDCP = function(txnalias,txnprimitives,datacopytxnprimitives,txnCounter){
   this.tell({dcp:[txnalias,txnprimitives,txnCounter]});
 };
 
@@ -29,7 +30,7 @@ function init(){
   };
   var server = net.createServer(function(c){
     var rp = c.remotePort;
-    var rsc = new ReplicatorServerCommunication(processInput);
+    var rsc = new ReplicatorCommunicationServerSide(processInput);
     rsc.listenTo(c);
     commmap[rp] = rsc;
     rsc.sendDCP.apply(rsc,data.dump());

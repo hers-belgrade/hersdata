@@ -2,9 +2,11 @@
 var utils = require('util');
 var fs = require('fs');
 var Path = require('path');
+var net = require('net');
 var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var KeyRing = require('./keyring');
+var ReplicatorCommunication = require('./replicatorcommunication');
 var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
 eval(content);
 
@@ -594,6 +596,27 @@ Collection.prototype.createRemoteReplica = function(localname,realmname,url){
   this.add(localname,new (require('./RemoteCollectionReplica'))(realmname,url));
   //skipping the txn mechanism, it will be fired when the communication is established
 };
+
+Collection.prototype.openReplication = function(port){
+  var t = this;
+  var server = net.createServer(function(c){
+    var rp = c.remotePort;
+    var collection = t;
+    var rc = new ReplicatorCommunication(t);
+    rc.listenTo(c);
+    c.on('error',function(){
+      delete collection.replicatingClients[rp];
+    });
+    c.on('end',function(){
+      delete collection.replicatingClients[rp];
+    });
+    collection.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+      rc.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+    });
+  });
+  server.listen(port);
+};
+
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
   if(!this.replicatingClients){
@@ -627,9 +650,9 @@ Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
     switch(internal[0]){
-      case 'do_init':
+      case 'need_init':
         sender._realmname = internal[1];
-        sender.send({dcp:this.dump()});
+        sender.send({rpc:['_commit','init',this.toMasterPrimitives()]});
         break;
     }
   }
@@ -653,10 +676,6 @@ Collection.prototype.processInput = function(sender,input){
     }
     method.apply(this,args);
   }
-};
-
-Collection.prototype.startReplicator = function(port){
-  return this.attach(__dirname+'/replicator',{port:port});
 };
 
 function isInArray(elem,array){
