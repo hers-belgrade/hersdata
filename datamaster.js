@@ -438,6 +438,7 @@ Collection.prototype.setKey = function(username,realmname,key){
   if(this.replicatingClients){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
+      console.log('should',rc,'setKey',key,'for',username+'@'+realmname,'?');
       if(rc._realmname === realmname){
         rc.send({rpc:['setKey',username,realmname,key]});
       }
@@ -620,17 +621,7 @@ Collection.prototype.openReplication = function(port){
 
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
-  if(!this.replicatingClients){
-    this.replicatingClients = {};
-  }
-  var cp = this.replicatingClients[name];
-  if(cp){
-    console.log('There already exists a replicator named',name,'on',this.dataDebug());
-    return;
-  }
   var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
-  this.replicatingClients[name] = cp;
-  cp._realmname = name;
   var t = this;
   cp.on('message',function(input){
     //console.log('Web server says',input);
@@ -652,7 +643,11 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
+        if(!this.replicatingClients){
+          this.replicatingClients = {};
+        }
         sender._realmname = internal[1];
+        this.replicatingClients[sender._realmname] = sender;
         sender.send({rpc:['_commit','init',this.toMasterPrimitives()]});
         break;
     }
@@ -662,6 +657,7 @@ Collection.prototype.processInput = function(sender,input){
     var methodname = rpc[0];
     var method = this[methodname];
     if(typeof method !=='function'){
+      console.log(methodname,'does not exist');
       return;
     }
     var args = rpc.slice(1);
@@ -675,6 +671,7 @@ Collection.prototype.processInput = function(sender,input){
         sender.send({commandresult:args});
       };
     }
+    //console.log('invoking',methodname,args,method);
     method.apply(this,args);
   }
 };
