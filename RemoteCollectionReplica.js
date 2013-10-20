@@ -33,17 +33,18 @@ function RemoteCollectionReplica(name,url){
   console.log('new RemoteCollectionReplica',name,url);
   var communication = new replicator_communication(this);
   this.commands = new QueueProcessor();
+  CollectionReplica.call(t,name,function(obj){
+    communication.send(obj);
+  });
   var t = this;
   this.connectedcb = function(){};
   net.createConnection(url.port,url.address,function(){
     communication.listenTo(this);
-    CollectionReplica.call(t,name,function(obj){
-      communication.tell(obj);
-    });
     t.connectedcb();
     this.on('close',function(){
       t.commands.clear();
     });
+    t.go();
   }).on('error',function(){
     var _t = t, _url=url;
     setTimeout(function(){_t.go(_url);},1000);

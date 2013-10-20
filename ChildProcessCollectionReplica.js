@@ -11,6 +11,7 @@ function ChildProcessCollectionReplica(realm){
       t.processInput(process,m);
     };
   })(this));
+  this.go();
 }
 ChildProcessCollectionReplica.prototype = new CollectionReplica();
 ChildProcessCollectionReplica.prototype.constructor = ChildProcessCollectionReplica;

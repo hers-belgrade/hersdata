@@ -13,7 +13,6 @@ function CollectionReplica(realmname,sendcb){
     sendobj[code]=params;
     sendcb(sendobj);
   };
-  this.send('internal','need_init',realmname);
 };
 CollectionReplica.prototype = new Collection();
 CollectionReplica.prototype.constructor = CollectionReplica;
@@ -32,7 +31,10 @@ CollectionReplica.prototype.prepareCallParams = function(ca){
   }
   return ca;
 };
-CollectionReplica.prototype.invoke = function(txnalias,txnprimitives){
+CollectionReplica.prototype.go = function(){
+  this.send('internal','need_init',this.realmname);
+};
+CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   Collection.prototype.commit.call(this,txnalias,txnprimitives);
   this.send('rpc','_commit',txnalias,txnprimitives);
 };
