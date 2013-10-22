@@ -437,10 +437,10 @@ Collection.prototype.setKey = function(username,realmname,key){
   if(!key){
     throw "realmname problem?";
   }
-  console.log('setting key',key,'for',username+'@'+realmname);
+  //console.log('setting key',key,'for',username+'@'+realmname);
   var t = this;
   this.findUser(username,realmname,function(keyring){
-    console.log('setting key',key,'for',username+'@'+realmname,keyring);
+    //console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
   });
   if(this.replicatingClients){
@@ -502,7 +502,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 	}
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){console.log('('+errkey+'): '+errmess)} : originalerrcb;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb;
     return function(errorkey){
       if(!errorkey){
         ecb(0,'ok');

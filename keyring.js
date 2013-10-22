@@ -69,36 +69,70 @@ KeyRing.prototype.filter = function(txnoperations){
   return ret;
 };
 
-KeyRing.prototype.filterDataCopyPrimitive = function(p){
-  return p[(p[0] ? (this.contains(p[0]) ? 2 : 1) : 2)];
+function beginsWith(haystack,needle){
+  if(!haystack){return false;}
+  for(var i in needle){
+    var h = haystack[i];
+    if(!h){return false;}
+    if(h!==needle[i]){
+      return false;
+    }
+  }
+  return true;
 }
 
-KeyRing.prototype.maintainDataCopy = function(datamaster,datacopy){
-  var cf = (function commitFn(dc,kr){
+KeyRing.prototype.filterDataCopyPrimitive = function(path,p){
+  var ret = p[(p[0] ? (this.contains(p[0]) ? 2 : 1) : 2)];
+  //console.log(ret);
+  if(ret&&ret[1]&&beginsWith(ret[1],path)){
+    return [ret[0],ret[1].slice(path.length),ret[2]];
+  }
+  return [];
+}
+
+KeyRing.prototype.maintainDataCopy = function(datamaster,path,datacopy){
+  var cf = (function commitFn(dc,kr,pth){
     return function(txnalias,txnid,datacopytxns){
+      var keys = [];
+      for(var i in kr.keys){
+        keys.push(i);
+      }
+      var dolog = false;//kr.targetkey && kr.targetkey.indexOf('Bot0')>0;
+      if(dolog){
+        console.log(kr.targetkey,keys,'commiting',['start',txnalias,txnid]);
+      }
       dc.commit(['start',txnalias,txnid]);
       for(var i in datacopytxns){
-        var myp = kr.filterDataCopyPrimitive(datacopytxns[i]);
+        var myp = kr.filterDataCopyPrimitive(pth,datacopytxns[i]);
         if(myp && myp.length){
-          console.log('commiting',myp);
+          if(dolog){
+            console.log('commiting',myp);
+          }
           dc.commit(myp.slice());
         }else{
-          //console.log(_p,k,myp);
+          if(dolog){
+            console.log(pth,datacopytxns[i]);
+          }
         }
       }
+      //console.log('commiting',['end',txnalias]);
       dc.commit(['end',txnalias]);
     };
-  })(datacopy,this);
+  })(datacopy,this,path);
   var reset = function(){
     var d = datamaster.dump();
     cf('init',datamaster.txnCounterValue(),d[2]);
   };
+  var hook = datamaster.onNewTransaction.attach(function(){
+    cf(arguments[1],arguments[4],arguments[3].slice());
+  });
   reset();
   return {
     reset:reset,
-    hook:datamaster.onNewTransaction.attach(function(){
-      cf(arguments[1],arguments[4],arguments[3].slice());
-    })
+    hook:hook,
+    stop:function(){
+      datamaster.onNewTransaction.detach(hook)
+    }
   };
 };
 KeyRing.create = function(username,realmname){

@@ -3,7 +3,12 @@ var CollectionReplica = require('./CollectionReplica');
 function ChildProcessCollectionReplica(realm){
   if(!realm){return;}
   CollectionReplica.call(this,realm,function(obj){
-    process.send(obj);
+    try{
+      process.send(obj);
+    }catch(e){
+      console.log('could not send',obj);
+      console.log(e);
+    }
   });
   process.on('message',(function(_t){
     var t = _t;

@@ -50,7 +50,7 @@ RemoteCollectionReplica.prototype.go = function(){
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(){
-    var _t = t, _url=url;
+    var _t = t;
     setTimeout(function(){_t.go();},1000);
   });
 };
