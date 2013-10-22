@@ -437,6 +437,7 @@ Collection.prototype.setKey = function(username,realmname,key){
   if(!key){
     throw "realmname problem?";
   }
+  //console.trace();
   //console.log('setting key',key,'for',username+'@'+realmname);
   var t = this;
   this.findUser(username,realmname,function(keyring){
@@ -447,6 +448,7 @@ Collection.prototype.setKey = function(username,realmname,key){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
       if(rc._realmname === realmname){
+        //console.log('sending',key,'to set for',realmname);
         rc.send({rpc:['setKey',username,realmname,key]});
       }
     }
@@ -458,6 +460,8 @@ Collection.prototype.removeKey = function(username,realmname,key){
     throw "realmname problem?";
   }
   var t = this;
+  //console.trace();
+  //console.log('removing key',key,'for',username+'@'+realmname);
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.removeKey(key,t);
   });
@@ -465,6 +469,7 @@ Collection.prototype.removeKey = function(username,realmname,key){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
       if(rc._realmname === realmname){
+        //console.log('sending',key,'to remove for',realmname);
         rc.send({rpc:['removeKey',username,realmname,key]});
       }
     }
@@ -693,6 +698,7 @@ Collection.prototype.processInput = function(sender,input){
       args[args.length-1] = function(){
         var args = Array.prototype.slice.call(arguments);
         args.unshift(fnref);
+        //console.log('sending commandresult',args);
         sender.send({commandresult:args});
       };
     }
