@@ -437,9 +437,26 @@ Collection.prototype.setKey = function(username,realmname,key){
   if(this.replicatingClients){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
-      console.log('should',rc,'setKey',key,'for',username+'@'+realmname,'?');
       if(rc._realmname === realmname){
         rc.send({rpc:['setKey',username,realmname,key]});
+      }
+    }
+  }
+};
+
+Collection.prototype.removeKey = function(username,realmname,key){
+  if(!key){
+    throw "realmname problem?";
+  }
+  var t = this;
+  this.findUser(username,realmname,function(keyring){
+    keyring && keyring.removeKey(key,t);
+  });
+  if(this.replicatingClients){
+    for(var i in this.replicatingClients){
+      var rc = this.replicatingClients[i];
+      if(rc._realmname === realmname){
+        rc.send({rpc:['removeKey',username,realmname,key]});
       }
     }
   }
