@@ -31,23 +31,27 @@ function QueueProcessor(){
 
 function RemoteCollectionReplica(name,url){
   console.log('new RemoteCollectionReplica',name,url);
+  this.url = url;
   var communication = new replicator_communication(this);
   this.commands = new QueueProcessor();
   CollectionReplica.call(this,name,function(obj){
     communication.send(obj);
   });
-  var t = this;
-  net.createConnection(url.port,url.address,function(){
-    communication.listenTo(this);
-    this.on('close',function(){
-      t.commands.clear();
-    });
-    t.go();
-  }).on('error',function(){
-    var _t = t, _url=url;
-    setTimeout(function(){_t.go(_url);},1000);
-  });
+  this.communication = communication;
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
+RemoteCollectionReplica.prototype.go = function(){
+  var t = this;
+  net.createConnection(this.url.port,this.url.address,function(){
+    t.communication.listenTo(this);
+    this.on('close',function(){
+      t.commands.clear();
+    });
+    CollectionReplica.prototype.go.call(t);
+  }).on('error',function(){
+    var _t = t, _url=url;
+    setTimeout(function(){_t.go();},1000);
+  });
+};
 module.exports = RemoteCollectionReplica;

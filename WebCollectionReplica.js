@@ -22,9 +22,9 @@ WebCollectionReplica.prototype.invoke = function(params,cb){
   if(!ic){
     return cb('NO_USER');
   }
-  return ChildProcessCollectionReplica.prototype.invoke.call(this,params.path,params.params,ic[0].name,'',cb);
+  return ChildProcessCollectionReplica.prototype.invoke.call(this,params.path,params.params,ic[0].name,cb);
 };
-WebCollectionReplica.prototype.setUser = function(username,realmname,cb){
+WebCollectionReplica.prototype.setUser = function(username,realmname,roles,cb){
   var ic = this.lobby.identityAndConsumerFor({name:username});
   if(ic){
     cb(ic[0]);

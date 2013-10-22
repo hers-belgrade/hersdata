@@ -40,6 +40,8 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   this.send('rpc','_commit',txnalias,txnprimitives);
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,roles,cb) {
+  //controversial solution
+  this.setUser(username,this.realmname,roles,function(){});
   this.send('rpc','invoke',path,paramobj,username,this.realmname,roles,cb);
 };
 
