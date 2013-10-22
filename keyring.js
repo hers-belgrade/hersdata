@@ -42,6 +42,7 @@ KeyRing.prototype.contains = function(key){
 KeyRing.prototype.addKey = function(key){
   if(typeof this.keys[key] === 'undefined'){
     this.keys[key] = 1;
+    return true;
   }else{
     this.keys[key]++;
   }
@@ -56,6 +57,7 @@ KeyRing.prototype.removeKey = function(key){
     this.keys[key]--;
     if(this.keys[key]<1){
       delete this.keys[key];
+      return true;
     }
   }
 };
@@ -65,6 +67,42 @@ KeyRing.prototype.filter = function(txnoperations){
 
   }
   return ret;
+};
+
+KeyRing.prototype.filterDataCopyPrimitive = function(p){
+  return p[(p[0] ? (this.contains(p[0]) ? 2 : 1) : 2)];
+}
+
+KeyRing.prototype.maintainDataCopy = function(datamaster,datacopy){
+  var cf = (function commitFn(dc,kr){
+    return function(txnalias,txnid,datacopytxns){
+      dc.commit(['start',txnalias,txnid]);
+      for(var i in datacopytxns){
+        var myp = kr.filterDataCopyPrimitive(datacopytxns[i]);
+        if(myp && myp.length){
+          console.log('commiting',myp);
+          dc.commit(myp.slice());
+        }else{
+          //console.log(_p,k,myp);
+        }
+      }
+      dc.commit(['end',txnalias]);
+    };
+  })(datacopy,this);
+  var reset = function(){
+    var d = datamaster.dump();
+    cf('init',datamaster.txnCounterValue(),d[2]);
+  };
+  reset();
+  return {
+    reset:reset,
+    hook:datamaster.onNewTransaction.attach(function(){
+      cf(arguments[1],arguments[4],arguments[3].slice());
+    })
+  };
+};
+KeyRing.create = function(username,realmname){
+  return new KeyRing();
 };
 
 module.exports = KeyRing;

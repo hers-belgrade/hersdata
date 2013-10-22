@@ -236,7 +236,11 @@ function Collection(a_l){
 
   this.add = function(name,entity){
     throw_if_invalid_scalar(name);
-    data[name+''] = entity;
+    var key = name+'';
+    if(data[key]){
+      data[key].destroy();
+    }
+    data[key] = entity;
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter));
@@ -274,6 +278,7 @@ function Collection(a_l){
   this.dump = function(){
     return ['init',this.toMasterPrimitives(),this.toCopyPrimitives(),txnCounter.clone()];
   };
+  this.userFactory = KeyRing;
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
@@ -366,7 +371,9 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
   }
   var u = realm[username];
   if(!u){
-    var kr = new KeyRing();
+    console.log(username+'@'+realmname,'not found');
+    var kr = (this.userFactory.create)(this,username,realmname);
+    roles = roles||'';
     kr.addKeys(roles.split(','));
     u = kr;
     realm[username] = u;
@@ -433,6 +440,7 @@ Collection.prototype.setKey = function(username,realmname,key){
   console.log('setting key',key,'for',username+'@'+realmname);
   var t = this;
   this.findUser(username,realmname,function(keyring){
+    console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
   });
   if(this.replicatingClients){
@@ -524,7 +532,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 				//console.log('setting requirement '+j+' to '+functionalityname);
 				my_mod[_j] = function () {
 					return _e[_j].apply(SELF(), arguments);
-				}
+				};
 			})(j);
 		}
 		//console.log('Reqirement successfully set on: '+functionalityname);
@@ -674,53 +682,6 @@ Collection.prototype.processInput = function(sender,input){
     //console.log('invoking',methodname,args,method);
     method.apply(this,args);
   }
-};
-
-function isInArray(elem,array){
-  for(var i in array){
-    if(array[i]===elem){
-      return true;
-    }
-  }
-  return false;
-};
-
-function filterDataCopyPrimitive(p,keys){
-  //console.log(_p);
-  var myp = p[(p[0] ? (isInArray(p[0],keys) ? 2 : 1) : 2)];
-  /*
-  if(_p[0]){
-    console.log('private data for key',_p[0],'is',myp,'because',k);
-  }
-  if(typeof myp === 'undefined'){
-    console.log(_p,k,myp);
-  }
-  console.log(p,keys,myp);
-  */
-  return myp;
-}
-
-Collection.prototype.maintainDataCopy = function(keys,datacopy){
-  var cf = (function commitFn(dc,ks){
-    return function(txnalias,txnid,datacopytxns){
-      dc.commit(['start',txnalias,txnid]);
-      for(var i in datacopytxns){
-        var myp = filterDataCopyPrimitive(datacopytxns[i],ks);
-        if(myp && myp.length){
-          dc.commit(myp.slice());
-        }else{
-          //console.log(_p,k,myp);
-        }
-      }
-      dc.commit(['end',txnalias]);
-    };
-  })(datacopy,keys.slice());
-  var d = this.dump();
-  cf('init',this.txnCounterValue(),d[2]);
-  return this.onNewTransaction.attach(function(){
-    console.log('newTxn',arguments);
-    cf(arguments[1],arguments[4],arguments[3].slice());
-  });
 };
 
 function DeadCollection(){
