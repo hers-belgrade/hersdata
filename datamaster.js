@@ -1,14 +1,12 @@
 /// we should use portable version of HookCollection?
 var utils = require('util');
-var fs = require('fs');
 var Path = require('path');
 var net = require('net');
 var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var KeyRing = require('./keyring');
 var ReplicatorCommunication = require('./replicatorcommunication');
-var content = fs.readFileSync(__dirname+'/hookcollection.js', 'utf8');
-eval(content);
+var HookCollection = require('./hookcollection');
 
 function deeparraycopy(array){
   var ret = [];
@@ -66,6 +64,9 @@ function Scalar(res_val,pub_val, access_lvl) {
     }
   }
 
+  this.changed = new HookCollection();
+  destroyed = new HookCollection();
+
 	function set_from_vals (ra,pa,al,path) {
     ra = (ra===null) ? undefined : ra;
     pa = (pa===null) ? undefined : pa;
@@ -77,8 +78,17 @@ function Scalar(res_val,pub_val, access_lvl) {
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
+    this.changed.fire();
     return this.toCopyPrimitives(path);
 	}
+
+  this.subscribeToValue = function(cb){
+    if(typeof cb !== 'function'){return;}
+    cb(this);
+    var t = this;
+    var hook = this.changed.attach(function(){cb(t);});
+    return {destroy:function(){this.changed&&this.changed.detach(hook);}};
+  };
 
 	set_from_vals.call(this,res_val, pub_val, access_lvl);
 
@@ -105,6 +115,9 @@ function Scalar(res_val,pub_val, access_lvl) {
 		public_value = undefined;
 		restricted_value = undefined;
 		access_level = undefined;
+    destroyed.fire();
+    this.changed.destruct();
+    destroyed.destruct();
 	}
 };
 Scalar.prototype.type = function(){
@@ -160,6 +173,8 @@ function Collection(a_l){
     return ret;
 	}
 
+  var onNewElement = new HookCollection();
+
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
 
@@ -186,9 +201,29 @@ function Collection(a_l){
     return ret;
   };
 
+  this.traverseElements = function(cb){
+    for(var i in data){
+      cb(i,data[i]);
+    }
+  };
+
+  this.subscribeToElements = function(cb){
+    if(typeof cb !== 'function'){return;}
+    this.traverseElements(cb);
+    var onel = onNewElement.attach(cb);
+    return {destroy:function(){
+      onNewElement.detach(onel);
+    }};
+  };
+
   this.destroy = function(name){
+    for(var i in data){
+      data[i].destroy();
+    }
+    data = null;
     this.onNewTransaction.destruct();
     this.onNewFunctionality.destruct();
+    onNewElement.destruct();
   };
 
 	this.element = function(name){
@@ -204,7 +239,8 @@ function Collection(a_l){
       }
     }else{
       console.trace();
-      throw "Path has to be an array "+JSON.stringify(name);
+      console.log('invalid path',name);
+      throw "Path has to be an array";
     }
   };
   this.toMasterPrimitives = function(path){
@@ -241,6 +277,7 @@ function Collection(a_l){
       data[key].destroy();
     }
     data[key] = entity;
+    onNewElement.fire(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter));
@@ -399,6 +436,7 @@ Collection.prototype.removeUser = function(username,realmname){
   if(!this.realms){return;}
   var realm = this.realms[realmname];
   if(!realm){return;}
+  realm[username].destroy();
   delete realm[username];
 };
 
@@ -704,6 +742,17 @@ Collection.prototype.processInput = function(sender,input){
     }
     //console.log('invoking',methodname,args,method);
     method.apply(this,args);
+  }
+  var commandresult = input.commandresult;
+  if(commandresult){
+    if(commandresult.length){
+      cbref = commandresult.splice(0,1)[0];
+      var cb = this.cbs[cbref];
+      if(typeof cb === 'function'){
+        cb(commandresult);
+        delete this.cbs[cbref];
+      }
+    }
   }
 };
 

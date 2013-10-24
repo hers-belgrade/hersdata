@@ -93,8 +93,9 @@ Consumer.prototype.dumpqueue = function(cb){
   }
 };
 
-function ConsumerIdentity(name,roles, connection_status_cb){
+function ConsumerIdentity(data, name, roles, connection_status_cb){
   this.name = name;
+  this.keyring = new KeyRing(data,name);
   this.reset(roles);
   this.datacopy = {};
 
@@ -124,8 +125,7 @@ ConsumerIdentity.prototype.removeKey = function(key){
 };
 ConsumerIdentity.prototype.reset = function(roles){
   this.roles = roles;
-  this.keyring = new KeyRing();
-  this.keyring.take(roles);
+  this.keyring.reset(roles);
   this.consumers = {};
 };
 ConsumerIdentity.prototype.initiationPrimitives = function(){
@@ -323,7 +323,7 @@ function ConsumerLobby(data){
   this.identities = identities;
   this.sess2consumer = {};
   this.sess2identity = {};
-  this.anonymous = new ConsumerIdentity();
+  this.anonymous = new ConsumerIdentity(data);
 	this.connection_status_cb = function(){/*console.log('connection_status_cb',arguments);*/};
   this.functionalities = {};
   var mytxnid = '_';
@@ -406,7 +406,7 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials){
   }
   var name = credentials.name;
   var rolearray = credentials.roles;
-  var rkr = new KeyRing();
+  var rkr = new KeyRing(this.data,name);
   if(rolearray && Utils.isArray(rolearray)){
     rkr.addKeys(rolearray);
   }
@@ -419,12 +419,13 @@ ConsumerLobby.prototype.identityAndConsumerFor = function(credentials){
   }else{
     if(name){
 			var self = this;
-      user = new ConsumerIdentity(name,rkr, (function(_ids,_ccc){
+      user = new ConsumerIdentity(this.data,name,rkr, (function(_ids,_ccc){
         var ids = _ids;
         var changeconsumercount = _ccc;
         return function (online) {
 				('function' === typeof(self.connection_status_cb)) && self.connection_status_cb.call(self,this.name, online); 
         if(!online){
+          ids[this.name].destroy();
           delete ids[this.name];
           changeconsumercount(-1);
           for(var i in this){

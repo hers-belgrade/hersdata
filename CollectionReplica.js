@@ -6,13 +6,13 @@ function CollectionReplica(realmname,sendcb){
   this.counter = new BigCounter();
   this.realmname = realmname;
   this.cbs = {};
-  Collection.call(this);
   this.send = function(code){
     var params = this.prepareCallParams(Array.prototype.slice.call(arguments,1));
     var sendobj = {};
     sendobj[code]=params;
     sendcb(sendobj);
   };
+  Collection.call(this);
 };
 CollectionReplica.prototype = new Collection();
 CollectionReplica.prototype.constructor = CollectionReplica;
@@ -21,8 +21,9 @@ CollectionReplica.prototype.prepareCallParams = function(ca){
   var tocb = typeof cb;
   if(tocb === 'function'){
     this.counter.inc();
-    var cs = '#FunctionRef:'+this.counter.toString();
-    this.cbs[cs] = cb;
+    var cts = this.counter.toString();
+    var cs = '#FunctionRef:'+cts;
+    this.cbs[cts] = cb;
     ca.push(cs);
   }else{
     if(tocb !== 'undefined'){

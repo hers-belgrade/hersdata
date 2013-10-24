@@ -11,6 +11,7 @@ module.exports = {
   DataMaster:DataMaster,
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   KeyRing:require('./keyring'),
+  Follower:require('./follower'),
 	helpers: require('./helpers')
 };
 

@@ -77,3 +77,5 @@ HookCollection.prototype.destruct = function(){
     delete this.collection[i];
   }
 }
+
+module.exports = HookCollection;
