@@ -13,7 +13,8 @@ function ChildProcessCollectionReplica(realm){
   process.on('message',(function(_t){
     var t = _t;
     return function(m){
-      t.processInput(process,m);
+      //console.log(m);
+      setTimeout(function(){t.processInput(process,m);},5);
     };
   })(this));
   this.go();

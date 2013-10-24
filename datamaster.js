@@ -693,7 +693,8 @@ Collection.prototype.startHTTP = function(port,root,name){
   var t = this;
   cp.on('message',function(input){
     //console.log('Web server says',input);
-    t.processInput(this,input);
+    var _t = t,sender=this;
+    setTimeout(function(){_t.processInput(sender,input);},1);
   });
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
     cp.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
