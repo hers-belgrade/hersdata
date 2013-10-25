@@ -459,7 +459,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         f = f.f;
         var m = f[methodname];
         if(typeof m === 'function'){
-          //console.log('invoking',methodname,'for',username,'@',realmname,this.realms); 
+          //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
         }
       }else{
@@ -748,6 +748,7 @@ Collection.prototype.processInput = function(sender,input){
     if(commandresult.length){
       cbref = commandresult.splice(0,1)[0];
       var cb = this.cbs[cbref];
+			//console.log('cb for',cbref,'is',cb);
       if(typeof cb === 'function'){
         cb(commandresult);
         delete this.cbs[cbref];
