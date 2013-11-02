@@ -104,6 +104,9 @@ function Scalar(res_val,pub_val, access_lvl) {
   this.value = function(){
     return restricted_value;
   };
+  this.public_value = function(){
+    return public_value;
+  };
   this.debugValue = function(){
     return restricted_value+'/'+access_level+'/'+public_value;
   };
@@ -124,7 +127,7 @@ Scalar.prototype.type = function(){
   return 'Scalar';
 };
 
-function onChildTxn(name,onntxn,txnc){
+function onChildTxn(name,onntxn,txnc,txnb,txne){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
     var tp = deeparraycopy(txnprimitives);
     var dcp = deeparraycopy(datacopytxnprimitives);
@@ -138,7 +141,9 @@ function onChildTxn(name,onntxn,txnc){
     }
     txnc.inc();
     //console.log(txnalias,'firing on child',txnc.toString());
+    //txnb.fire(txnalias);
     onntxn.fire([],txnalias,tp,dcp,txnc.clone());
+    //txne.fire(txnalias);
     //console.log(txnc.toString(),'fire done');
   };
 };
@@ -177,6 +182,8 @@ function Collection(a_l){
 
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
+  this.txnBegins = new HookCollection();
+  this.txnEnds = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
     if(a_l===null){a_l=undefined;}
@@ -223,6 +230,8 @@ function Collection(a_l){
     data = null;
     this.onNewTransaction.destruct();
     this.onNewFunctionality.destruct();
+    this.txnBegins.destruct();
+    this.txnEnds.destruct();
     onNewElement.destruct();
   };
 
@@ -280,7 +289,7 @@ function Collection(a_l){
     onNewElement.fire(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
-      entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter));
+      entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
       entity.onNewFunctionality.attach(onChildFunctionality(name,this.onNewFunctionality));
     }
   };
@@ -289,6 +298,7 @@ function Collection(a_l){
     return function (txnalias,txnprimitives) {
       var datacopytxnprimitives = [];
       //console.log('performing',txnalias,txnprimitives);
+      t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
         var it = txnprimitives[i];
         //console.log('should perform',it);
@@ -305,6 +315,7 @@ function Collection(a_l){
           }
         }
       }
+      t.txnEnds.fire(txnalias);
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
@@ -441,6 +452,7 @@ Collection.prototype.removeUser = function(username,realmname){
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
+  if(!path){return cb('NO_FUNCTIONALITY');}
   path = path.split('/');
   if(!path.length){return cb('NO_FUNCTIONALITY');}
   var methodname = path[path.length-1];
@@ -463,6 +475,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
           m(paramobj,cb,username,realmname);
         }
       }else{
+        console.log(path[path.length-2],'is not a methodname');
         return cb('NO_FUNCTIONALITY');
       }
     });
@@ -553,6 +566,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       }
       var errorparams = Array.prototype.slice.call(arguments,1);
       if(typeof m.errors[errorkey] !== 'object'){
+        console.trace();
         throw 'Error key '+errorkey+' not specified in the error map';
       }
       var eo = m.errors[errorkey];

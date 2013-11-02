@@ -5,7 +5,9 @@ var WebCollectionReplica = require('./WebCollectionReplica');
 
 function WebServer (root, realm, pam) {
   this.data = new WebCollectionReplica(realm);
+  this.sessionfunctionality = this.data.functionalities.sessionuserfunctionality.f;
 	this.root = root;
+  this.realm = realm;
 	this.pam = pam;
 }
 
@@ -13,19 +15,29 @@ WebServer.prototype.error_log = function (s) {
 	console.error(s);
 }
 
+WebServer.prototype.connectionCountChanged = function(delta){
+  this.connectionCount+=delta;
+  var lccu = this.lastCCupdate;
+  if(!lccu){
+    lccu = (new Date()).getTime();
+    this.lastCCupdate = lccu;
+  }
+  var now = (new Date()).getTime();
+  if(now-lccu<10000){
+    return;
+  }
+  this.lastCCupdate = now;
+  this.data.commit('connection_count_changed',[
+    ['set',['connectioncount'],[this.connectionCount,undefined,'system']]
+  ]);
+};
+
 WebServer.prototype.start = function (port) {
 	port = port || 80;
 	var self = this;
-  function connectionCountChanged(delta){
-    var cce = self.data.element(['connectioncount']);
-    if(!cce){return;}
-    var cc = self.data.element(['connectioncount']).value();
-    self.data.commit('connection_count_changed',[
-      ['set',['connectioncount'],[cc+delta,undefined,'system']]
-    ]);
-  };
+  this.connectionCount = 0;
   this.data.commit('web_server_starting',[
-    ['set',['connectioncount'],[0,undefined,'system']]
+    ['set',['connectioncount'],[this.connectionCount,undefined,'system']]
   ]);
 	var map_resolver = function (req, res, next) {
 		var url = req.url;
@@ -85,22 +97,26 @@ WebServer.prototype.start = function (port) {
 				}
 				return report_end(200,JSON.stringify({'status':'ok'}));
 			}
-			if(typeof data.roles === 'string'){
-				data.roles = data.roles.split(',');
-			}
 			if (!urlpath.length){
-				try{
-					res.connection.setTimeout(0);
-					req.connection.setTimeout(0);
-					//req.on('close', function () {self.master.inneract('_connection_status', data, false)});
-					req.on('close', function () {self.data.removeUser(data)});
-          data.cb = function(s){report_end (200,JSON.stringify(s));};
-					return self.data.dumpQueue(data);
-				}
-				catch(e){
-          console.log(e,e.stack);
-					return report_error(e);
-				}
+        res.connection.setTimeout(0);
+        req.connection.setTimeout(0);
+        //req.on('close', function () {self.master.inneract('_connection_status', data, false)});
+        req.on('close', function () {self.data.removeUser(data)});
+        data.cb = function(s){report_end (200,JSON.stringify(s));};
+        self.sessionfunctionality.findUser(data,function(errcode,errparams,errmessage){
+          if(errcode==='OK'){
+            self.sessionfunctionality.dumpUserSession({user:errparams[0],session:errparams[1]},function(errcode,errparams){
+              if(errcode==='OK'){
+                report_end(200,JSON.stringify(errparams[0]));
+              }else{
+                report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
+              }
+            });
+          }else{
+            report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
+          }
+        });
+        return;
 			}
 
 			var paramobj;
@@ -116,10 +132,6 @@ WebServer.prototype.start = function (port) {
 			//console.log('credentials',data,'method',urlpath,'paramobj',paramobj);
 			setTimeout(function(){
 				try{
-          var po = {path:urlpath,params:paramobj};
-          for(var i in data){
-            po[i] = data[i];
-          }
           var statuscb = function(errcode,errparams,errmess){
             if(!errcode){
               report_end(200,JSON.stringify({errorcode:0}));
@@ -127,8 +139,23 @@ WebServer.prototype.start = function (port) {
               report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
             }
           };
+          self.sessionfunctionality.findUser(data,function(errcode,errparams,errmessage){
+            if(errcode==='OK'){
+              if(urlpath==='follow'){
+                errparams[0].follow(paramobj.path);
+                statuscb('OK',paramobj.path);
+              }else{
+                self.sessionfunctionality.invokeOnUserSession({user:errparams[0],session:errparams[1],path:urlpath,paramobj:paramobj,cb:statuscb},statuscb);
+              }
+            }
+          });
+          return;
+          var po = {path:urlpath,params:paramobj};
+          for(var i in data){
+            po[i] = data[i];
+          }
           po.statuscb = statuscb;
-					self.data.invoke(po,statuscb);
+					//self.data.invoke(po,statuscb);
 				}
 				catch(e){
 					console.log(e.stack);
@@ -149,9 +176,10 @@ WebServer.prototype.start = function (port) {
 	).listen(port);
   //console.log(srv);
   srv.on('connection',function(connection){
-    connectionCountChanged(1);
+    self.connectionCountChanged(1);
+    var _self = self;
     connection.on('close',function(){
-      connectionCountChanged(-1);
+      _self.connectionCountChanged(-1);
     });
   });
 };

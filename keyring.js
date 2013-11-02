@@ -62,7 +62,6 @@ KeyRing.prototype.removeKey = function(key){
     }
   }
 };
-
 function beginsWith(haystack,needle){
   if(!haystack){return false;}
   for(var i in needle){

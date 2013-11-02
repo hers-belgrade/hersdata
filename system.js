@@ -13,7 +13,7 @@ function init(){
     var lastChange;
     return function(){
       var now = (new Date()).getTime();
-      if(lastChange&&(now-lastChange<1000000)){
+      if(lastChange&&(now-lastChange<10000)){
         return;
       }
       lastChange = now;
