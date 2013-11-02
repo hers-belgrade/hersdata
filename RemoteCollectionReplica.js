@@ -47,6 +47,10 @@ RemoteCollectionReplica.prototype.go = function(){
     t.communication.listenTo(this);
     this.on('close',function(){
       t.commands.clear();
+      t.traverseElements(function(name,ent){
+        t.remove(ent);
+      });
+      t.go();
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(){
