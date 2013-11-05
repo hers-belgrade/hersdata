@@ -8,6 +8,11 @@ var KeyRing = require('./keyring');
 var ReplicatorCommunication = require('./replicatorcommunication');
 var HookCollection = require('./hookcollection');
 
+function log() {
+	Array.prototype.unshift.call(arguments, 'DataMaster said: ');
+	console.log.apply(console, arguments);
+}
+
 function deeparraycopy(array){
   var ret = [];
   for(var i in array){
@@ -444,9 +449,9 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   path = path.split('/');
   if(!path.length){return cb('NO_FUNCTIONALITY');}
   var methodname = path[path.length-1];
-  //console.log(methodname);
 	if (methodname.charAt(0) === '_'){return cb('ACCESS_FORBIDDEN');}
   var target = this.element(path.slice(0,-2));
+
   if(target){
     this.setUser(username,realmname,roles,function(u){
       if(!u){return cb('NO_USER');}
@@ -461,7 +466,9 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         if(typeof m === 'function'){
           //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
-        }
+        }else{
+					return cb('NO_FUNCTIONALITY');
+				}
       }else{
         return cb('NO_FUNCTIONALITY');
       }
@@ -716,6 +723,7 @@ Collection.prototype.processInput = function(sender,input){
         }
         sender._realmname = internal[1];
         this.replicatingClients[sender._realmname] = sender;
+				log('Init required from replica ', sender._realmname);
         sender.send({rpc:['_commit','init',this.toMasterPrimitives()]});
         break;
     }
