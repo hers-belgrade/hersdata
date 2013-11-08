@@ -164,6 +164,9 @@ function Collection(a_l){
   };
 	var data = {};
   this.functionalities = {};
+	this.keys = function () {
+		return Object.keys(data);
+	}
 
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
@@ -414,7 +417,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
   var u = realm[username];
   if(!u){
     //console.log(username+'@'+realmname,'not found');
-    var kr = (this.userFactory.create)(this,username,realmname);
+    var kr = (this.userFactory.create)(this,username,realmname, roles);
     roles = roles||'';
     kr.addKeys(roles.split(','));
     u = kr;
