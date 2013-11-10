@@ -2,32 +2,34 @@ var RandomBytes = require('crypto').randomBytes;
 var KeyRing = require('./keyring');
 var Follower = require('./follower');
 var BigCounter = require('./BigCounter');
+var util = require('util');
 
 scalarValue = function(keyring,scalar){
   return keyring.contains(scalar.access_level()) ? scalar.value() : scalar.public_value();
 };
 
 function SessionFollower(keyring,path,txncb){
+  console.log('new follower',path);
   var scalars={};
   var collections={};
-  this.listeners = {};
+  this.followers = {};
   this.keyring = keyring;
   this.path = path;
   this._localdump = function(){
     var mydump = [];
     for(var i in scalars){
-      mydump.push([i,scalars[i].value]);
+      if(typeof scalars[i].value !== 'undefined'){
+        mydump.push([i,scalars[i].value]);
+      }
     };
     for(var i in collections){
       mydump.push([i,null]);
     };
-    //console.log('localdump',mydump);
     return mydump;
   };
   var txnqueue=[];
   this.dumptxnqueue = function(){
-    var ret = txnqueue.splice(0);
-    return ret;
+    return txnqueue.splice(0);
   };
   function cb(name,ent){
     if(ent){
@@ -36,36 +38,35 @@ function SessionFollower(keyring,path,txncb){
         case 'Scalar':
           var val = {};
           val.handler = ent.subscribeToValue(function(el){
-            var sv = scalarValue(keyring,el)
-            val.value = sv;
-            txnqueue.push([name,sv]);
-            //console.log('value of',name,'is',sv,tq);
+            var sv = scalarValue(keyring,el);
+            if(typeof sv !== 'undefined'){
+              val.value = sv;
+              txnqueue.push([name,sv]);
+            }
           });
           scalars[name] = val;
         break;
         case 'Collection':
           collections[name] = null;
+          txnqueue.push([name,null]);
         break;
       }
     }else{
-      if(scalars[name]){
+      if(typeof scalars[name] !== 'undefined'){
         txnqueue.push([name]);
         delete scalars[name];
-      }else if(collections[name]){
+      }else if(typeof collections[name] !== 'undefined'){
         txnqueue.push([name]);
         delete collections[name];
       }
     }
   };
   Follower.call(this,keyring,path,cb);
-  this.follower = function(name){
-    return listeners[name];
-  };
   var superDestroy = this.destroy;
   this.destroy = function(){
     superDestroy.call();
-    for(var i in listeners){
-      this.listeners[i].destroy();
+    for(var i in followers){
+      this.followers[i].destroy();
     }
     for(var i in scalars){
       scalars[i].handler.destroy();
@@ -84,6 +85,10 @@ function SessionFollower(keyring,path,txncb){
     };
     keyring.data.txnEnds.attach(this.doEndTxn);
   }
+  //console.log(this._localdump(),'<>',txnqueue);
+};
+SessionFollower.prototype.follower = function(name){
+  return this.followers[name];
 };
 SessionFollower.prototype.startTxn = function(txnalias){
   if(this.txnalias && txnalias!==txnalias){
@@ -91,8 +96,8 @@ SessionFollower.prototype.startTxn = function(txnalias){
   }
   //console.log(this.path.join('.'),'starting txn',txnalias);
   this.txnalias=txnalias;
-  for(var i in this.listeners){
-    this.listeners[i].startTxn(txnalias);
+  for(var i in this.followers){
+    this.followers[i].startTxn(txnalias);
   }
 };
 SessionFollower.prototype.endTxn = function(txnalias){
@@ -103,8 +108,8 @@ SessionFollower.prototype.endTxn = function(txnalias){
   //console.log(this.path.join('.'),'ending txn',txnalias);
   var has_data = false;
   var childtxns={};
-  for(var i in this.listeners){
-    var ce = this.listeners[i].endTxn(txnalias);
+  for(var i in this.followers){
+    var ce = this.followers[i].endTxn(txnalias);
     if(typeof ce !== 'undefined'){
       has_data=true;
       childtxns[i] = ce;
@@ -116,35 +121,63 @@ SessionFollower.prototype.endTxn = function(txnalias){
   }
 };
 SessionFollower.prototype.follow = function(name){
-  if(!this.listeners[name]){
-    this.listeners[name] = new SessionFollower(this.keyring,this.path.concat([name]));
-    if(this.doEndTxn){
-      var virtualtxn = 'new_follower_'+name;
-      this.startTxn(virtualtxn);
-      this.doEndTxn(virtualtxn);
-    }
+  if(!this.followers[name]){
+    this.followers[name] = new SessionFollower(this.keyring,this.path.concat([name]));
     return true;
+  }else{
+    //console.log('follower for',name,'already exists');
+  }
+};
+SessionFollower.prototype.triggerTxn = function(virtualtxn){
+  if(this.doEndTxn){
+    //console.log('triggering',virtualtxn);
+    this.startTxn(virtualtxn);
+    this.doEndTxn(virtualtxn);
+  }else{
+    console.log('cannot trigger',virtualtxn,'got no doEndTxn');
   }
 };
 SessionFollower.prototype.dump = function(){
   var childdumps = {};
   var ret = [this._localdump(),childdumps]
-  for(var i in this.listeners){
-    childdumps[i] = this.listeners[i].dump();
+  for(var i in this.followers){
+    childdumps[i] = this.followers[i].dump();
   }
   return ret;
 };
 
-function UserSession(datadump){
+function UserSession(datadump,destroycb,id){
+  this.id = id;
   this.queue = [['init',datadump]];
+  var t = this;
+  this.destroycb = function(){
+    if(t.cb){
+      console.log(t.id,'will not die, got cb in the meantime');
+      return;
+    }
+    delete t.queue;
+    destroycb();
+  }
 };
 UserSession.prototype.add = function(txnalias,txns){
   this.queue.push([txnalias,txns]);
   this.dumpQueue();
 };
+UserSession.prototype.setTimeout = function(){
+  if(!this.timeout){
+    //console.log(this.id,'setting timeout to die');
+    this.timeout = setTimeout(this.destroycb,15000);
+  }
+};
 UserSession.prototype.dumpQueue = function(cb){
+  if(cb && this.timeout){
+    //console.log(this.id,'clearing timeout to die');
+    clearTimeout(this.timeout);
+    delete this.timeout;
+  }
   if(this.cb){
     //console.log('dumping on previous cb with queue length',this.queue.length);
+    //console.log('dumping',util.inspect(this.queue,false,null,false));
     this.cb(this.queue);
     this.queue=[];
     this.cb = cb;
@@ -152,15 +185,16 @@ UserSession.prototype.dumpQueue = function(cb){
     if(this.queue.length){
       if(typeof cb === 'function'){
         //console.log('dumping on queue length',this.queue.length);
+        //console.log('dumping',util.inspect(this.queue,false,null,false));
         cb(this.queue);
         this.queue=[];
       }
     }else{
-      if(cb){
-        //console.log('setting cb',cb,'for future use');
-      }
       this.cb = cb;
     }
+  }
+  if(!this.cb){
+    this.setTimeout();
   }
 };
 function SessionUser(data,username,realmname){
@@ -170,7 +204,7 @@ function SessionUser(data,username,realmname){
   this.username=username;
   this.realmname=realmname;
   this.follower = new SessionFollower(this,[],function(txnalias,txns){
-    console.log('txn done',txnalias,txns);
+    //console.log('txn done',txnalias,util.inspect(txns,false,null,false));
     for(var i in sessions){
       sessions[i].add(txnalias,txns);
     }
@@ -187,32 +221,44 @@ SessionUser.prototype.invoke = function(path,paramobj,cb){
   this.data.invoke(path,paramobj,this.username,this.roles,cb);
 };
 SessionUser.prototype.makeSession = function(session){
-  var s = this.sessions[session];
+  var ss = this.sessions;
+  var s = ss[session];
   if(!s){
     //console.log('there is no session',session);
-    this.sessions[session] = new UserSession(this.follower.dump());
+    ss[session] = new UserSession(this.follower.dump(),function(){
+      //console.log('deleting session',session);
+      delete ss[session];
+    },session);
   }
 };
 SessionUser.prototype.follow = function(path){
+  //console.log('I was told to follow',path);
+  var ps = path.join('_');
   if(!path){return;}
   var f = this.follower;
-  while(path.length>1 && f && typeof e !== 'undefined'){
-    var pe = path.unshift();
+  while(path.length>1 && f){// && typeof e !== 'undefined'){
+    var pe = path.shift();
     f = f.follower(pe);
-    e = e[pe];
+    //e = e[pe];
   }
   if(f){
     if(f.follow(path[0])){
+      this.follower.triggerTxn('new_follower_'+ps);
       for(var i in this.sessions){
         this.sessions[i].dumpQueue();
       }
+    }else{
+      //console.log('following',path,'failed');
     }
+  }else{
+    //console.log('no follower for',path);
   }
 };
 
 
 var errors = {
-  'OK':{message:'OK'}
+  'OK':{message:'OK'},
+  'NO_SESSION':{message:'Session [session] does not exist',params:['session']}
 };
 
 function findUser(params,statuscb){
@@ -228,11 +274,11 @@ function findUser(params,statuscb){
   }
   var name = params.name;
   var t = this,scb = statuscb;
-  console.log('roles',params.roles);
+  //console.log('roles',params.roles);
   this.cbs.checkUserName(name,params.roles,function(roles){
     if(roles===null){
       //anonymous?
-      console.log('anonymous?');
+      //console.log('anonymous?');
       scb('OK');
     }
     var _scb = scb;
@@ -247,7 +293,21 @@ function findUser(params,statuscb){
 };
 findUser.params = 'originalobj';
 
+function deleteUserSession(user,session,statuscb){
+  var s = user.sessions[session];
+  if(s){
+    s.dumpQueue();
+  }else{
+    //console.log('no session',session);
+  }
+};
+deleteUserSession.params=['user','session'];
+
 function dumpUserSession(user,session,statuscb){
+  var s = user.sessions[session];
+  if(!s){
+    return statuscb('NO_SESSION',session);
+  }
   var so = {};
   so[this.self.fingerprint] = session;
   user.sessions[session].dumpQueue(function(data){
@@ -280,6 +340,7 @@ module.exports = {
   init:init,
   findUser:findUser,
   dumpUserSession:dumpUserSession,
+  deleteUserSession:deleteUserSession,
   invokeOnUserSession:invokeOnUserSession,
   requirements:{
     checkUserName:function(username,roles,cb){

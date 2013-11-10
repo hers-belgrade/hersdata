@@ -101,11 +101,12 @@ WebServer.prototype.start = function (port) {
         res.connection.setTimeout(0);
         req.connection.setTimeout(0);
         //req.on('close', function () {self.master.inneract('_connection_status', data, false)});
-        req.on('close', function () {self.data.removeUser(data)});
         data.cb = function(s){report_end (200,JSON.stringify(s));};
         self.sessionfunctionality.findUser(data,function(errcode,errparams,errmessage){
           if(errcode==='OK'){
-            self.sessionfunctionality.dumpUserSession({user:errparams[0],session:errparams[1]},function(errcode,errparams){
+            var uo = {user:errparams[0],session:errparams[1]};
+            req.on('close', function () {self.sessionfunctionality.deleteUserSession(uo)});
+            self.sessionfunctionality.dumpUserSession(uo,function(errcode,errparams,errmess){
               if(errcode==='OK'){
                 report_end(200,JSON.stringify(errparams[0]));
               }else{

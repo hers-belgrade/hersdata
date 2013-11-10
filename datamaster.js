@@ -438,7 +438,8 @@ Collection.prototype.findUser = function(username,realmname,cb){
   //console.log(this.realms[realmname]);
   var kr = this.realms[realmname][username];
   if(!kr){
-    throw "Username "+username+"@"+realmname+" cannot be found because the corresponding Collection's realm "+realmname+" has no user named "+username;
+    //throw "Username "+username+"@"+realmname+" cannot be found because the corresponding Collection's realm "+realmname+" has no user named "+username;
+    return;
   }
   cb(kr);
 };
