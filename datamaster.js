@@ -765,7 +765,7 @@ Collection.prototype.processInput = function(sender,input){
       var cb = this.cbs[cbref];
 			//console.log('cb for',cbref,'is',cb);
       if(typeof cb === 'function'){
-        cb(commandresult);
+        cb.apply(null,commandresult);
         delete this.cbs[cbref];
       }
     }

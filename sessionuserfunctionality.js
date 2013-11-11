@@ -217,7 +217,7 @@ SessionUser.prototype.destroy = function(){
   this.destroytree();
 };
 SessionUser.prototype.invoke = function(path,paramobj,cb){
-  console.log('invoking',path,paramobj,this.username,this.realmname,this.roles);
+  //console.log('invoking',path,paramobj,this.username,this.realmname,this.roles,cb);
   this.data.invoke(path,paramobj,this.username,this.roles,cb);
 };
 SessionUser.prototype.makeSession = function(session){
