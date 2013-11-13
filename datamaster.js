@@ -50,36 +50,41 @@ function throw_if_any_invalid (ra,pa,al) {
   throw_if_invalid_scalar_or_undefined (al);
 }
 
+function equals(a,b){
+  if(typeof a === 'undefined' && typeof b === 'undefined'){
+    return true;
+  }
+  return a===b;
+}
+
+function nullconversion(a){
+  return (a===null) ? undefined : a;
+}
+
 function Scalar(res_val,pub_val, access_lvl) {
 
-  var public_value = pub_val;
-  var restricted_value = res_val;
-  var access_level = access_lvl;
-
-  this.toCopyPrimitives = function(path){
-    if(typeof public_value !== 'undefined'){
-      return [[access_level,['set',path,public_value],['set',path,restricted_value]]];
-    }else{
-      return [[access_level,undefined,['set',path,restricted_value]]];
-    }
-  }
+  var public_value = nullconversion(pub_val);
+  var restricted_value = nullconversion(res_val);
+  var access_level = nullconversion(access_lvl);
 
   this.changed = new HookCollection();
   destroyed = new HookCollection();
 
 	function set_from_vals (ra,pa,al,path) {
-    ra = (ra===null) ? undefined : ra;
-    pa = (pa===null) ? undefined : pa;
-    al = (al===null) ? undefined : al;
+    ra = nullconversion(ra);
+    pa = nullconversion(pa);
+    al = nullconversion(al);
 		throw_if_any_invalid(ra,pa,al);
-    if((ra===restricted_value)&&(pa===public_value)&&(al===access_level)){
+    if(equals(ra,restricted_value)&&equals(pa,public_value)&&equals(al,access_level)){
       return;
     }
+    //console.trace();
+    //console.log('[',public_value,restricted_value,access_level,'] changed to [',pa,ra,al,']');
 		restricted_value = ra;
 		public_value = pa;
 		access_level = al;
+    //console.log(this.changed.counter);
     this.changed.fire();
-    return this.toCopyPrimitives(path);
 	}
 
   this.subscribeToValue = function(cb){
@@ -128,21 +133,15 @@ Scalar.prototype.type = function(){
 };
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
-  return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+  return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,txnid){
     var tp = deeparraycopy(txnprimitives);
-    var dcp = deeparraycopy(datacopytxnprimitives);
     for(var i = 0; i<tp.length; i++){
       augmentpath(name,tp[i]);
-    }
-    for(var i = 0; i<dcp.length; i++){
-      var _t = dcp[i];
-      augmentpath(name,_t[1]);
-      augmentpath(name,_t[2]);
     }
     txnc.inc();
     //console.log(txnalias,'firing on child',txnc.toString());
     //txnb.fire(txnalias);
-    onntxn.fire([],txnalias,tp,dcp,txnc.clone());
+    onntxn.fire([],txnalias,tp,txnc.clone());
     //txne.fire(txnalias);
     //console.log(txnc.toString(),'fire done');
   };
@@ -179,6 +178,7 @@ function Collection(a_l){
 	}
 
   var onNewElement = new HookCollection();
+  var onElementDestroyed = new HookCollection();
 
 	this.onNewTransaction = new HookCollection();
 	this.onNewFunctionality = new HookCollection();
@@ -189,12 +189,12 @@ function Collection(a_l){
     if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
-      return this.toCopyPrimitives(path);
     }
   };
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
+      onElementDestroyed.fire(name);
       data[name].destroy();
       delete data[name];
     }
@@ -218,6 +218,7 @@ function Collection(a_l){
     if(typeof cb !== 'function'){return;}
     this.traverseElements(cb);
     var onel = onNewElement.attach(cb);
+    var ondel = onElementDestroyed.attach(cb);
     return {destroy:function(){
       onNewElement.detach(onel);
     }};
@@ -233,6 +234,7 @@ function Collection(a_l){
     this.txnBegins.destruct();
     this.txnEnds.destruct();
     onNewElement.destruct();
+    onElementDestroyed.destruct();
   };
 
 	this.element = function(name){
@@ -261,19 +263,6 @@ function Collection(a_l){
     }
     return ret;
   };
-  this.toCopyPrimitives = function(path){
-    var ret = [];
-    path = path || [];
-    ret.push([access_level,['remove',path],['set',path,{}]]);
-    for(var i in data){
-      var p = path.concat(i);
-      //ret = ret.concat(data[i].toCopyPrimitives(p));
-      Array.prototype.push.apply(ret,data[i].toCopyPrimitives(p));
-    }
-    //console.log('copyPrimitives',utils.inspect(ret,false,null,false));
-    return ret;
-  };
-
   var txnCounter = new BigCounter();
   this.txnCounterValue = function(){
     return txnCounter.value();
@@ -296,7 +285,6 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
-      var datacopytxnprimitives = [];
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
@@ -304,27 +292,19 @@ function Collection(a_l){
         //console.log('should perform',it);
         if (utils.isArray(it) && it.length) {
           //console.log('performing',it);
-          var cpp = t['perform_'+it[0]](it[1], it[2], txnc);
-          if(utils.isArray(cpp)){
-            for(var i in cpp){
-              var _cp = cpp[i];
-              if(utils.isArray(_cp)){
-                datacopytxnprimitives.push(_cp);
-              }
-            }
-          }
+          t['perform_'+it[0]](it[1], it[2], txnc);
         }
       }
       t.txnEnds.fire(txnalias);
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
-      t.onNewTransaction.fire([],txnalias,txnprimitives,datacopytxnprimitives,txnc.clone());
+      t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
       //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
 
   this.dump = function(){
-    return ['init',this.toMasterPrimitives(),this.toCopyPrimitives(),txnCounter.clone()];
+    return ['init',this.toMasterPrimitives(),txnCounter.clone()];
   };
   this.userFactory = KeyRing;
 };
@@ -370,7 +350,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
     if (target && target.add) {
       var ns = new Scalar(param[0],param[1],param[2]);
       target.add(name,ns);
-      return ns.toCopyPrimitives(path);
+      return;
     }else{
       console.trace();
       throw 'No collection at path '+path;
@@ -388,7 +368,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
       if(param===null){param = undefined;}
       var nc = new Collection(param);
       target.add(name,nc);
-      return nc.toCopyPrimitives(path);
+      return;
     }else{
       console.trace();
       throw 'No collection at path '+path;

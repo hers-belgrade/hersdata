@@ -29,15 +29,22 @@ function Follower(keyring,path,cb){
     });
   });
   var keyRemovedListener = keyring.keyRemoved.attach(function(key){
+    console.log('removing key',key);
     var _cb = cb;
     var _t = t;
     data.traverseElements(function(name,ent){
       if(ent.access_level()===key){
+        console.log('deleting',name,'because of removed',key);
         _cb.call(_t,name);
       }
     });
+    console.log(key,'removed');
   });
   var newElementListener = data.subscribeToElements(function(name,el){
+    if(!el){
+      cb.call(t,name);
+      return;
+    }
     switch(el.type()){
       case 'Collection':
         if(keyring.contains(data.access_level())&&keyring.contains(el.access_level())){

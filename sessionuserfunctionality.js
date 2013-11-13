@@ -20,11 +20,14 @@ function SessionFollower(keyring,path,txncb){
     for(var i in scalars){
       if(typeof scalars[i].value !== 'undefined'){
         mydump.push([i,scalars[i].value]);
+      }else{
+        console.log('scalar',i,scalars[i],'has no value');
       }
     };
     for(var i in collections){
       mydump.push([i,null]);
     };
+    console.log('mydump',mydump);
     return mydump;
   };
   var txnqueue=[];
@@ -37,14 +40,18 @@ function SessionFollower(keyring,path,txncb){
       switch(ent.type()){
         case 'Scalar':
           var val = {};
-          val.handler = ent.subscribeToValue(function(el){
-            var sv = scalarValue(keyring,el);
-            if(typeof sv !== 'undefined'){
-              val.value = sv;
-              txnqueue.push([name,sv]);
-            }
-          });
-          scalars[name] = val;
+          if(typeof scalars[name] === 'undefined'){
+            val.handler = ent.subscribeToValue(function(el){
+              var sv = scalarValue(keyring,el);
+              if(typeof sv !== 'undefined'){
+                val.value = sv;
+                console.log(path.join('.'),val);
+                //console.log(path.join('.'),'pushing',name,sv);
+                txnqueue.push([name,sv]);
+              }
+            });
+            scalars[name] = val;
+          }
         break;
         case 'Collection':
           collections[name] = null;
@@ -53,11 +60,16 @@ function SessionFollower(keyring,path,txncb){
       }
     }else{
       if(typeof scalars[name] !== 'undefined'){
+        console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
+        scalars[name] && scalars[name].handler && scalars[name].handler.destroy();
         delete scalars[name];
       }else if(typeof collections[name] !== 'undefined'){
+        console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         delete collections[name];
+      }else{
+        console.log(path.join('.'),'has no',name,'to delete');
       }
     }
   };
