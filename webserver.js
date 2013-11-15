@@ -162,3 +162,11 @@ var serv = new WebServer(process.argv[3],process.argv[4]);
 serv.start(process.argv[2]);
 
 console.log(process.argv);
+
+
+process.on ('message', function (m) {
+	if ('die_right_now' === m) {
+		console.log("Yes, masta', will die right now ....");
+		setTimeout(function () {process.exit(0);}, 0);
+	}
+});

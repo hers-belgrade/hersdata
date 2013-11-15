@@ -697,9 +697,19 @@ Collection.prototype.openReplication = function(port){
   server.listen(port);
 };
 
+Collection.prototype.killAllProcesses = function () {
+	while(this.processes && this.processes.length) {
+		var p = this.processes.shift();
+		p.send('die_right_now');
+	}
+}
+
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
   var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
+	if (!this.processes) this.processes = [];
+	this.processes.push (cp);
+
   var t = this;
   cp.on('message',function(input){
     //console.log('Web server says',input);
