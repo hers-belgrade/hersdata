@@ -164,6 +164,8 @@ function Collection(a_l){
 	var data = {};
   this.functionalities = {};
 
+	this.keys = function () {return Object.keys(data);}
+
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
   };
