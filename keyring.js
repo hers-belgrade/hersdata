@@ -1,14 +1,23 @@
 var HookCollection = require('./hookcollection');
 
-function KeyRing(data,username,realmname){
+function KeyRing(data,username,realmname, roles){
   if(!data){
-    console.trace();
+    //console.trace();
   }
   this.data = data;
   this.keys = {};
   this.newKey = new HookCollection();
   this.keyRemoved = new HookCollection();
+	this.roles = roles;
+	this.username = username;
+	this.realmname = realmname;
 };
+
+KeyRing.prototype.invoke = function (request, paramobj, cb) {
+	this.data && this.data.invoke(request, paramobj,this.username, this.roles, cb);
+}
+
+
 KeyRing.prototype.take = function(keyring){
   if(typeof keyring === 'undefined'){
     return;
