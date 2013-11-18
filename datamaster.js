@@ -383,7 +383,8 @@ Collection.prototype.perform_set = function(path,param,txnc){
     }
     if (target && target.add) {
       if(param===null){param = undefined;}
-      target.add(name,param);
+			var nc = new Collection(param);
+      target.add(name,nc);
       return nc.toCopyPrimitives(path);
     }else{
       console.trace();
