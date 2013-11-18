@@ -9,7 +9,7 @@ scalarValue = function(keyring,scalar){
 };
 
 function SessionFollower(keyring,path,txncb){
-  console.log('new follower',path);
+  //console.log('new follower',path);
   var scalars={};
   var collections={};
   this.followers = {};
@@ -21,13 +21,13 @@ function SessionFollower(keyring,path,txncb){
       if(typeof scalars[i].value !== 'undefined'){
         mydump.push([i,scalars[i].value]);
       }else{
-        console.log('scalar',i,scalars[i],'has no value');
+        //console.log('scalar',i,scalars[i],'has no value');
       }
     };
     for(var i in collections){
       mydump.push([i,null]);
     };
-    console.log('mydump',mydump);
+    //console.log('mydump',mydump);
     return mydump;
   };
   var txnqueue=[];
@@ -45,9 +45,10 @@ function SessionFollower(keyring,path,txncb){
               var sv = scalarValue(keyring,el);
               if(typeof sv !== 'undefined'){
                 val.value = sv;
-                console.log(path.join('.'),val);
                 //console.log(path.join('.'),'pushing',name,sv);
                 txnqueue.push([name,sv]);
+              }else{
+                //console.log(path.join('.'),name,'cannot be pushed');
               }
             });
             scalars[name] = val;
@@ -57,19 +58,25 @@ function SessionFollower(keyring,path,txncb){
           collections[name] = null;
           txnqueue.push([name,null]);
         break;
+        default:
+          //console.log(path.join('.'),'cannot push',name);
+        break;
       }
     }else{
       if(typeof scalars[name] !== 'undefined'){
-        console.log(path.join('.'),'pushing deletion of',name);
+        //console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
-        scalars[name] && scalars[name].handler && scalars[name].handler.destroy();
+        if(scalars[name].handler){
+          scalars[name].handler.destroy();
+        }
+        scalars[name] = null;
         delete scalars[name];
       }else if(typeof collections[name] !== 'undefined'){
-        console.log(path.join('.'),'pushing deletion of',name);
+        //console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         delete collections[name];
       }else{
-        console.log(path.join('.'),'has no',name,'to delete');
+        //console.log(path.join('.'),'has no',name,'to delete');
       }
     }
   };

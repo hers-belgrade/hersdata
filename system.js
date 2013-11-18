@@ -29,7 +29,7 @@ function init(){
         actions.push(['set',['memoryavailable'],[mma,undefined,'system']]);
       }
       if(actions.length){
-        console.log('commiting memoryusagechanged',now);
+        //console.log('commiting memoryusagechanged',now);
         setTimeout(function(){data.commit('memoryusagechanged',actions);},1);
       }
     };

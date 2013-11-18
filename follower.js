@@ -1,18 +1,17 @@
 function Follower(keyring,path,cb){
   var data = keyring.data.element(path);
   if(!data){
-    console.log('no data found at',path);
-    //console.log(keyring.data.dataDebug(),'no data found at',path);
+    //console.log('no data found at',path);
     this.destroy = function(){};
     return;
   }
   if(data.type()!=='Collection'){
-    console.log('Cannot follow a Scalar at',path);
+    //console.log('Cannot follow a Scalar at',path);
     return;
   }
   var t = this;
   var newKeyListener = keyring.newKey.attach(function(key){
-    console.log('new key',key,'on',path);
+    //console.log('new key',key,'on',path);
     var _cb = cb;
     var _t = t;
     data.traverseElements(function(name,ent){
@@ -29,16 +28,16 @@ function Follower(keyring,path,cb){
     });
   });
   var keyRemovedListener = keyring.keyRemoved.attach(function(key){
-    console.log('removing key',key);
+    //console.log('removing key',key);
     var _cb = cb;
     var _t = t;
     data.traverseElements(function(name,ent){
       if(ent.access_level()===key){
-        console.log('deleting',name,'because of removed',key);
+        //console.log('deleting',name,'because of removed',key);
         _cb.call(_t,name);
       }
     });
-    console.log(key,'removed');
+    //console.log(key,'removed');
   });
   var newElementListener = data.subscribeToElements(function(name,el){
     if(!el){
