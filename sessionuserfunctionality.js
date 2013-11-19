@@ -37,7 +37,7 @@ function SessionFollower(keyring,path,txncb){
   };
   function cb(name,ent){
     if(ent){
-      //console.log('scalars',scalars,'collections',collections);
+      console.log('scalars',scalars,'collections',collections);
       switch(ent.type()){
         case 'Scalar':
           var val = {};
@@ -46,10 +46,10 @@ function SessionFollower(keyring,path,txncb){
               var sv = scalarValue(keyring,el);
               if(typeof sv !== 'undefined'){
                 val.value = sv;
-                //console.log(path.join('.'),'pushing',name,sv);
+                console.log(path.join('.'),'pushing',name,sv);
                 txnqueue.push([name,sv]);
               }else{
-                //console.log(path.join('.'),name,'cannot be pushed');
+                console.log(path.join('.'),name,'cannot be pushed');
               }
             });
             scalars[name] = val;
@@ -57,6 +57,7 @@ function SessionFollower(keyring,path,txncb){
         break;
         case 'Collection':
           collections[name] = null;
+					console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
 					if(followers[name]){
 						followers[name].refresh();
@@ -147,11 +148,13 @@ SessionFollower.prototype.endTxn = function(txnalias){
   }
 };
 SessionFollower.prototype.follow = function(name){
+	console.log('should follow',name);
   if(!this.followers[name]){
+		console.log(this.path.join('.'),'created follower',name);
     this.followers[name] = new SessionFollower(this.keyring,this.path.concat([name]));
     return true;
   }else{
-    //console.log('follower for',name,'already exists');
+    console.log('follower for',name,'already exists');
   }
 };
 SessionFollower.prototype.triggerTxn = function(virtualtxn){
@@ -258,14 +261,25 @@ SessionUser.prototype.makeSession = function(session){
   }
 };
 SessionUser.prototype.follow = function(path){
-  //console.log('I was told to follow',path);
+  console.log('I was told to follow',path);
   var ps = path.join('_');
   if(!path){return;}
   var f = this.follower;
-  while(path.length>1 && f){// && typeof e !== 'undefined'){
+  while(path.length>1){
     var pe = path.shift();
-    f = f.follower(pe);
-    //e = e[pe];
+		console.log('investigating',pe);
+    var _f = f.follower(pe);
+    if(!_f){
+			f.follow(pe);
+			_f = f.follower(pe);
+			if(!_f){
+				console.log('following',path,'on',pe,'failed');
+			}else{
+				f=_f;
+			}
+		}else{
+			f = _f;
+		}
   }
   if(f){
     if(f.follow(path[0])){
@@ -274,10 +288,10 @@ SessionUser.prototype.follow = function(path){
         this.sessions[i].dumpQueue();
       }
     }else{
-      //console.log('following',path,'failed');
+      console.log('following',path,'failed');
     }
   }else{
-    //console.log('no follower for',path);
+    console.log('no follower for',path);
   }
 };
 
