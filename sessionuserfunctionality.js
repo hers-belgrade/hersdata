@@ -37,7 +37,7 @@ function SessionFollower(keyring,path,txncb){
   };
   function cb(name,ent){
     if(ent){
-      console.log('scalars',scalars,'collections',collections);
+      //console.log('scalars',scalars,'collections',collections);
       switch(ent.type()){
         case 'Scalar':
           var val = {};
@@ -46,10 +46,10 @@ function SessionFollower(keyring,path,txncb){
               var sv = scalarValue(keyring,el);
               if(typeof sv !== 'undefined'){
                 val.value = sv;
-                console.log(path.join('.'),'pushing',name,sv);
+                //console.log(path.join('.'),'pushing',name,sv);
                 txnqueue.push([name,sv]);
               }else{
-                console.log(path.join('.'),name,'cannot be pushed');
+                //console.log(path.join('.'),name,'cannot be pushed');
               }
             });
             scalars[name] = val;
@@ -57,7 +57,7 @@ function SessionFollower(keyring,path,txncb){
         break;
         case 'Collection':
           collections[name] = null;
-					console.log(path.join('.'),'pushing collection',name);
+					//console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
 					if(followers[name]){
 						followers[name].refresh();
@@ -288,10 +288,10 @@ SessionUser.prototype.follow = function(path){
         this.sessions[i].dumpQueue();
       }
     }else{
-      console.log('following',path,'failed');
+      //console.log('following',path,'failed');
     }
   }else{
-    console.log('no follower for',path);
+    //console.log('no follower for',path);
   }
 };
 
