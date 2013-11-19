@@ -12,7 +12,8 @@ function SessionFollower(keyring,path,txncb){
   //console.log('new follower',path);
   var scalars={};
   var collections={};
-  this.followers = {};
+  var followers = {};
+	this.followers = followers;
   this.keyring = keyring;
   this.path = path;
   this._localdump = function(){
@@ -57,6 +58,9 @@ function SessionFollower(keyring,path,txncb){
         case 'Collection':
           collections[name] = null;
           txnqueue.push([name,null]);
+					if(followers[name]){
+						followers[name].refresh();
+					}
         break;
         default:
           //console.log(path.join('.'),'cannot push',name);
@@ -80,7 +84,11 @@ function SessionFollower(keyring,path,txncb){
       }
     }
   };
-  Follower.call(this,keyring,path,cb);
+	var t = this;
+  this.refresh = function(){
+		Follower.call(t,keyring,path,cb);
+	};
+	this.refresh();
   var superDestroy = this.destroy;
   this.destroy = function(){
     superDestroy.call();
@@ -91,7 +99,6 @@ function SessionFollower(keyring,path,txncb){
       scalars[i].handler.destroy();
     }
   };
-  var t = this;
   if(typeof txncb==='function'){
     keyring.data.txnBegins.attach(function(_txnalias){
       t.startTxn(_txnalias);
