@@ -148,13 +148,13 @@ SessionFollower.prototype.endTxn = function(txnalias){
   }
 };
 SessionFollower.prototype.follow = function(name){
-	console.log('should follow',name);
+	//console.log('should follow',name);
   if(!this.followers[name]){
-		console.log(this.path.join('.'),'created follower',name);
+		//console.log(this.path.join('.'),'created follower',name);
     this.followers[name] = new SessionFollower(this.keyring,this.path.concat([name]));
     return true;
   }else{
-    console.log('follower for',name,'already exists');
+    //console.log('follower for',name,'already exists');
   }
 };
 SessionFollower.prototype.triggerTxn = function(virtualtxn){
@@ -261,7 +261,7 @@ SessionUser.prototype.makeSession = function(session){
   }
 };
 SessionUser.prototype.follow = function(path){
-  console.log('I was told to follow',path);
+  //console.log('I was told to follow',path);
   var ps = path.join('_');
   if(!path){return;}
   var f = this.follower;
