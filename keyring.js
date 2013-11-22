@@ -58,7 +58,9 @@ KeyRing.prototype.addKey = function(key){
 };
 KeyRing.prototype.addKeys = function(keynamearry){
   for(var i=0; i<keynamearry.length; i++){
-    this.addKey(keynamearry[i]);
+    if(keynamearry[i]){
+      this.addKey(keynamearry[i]);
+    }
   }
 };
 KeyRing.prototype.removeKey = function(key){

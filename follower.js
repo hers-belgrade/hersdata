@@ -11,7 +11,7 @@ function Follower(keyring,path,cb){
   }
   var t = this;
   var newKeyListener = keyring.newKey.attach(function(key){
-    //console.log('new key',key,'on',path);
+    //console.log('new key',typeof key,key,'on',path);
     var _cb = cb;
     var _t = t;
     data.traverseElements(function(name,ent){
@@ -19,7 +19,9 @@ function Follower(keyring,path,cb){
         case 'Collection':
           if(ent.access_level()===key){
             _cb.call(_t,name,ent);
-          }
+          }/*else{
+            console.log(path.join('.'),'Collection',name,'will not be followed',key,'<>',ent.access_level());
+          }*/
           break;
         case 'Scalar':
           _cb.call(_t,name,ent);
