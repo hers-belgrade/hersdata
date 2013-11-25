@@ -1,12 +1,12 @@
 function Follower(keyring,path,cb){
   var data = keyring.data.element(path);
   if(!data){
-    //console.log('no data found at',path);
+    console.log('no data found at',path);
     this.destroy = function(){};
     return;
   }
   if(data.type()!=='Collection'){
-    //console.log('Cannot follow a Scalar at',path);
+    console.log('Cannot follow a Scalar at',path);
     return;
   }
   var t = this;
@@ -43,6 +43,7 @@ function Follower(keyring,path,cb){
   });
   var newElementListener = data.subscribeToElements(function(name,el){
     if(!el){
+      console.log(name,'deleted');
       cb.call(t,name);
       return;
     }
