@@ -223,12 +223,14 @@ function Collection(a_l){
     var ondel = onElementDestroyed.attach(cb);
     return {destroy:function(){
       onNewElement.detach(onel);
+      onElementDestroyed.detach(ondel);
     }};
   };
 
-  this.destroy = function(name){
+  this.destroy = function(){
     for(var i in data){
-      data[i].destroy();
+      this.remove(i);
+      //data[i].destroy();
     }
     data = null;
     this.onNewTransaction.destruct();
