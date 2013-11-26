@@ -71,7 +71,7 @@ function SessionFollower(keyring,path,txncb){
         break;
       }
     }else{
-      console.log('follower should delete',name,scalars,collections);
+      //console.log('follower should delete',name,scalars,collections);
       if(typeof scalars[name] !== 'undefined'){
         //console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);

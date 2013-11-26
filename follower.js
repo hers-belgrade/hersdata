@@ -43,7 +43,7 @@ function Follower(keyring,path,cb){
   });
   var newElementListener = data.subscribeToElements(function(name,el){
     if(!el){
-      console.log(name,'deleted');
+      //console.log(name,'deleted');
       cb.call(t,name);
       return;
     }
