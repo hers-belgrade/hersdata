@@ -56,6 +56,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
         this.data.processInput(this,JSON.parse(this.dataRead));
       }catch(e){
         console.log(e);
+				console.log(e.stack);
       }
     }
     this.dataRead = '';
