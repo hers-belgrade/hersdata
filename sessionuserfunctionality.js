@@ -206,7 +206,7 @@ UserSession.prototype.setTimeout = function(){
     this.timeout = setTimeout(this.destroycb,15000);
   }
 };
-UserSession.prototype.dumpQueue = function(cb){
+UserSession.prototype.dumpQueue = function(cb,justpeek){
   if(cb && this.timeout){
     //console.log(this.id,'clearing timeout to die');
     clearTimeout(this.timeout);
@@ -217,7 +217,12 @@ UserSession.prototype.dumpQueue = function(cb){
     //console.log('dumping',util.inspect(this.queue,false,null,false));
     this.cb(this.queue);
     this.queue=[];
-    this.cb = cb;
+    if(justpeek){
+      delete this.cb;
+      cb();
+    }else{
+      this.cb = cb;
+    }
   }else{
     if(this.queue.length){
       if(typeof cb === 'function'){
@@ -227,10 +232,17 @@ UserSession.prototype.dumpQueue = function(cb){
         this.queue=[];
       }
     }else{
-      this.cb = cb;
+      if(justpeek){
+        cb();
+      }else{
+        this.cb = cb;
+      }
     }
   }
   if(!this.cb){
+    if(this.timeout){
+      clearTimeout(this.timeout);
+    }
     this.setTimeout();
   }
 };
@@ -333,7 +345,7 @@ function findUser(params,statuscb){
   this.cbs.checkUserName(name,params.roles,function(roles){
     if(roles===null){
       //anonymous?
-      //console.log('anonymous?');
+      console.log('anonymous?');
       scb('OK');
     }
     var _scb = scb;
@@ -358,7 +370,7 @@ function deleteUserSession(user,session,statuscb){
 };
 deleteUserSession.params=['user','session'];
 
-function dumpUserSession(user,session,statuscb){
+function dumpUserSession(user,session,statuscb,justpeek){
   var s = user.sessions[session];
   if(!s){
     return statuscb('NO_SESSION',session);
@@ -367,11 +379,12 @@ function dumpUserSession(user,session,statuscb){
   so[this.self.fingerprint] = session;
   user.sessions[session].dumpQueue(function(data){
     statuscb('OK',[so,data]);
-  });
+  },justpeek);
 };
 dumpUserSession.params=['user','session'];
 
 function invokeOnUserSession(user,session,path,paramobj,cb,statuscb){
+  //console.log('invoking',path,paramobj,cb);
   user.invoke(path,paramobj,cb);
 };
 invokeOnUserSession.params=['user','session','path','paramobj','cb'];

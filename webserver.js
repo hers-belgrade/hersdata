@@ -3,6 +3,140 @@ var Url = require('url');
 var Path = require('path');
 var WebCollectionReplica = require('./WebCollectionReplica');
 
+function stripLeadingSlash(strng){
+  if(strng.length&&strng[0]==='/'){
+    return strng.slice(1);
+  }else{
+    return strng;
+  }
+};
+
+function RequestHandler(functionality,request,response,urlpath,data){
+  this.functionality = functionality;
+  this.response = response;
+  this.peekqueue = false;
+  var t = this;
+  functionality.findUser(data,function(errcode,errparams,errmessage){
+    if(errcode==='OK'){
+      t.user = errparams[0];
+      t.session = errparams[1];
+      var uo = {user:errparams[0],session:errparams[1]};
+      var _func = functionality;
+      request.on('close', function () {_func.deleteUserSession(uo)});
+      t.process(urlpath,data);
+    }else{
+      t.report_end(JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
+    }
+  });
+};
+RequestHandler.prototype.report_error = function(message){
+  var res = this.response;
+  if(res.writable){
+    res.writeHead(503,{'Content-Type':'text/plain'});
+    res.write(message);
+  }
+  res.end();
+};
+RequestHandler.prototype.report_end = function(){
+  var res = this.response;
+  if(!this.responseobj.username){
+    console.trace();
+    console.log(this.responseobj);
+  }
+  var message = JSON.stringify(this.responseobj);
+  if(res.writable){
+    var header = {'Content-Type':'text/plain'};
+    if (message) header['Content-Length']= message.length;
+    res.writeHead(200,header);
+    res.write(message);
+  }
+  res.end();
+};
+RequestHandler.prototype.process = function(urlpath,data){
+  this.responseobj = {results:[]};
+  urlpath = stripLeadingSlash(urlpath);
+  //console.log(urlpath,data);
+  switch(urlpath){
+    case 'execute':
+      var commands=[];
+      var dcmds = data.commands;
+      try{
+        if(typeof dcmds === 'string'){
+          commands.push(JSON.parse(dcmds));
+        }
+        if(typeof dcmds === 'object' && dcmds instanceof Array){
+          for(var i in dcmds){
+            commands.push(JSON.parse(dcmds[i]));//||[];
+          }
+        }
+      }
+      catch(e){
+        console.log('error JSON parsing',e,dcmds,typeof dcmds);
+        this.errorcode='JSON';
+        this.errorparams = data.commands[i];
+        this.report_end();
+        return;
+      }
+      this.commandsdone = 0;
+      this.commandstodo = commands.length;
+      for(var i in commands){
+        var command = commands[i];
+        //console.log('command',command,'#',i,'of',this.commandstodo);
+        this.execute(command[0],command[1],(function(index,t){
+          var _i = index,_t=t;
+          return function(errcode,errparams,errmessage){
+            _t.responseobj.results[_i] = [errcode,errparams,errmessage];
+            _t.commandsdone++;
+            //console.log(_t.commandsdone,'commands done out of',_t.commandstodo);
+            if(_t.commandsdone===_t.commandstodo){
+              _t.finalize();
+            }
+          };
+        })(i,this));
+      }
+      break;
+    default:
+      this.execute(urlpath,data,(function(t){var _t = t; return function(){_t.finalize();}})(this));
+      break;
+  }
+};
+RequestHandler.prototype.finalize = function(){
+  //console.log('finalizing with peek',this.peekqueue);
+  var t = this;
+  this.functionality.dumpUserSession({user:this.user,session:this.session},function(errcode,errparams,errmess){
+    if(errcode==='OK'){
+      t.responseobj.username = t.user.username;
+      t.responseobj.roles = t.user.roles;
+      t.responseobj.session = errparams[0][0];
+      t.responseobj.data = errparams[0][1];
+      t.report_end();
+    }else{
+      console.log('dumpUserSession returned',errcode,errparams);
+    }
+    for(var i in t){
+      delete t[i];
+    }
+  },this.peekqueue);
+};
+RequestHandler.prototype.execute = function(command,paramobj,cb){
+  if(!(command&&command.length)||command==='_'){
+    cb();
+    return;
+  }
+  this.peekqueue=true;
+  switch(stripLeadingSlash(command)){
+    case 'follow':
+      this.user.follow(paramobj.path.slice());
+      cb('OK',paramobj.path);
+    break;
+    case 'init':
+    break;
+    default:
+      this.functionality.invokeOnUserSession({user:this.user,session:this.session,path:command,paramobj:paramobj,cb:cb},cb);
+    break;
+  }
+};
+
 function WebServer (root, realm, pam) {
   this.data = new WebCollectionReplica(realm);
   this.sessionfunctionality = this.data.functionalities.sessionuserfunctionality.f;
@@ -41,132 +175,16 @@ WebServer.prototype.start = function (port) {
   ]);
 	var map_resolver = function (req, res, next) {
 		var url = req.url;
-		function report_error (s) {
-      if(!res.writable){return;}
-			self.error_log(s);
-			res.writeHead(503,{'Content-Type':'text/plain'});
-      res.write(s);
-			res.end();
-		};
-		function report_end (code, s) {
-      if(!res.writable){return;}
-			var header = {'Content-Type':'text/plain'};
-			if (s) header['Content-Length']= s.length;
-			res.writeHead(code,header);
-			res.write(s);
-			res.end();
-		};
-    function dump(s){
-      report_end (200,JSON.stringify(s));
-    };
-
     var purl = Url.parse(url,true);
     var urlpath = decodeURI(purl.pathname); //"including the leading slash if present" so we'll remove it if present...
-    if(urlpath[0]==='/'){urlpath = urlpath.slice(1);}
-
+		if (!urlpath.length) { next(); return; }
+		if (urlpath==='/') { next(); return; }
 		if (urlpath.indexOf('.') > -1) { next(); return; }
-
-		if (req.method != 'GET' && req.method != 'POST') return report_end(503);
+		if (req.method != 'GET' && req.method != 'POST') { next(); return;}
 		var data = ((req.method == 'GET') ? req.query : req.body) || {};
-
-		function do_da_request () {
-			if (urlpath === 'init') {
-				if(typeof data.functionality === 'undefined'){
-					return report_error('Missing functionality name');
-				}
-				var fname = data.functionality;
-				delete data.functionality;
-				var key = data.key;
-				delete data.key;
-				var environmentmodulename = data.environment;
-				delete data.environment;
-				var conf;
-				if(typeof data.config !== 'undefined'){
-					try{
-						conf = JSON.parse(data.config);
-						console.log('initing with conf',conf);
-					}
-					catch(e){}
-					delete data.config;
-				}
-				try{
-					self.data.attach(fname,conf,key,environmentmodulename);
-				}
-				catch(e){
-					return report_error(e.stack+"\n"+e);
-				}
-				return report_end(200,JSON.stringify({'status':'ok'}));
-			}
-			if (!urlpath.length){
-        res.connection.setTimeout(0);
-        req.connection.setTimeout(0);
-        //req.on('close', function () {self.master.inneract('_connection_status', data, false)});
-        data.cb = function(s){report_end (200,JSON.stringify(s));};
-        self.sessionfunctionality.findUser(data,function(errcode,errparams,errmessage){
-          if(errcode==='OK'){
-            var uo = {user:errparams[0],session:errparams[1]};
-            req.on('close', function () {self.sessionfunctionality.deleteUserSession(uo)});
-            self.sessionfunctionality.dumpUserSession(uo,function(errcode,errparams,errmess){
-              if(errcode==='OK'){
-                report_end(200,JSON.stringify(errparams[0]));
-              }else{
-                report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
-              }
-            });
-          }else{
-            report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
-          }
-        });
-        return;
-			}
-
-			var paramobj;
-			if(typeof data.paramobj === 'string'){
-				try{
-					paramobj = JSON.parse(data.paramobj);
-				}
-				catch(e){}
-			}else{
-				paramobj = data.paramobj;
-			}
-			delete data.paramobj;
-			//console.log('credentials',data,'method',urlpath,'paramobj',paramobj);
-			setTimeout(function(){
-				try{
-          var statuscb = function(errcode,errparams,errmess){
-            if(!errcode){
-              report_end(200,JSON.stringify({errorcode:0}));
-            }else{
-              report_end(200,JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
-            }
-          };
-          self.sessionfunctionality.findUser(data,function(errcode,errparams,errmessage){
-            if(errcode==='OK'){
-              if(urlpath==='follow'){
-                errparams[0].follow(paramobj.path);
-                statuscb('OK',paramobj.path);
-              }else{
-                self.sessionfunctionality.invokeOnUserSession({user:errparams[0],session:errparams[1],path:urlpath,paramobj:paramobj,cb:statuscb},statuscb);
-              }
-            }
-          });
-          return;
-          var po = {path:urlpath,params:paramobj};
-          for(var i in data){
-            po[i] = data[i];
-          }
-          po.statuscb = statuscb;
-					//self.data.invoke(po,statuscb);
-				}
-				catch(e){
-					console.log(e.stack);
-					console.log('GOTCHA',e);
-					report_error(e);
-				}},0);
-		}
-
-		if (!self.pam) return do_da_request();
-		self.pam.verify (req, res, urlpath, data, do_da_request);
+    res.connection.setTimeout(0);
+    req.connection.setTimeout(0);
+    new RequestHandler(self.sessionfunctionality,req,res,urlpath,data);
 	};
 
 	var srv = Connect.createServer (
