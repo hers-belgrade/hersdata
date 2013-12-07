@@ -64,6 +64,9 @@ function Follower(keyring,path,cb){
     keyring.newKey.detach(newKeyListener);
     keyring.keyRemoved.detach(keyRemovedListener);
     newElementListener.destroy();
+    for(var i in this){
+      delete this[i];
+    }
   };
 };
 
