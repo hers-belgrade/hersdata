@@ -61,8 +61,10 @@ RequestHandler.prototype.process = function(urlpath,data){
       var commands=[];
       var dcmds = data.commands;
       try{
+        console.log('data commands are',typeof dcmds,dcmds);
         if(typeof dcmds === 'string'){
-          commands.push(JSON.parse(dcmds));
+          commands = JSON.parse(dcmds);
+          //commands.push(JSON.parse(dcmds));
         }
         if(typeof dcmds === 'object' && dcmds instanceof Array){
           for(var i in dcmds){
@@ -100,24 +102,6 @@ RequestHandler.prototype.process = function(urlpath,data){
       break;
   }
 };
-RequestHandler.prototype.finalize = function(){
-  //console.log('finalizing with peek',this.peekqueue);
-  var t = this;
-  this.functionality.dumpUserSession({user:this.user,session:this.session},function(errcode,errparams,errmess){
-    if(errcode==='OK'){
-      t.responseobj.username = t.user.username;
-      t.responseobj.roles = t.user.roles;
-      t.responseobj.session = errparams[0][0];
-      t.responseobj.data = errparams[0][1];
-      t.report_end();
-    }else{
-      console.log('dumpUserSession returned',errcode,errparams);
-    }
-    for(var i in t){
-      delete t[i];
-    }
-  },this.peekqueue);
-};
 RequestHandler.prototype.execute = function(command,paramobj,cb){
   if(!(command&&command.length)||command==='_'){
     cb();
@@ -135,6 +119,24 @@ RequestHandler.prototype.execute = function(command,paramobj,cb){
       this.functionality.invokeOnUserSession({user:this.user,session:this.session,path:command,paramobj:paramobj,cb:cb},cb);
     break;
   }
+};
+RequestHandler.prototype.finalize = function(){
+  //console.log('finalizing with peek',this.peekqueue);
+  var t = this;
+  this.functionality.dumpUserSession({user:this.user,session:this.session},function(errcode,errparams,errmess){
+    if(errcode==='OK'){
+      t.responseobj.username = t.user.username;
+      t.responseobj.roles = t.user.roles;
+      t.responseobj.session = errparams[0][0];
+      t.responseobj.data = errparams[0][1];
+      t.report_end();
+    }else{
+      console.log('dumpUserSession returned',errcode,errparams);
+    }
+    for(var i in t){
+      delete t[i];
+    }
+  },this.peekqueue);
 };
 
 function WebServer (root, realm, pam) {
