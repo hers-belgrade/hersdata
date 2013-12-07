@@ -62,15 +62,7 @@ RequestHandler.prototype.process = function(urlpath,data){
       var dcmds = data.commands;
       try{
         console.log('data commands are',typeof dcmds,dcmds);
-        if(typeof dcmds === 'string'){
-          commands = JSON.parse(dcmds);
-          //commands.push(JSON.parse(dcmds));
-        }
-        if(typeof dcmds === 'object' && dcmds instanceof Array){
-          for(var i in dcmds){
-            commands.push(JSON.parse(dcmds[i]));//||[];
-          }
-        }
+        commands = JSON.parse(dcmds);
       }
       catch(e){
         console.log('error JSON parsing',e,dcmds,typeof dcmds);
@@ -80,11 +72,15 @@ RequestHandler.prototype.process = function(urlpath,data){
         return;
       }
       this.commandsdone = 0;
-      this.commandstodo = commands.length;
-      for(var i in commands){
-        var command = commands[i];
+      if(commands.length%2){
+        console.log('odd number of execute params');
+        throw ('odd execute');
+      }
+      this.commandstodo = commands.length/2;
+      for(var i =0; i< this.commandstodo; i++){
+        var command = commands[i*2],params = commands[i*2+1];
         //console.log('command',command,'#',i,'of',this.commandstodo);
-        this.execute(command[0],command[1],(function(index,t){
+        this.execute(command,params,(function(index,t){
           var _i = index,_t=t;
           return function(errcode,errparams,errmessage){
             _t.responseobj.results[_i] = [errcode,errparams,errmessage];
