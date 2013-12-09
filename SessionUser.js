@@ -1,3 +1,5 @@
+var KeyRing = require('./keyring');
+var Follower = require('./follower');
 
 scalarValue = function(keyring,scalar){
   return keyring.contains(scalar.access_level()) ? scalar.value() : scalar.public_value();

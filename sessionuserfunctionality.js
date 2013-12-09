@@ -1,9 +1,6 @@
 var RandomBytes = require('crypto').randomBytes;
-var KeyRing = require('./keyring');
-var Follower = require('./follower');
 var BigCounter = require('./BigCounter');
 var util = require('util');
-var SessionUser = require('SessionUser');
 
 var errors = {
   'OK':{message:'OK'},
@@ -80,9 +77,7 @@ function init(){
     counter.inc();
     return RandomBytes(12).toString('hex')+'.'+counter.toString();
   };
-  this.data.userFactory = {create:function(data,username,realmname){
-    return new SessionUser(data,username,realmname);
-  }};
+  this.data.setSessionUserFactory();
 };
 
 module.exports = {

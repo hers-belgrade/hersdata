@@ -7,6 +7,7 @@ var child_process = require('child_process');
 var KeyRing = require('./keyring');
 var ReplicatorCommunication = require('./replicatorcommunication');
 var HookCollection = require('./hookcollection');
+var SessionUser = require('./SessionUser');
 
 function deeparraycopy(array){
   var ret = [];
@@ -691,8 +692,13 @@ Collection.prototype.killAllProcesses = function () {
 		var p = this.processes.shift();
 		p.send('die_right_now');
 	}
-}
+};
 
+Collection.prototype.setSessionUserFactory = function(){
+  this.userFactory = {create:function(data,username,realmname){
+    return new SessionUser(data,username,realmname);
+  }};
+};
 
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
