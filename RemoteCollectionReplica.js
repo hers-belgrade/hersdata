@@ -44,18 +44,18 @@ RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
 RemoteCollectionReplica.prototype.go = function(cb){
   var t = this;
   net.createConnection(this.url.port,this.url.address,function(){
-    cb('connected');
+    cb && cb('connected');
     t.communication.listenTo(this);
     var _cb = cb;
     this.on('close',function(){
-      _cb('disconnected');
+      _cb && _cb('disconnected');
       t.commands.clear();
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(){
     var _t = t,_cb = cb;
-    cb('disconnected');
-    setTimeout(function(){_cb('reconnecting');_t.go();},1000);
+    cb && cb('disconnected');
+    setTimeout(function(){_cb && _cb('reconnecting');_t.go();},1000);
   });
 };
 module.exports = RemoteCollectionReplica;
