@@ -57,7 +57,7 @@ RequestHandler.prototype.process = function(urlpath,data){
   urlpath = stripLeadingSlash(urlpath);
   //console.log(urlpath,data);
   switch(urlpath){
-    case 'execute':
+    case 'executeDCP':
       var commands=[];
       var dcmds = data.commands;
       try{
