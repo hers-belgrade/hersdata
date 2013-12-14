@@ -679,10 +679,10 @@ Collection.prototype.openReplication = function(port){
     var rc = new ReplicatorCommunication(t);
     rc.listenTo(c);
     c.on('error',function(){
-      delete collection.replicatingClients[rp];
+      collection.replicatingClients && delete collection.replicatingClients[rp];
     });
     c.on('end',function(){
-      delete collection.replicatingClients[rp];
+      collection.replicatingClients && delete collection.replicatingClients[rp];
     });
     collection.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
       rc.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
