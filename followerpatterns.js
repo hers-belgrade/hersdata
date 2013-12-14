@@ -66,3 +66,10 @@ function TypedScalarsFollower(scalarnametypes,cb,ctx){
   }
   return ScalarsFollower(scalarnames,cb,validation,ctx);
 };
+
+module.exports = {
+  TypeFollower : TypeFollower,
+  ScalarFollower : ScalarFollower,
+  ScalarsFollower : ScalarsFollower,
+  TypedScalarsFollower : TypedScalarsFollower
+};

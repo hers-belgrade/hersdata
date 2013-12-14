@@ -12,6 +12,7 @@ module.exports = {
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   KeyRing:require('./keyring'),
   Follower:require('./follower'),
+  FollowerPatterns:require('./followerpatterns'),
 	helpers: require('./helpers')
 };
 
