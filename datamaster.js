@@ -439,16 +439,20 @@ Collection.prototype.removeUser = function(username,realmname){
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
   if(!path){return cb('NO_FUNCTIONALITY');}
+  if(path.charAt(0)==='/'){
+    path = path.substring(1);
+  }
   path = path.split('/');
   if(!path.length){return cb('NO_FUNCTIONALITY');}
   var methodname = path[path.length-1];
+  var functionalityname = path[path.length-2];
   //console.log(methodname);
 	if (methodname.charAt(0) === '_'){return cb('ACCESS_FORBIDDEN');}
   var target = this.element(path.slice(0,-2));
   if(target){
     this.setUser(username,realmname,roles,function(u){
       if(!u){return cb('NO_USER');}
-      var f = target.functionalities[path[path.length-2]];
+      var f = target.functionalities[functionalityname];
       if(f){
         var key = f.key;
         if((typeof key !== 'undefined')&&(!u.contains(key))){
@@ -461,7 +465,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
           m(paramobj,cb,username,realmname);
         }
       }else{
-        console.log(path[path.length-2],'is not a methodname');
+        console.log(functionalityname,'is not a functionalityname');
         return cb('NO_FUNCTIONALITY');
       }
     });
