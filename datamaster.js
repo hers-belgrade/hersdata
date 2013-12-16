@@ -447,7 +447,15 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_'){return cb('ACCESS_FORBIDDEN');}
+	if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
+  if (username==='*'){
+    if(typeof this.replicatingClients[realmname] !== 'undefined'){
+      username = realmname;
+      realmname = '_dcp_';
+    }else{
+      return cb('ACCESS_FORBIDDEN');
+    }
+  }
   var target = this.element(path.slice(0,-2));
   if(target){
     this.setUser(username,realmname,roles,function(u){
