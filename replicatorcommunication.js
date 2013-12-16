@@ -19,12 +19,6 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
   socket.on('data',function(data){
     t.processData(data);
   });
-  socket.on('close',function(){
-    t.lenBufread=0;
-    t.bytesToRead=-1;
-    t.dataRead='';
-    delete t.socket;
-  });
 };
 ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}

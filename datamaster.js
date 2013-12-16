@@ -678,15 +678,21 @@ Collection.prototype.openReplication = function(port){
     var collection = t;
     var rc = new ReplicatorCommunication(t);
     rc.listenTo(c);
-    c.on('error',function(){
-      collection.replicatingClients && delete collection.replicatingClients[rp];
-    });
-    c.on('end',function(){
-      collection.replicatingClients && delete collection.replicatingClients[rp];
-    });
-    collection.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+    rc.listener = collection.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
       rc.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
     });
+    function finalize(){
+      collection.replicatingClients && delete collection.replicatingClients[rp];
+      c.removeAllListeners();
+      collection.onNewTransaction.detach(rc.listener);
+      for(var i in rc){
+        delete rc[i];
+      }
+      rc = null;
+    }
+    c.on('error',finalize);
+    c.on('end',finalize);
+    c.on('close',finalize);
   });
   server.listen(port);
 };

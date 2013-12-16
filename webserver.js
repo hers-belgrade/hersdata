@@ -67,7 +67,7 @@ RequestHandler.prototype.process = function(urlpath,data){
       catch(e){
         console.log('error JSON parsing',e,dcmds,typeof dcmds);
         this.errorcode='JSON';
-        this.errorparams = data.commands[i];
+        this.errorparams = [dcmds];
         this.report_end();
         return;
       }
@@ -112,7 +112,8 @@ RequestHandler.prototype.execute = function(command,paramobj,cb){
     case 'init':
     break;
     default:
-      this.functionality.invokeOnUserSession({user:this.user,session:this.session,path:command,paramobj:paramobj,cb:cb},cb);
+      //this.functionality.invokeOnUserSession({user:this.user,session:this.session,path:command,paramobj:paramobj,cb:cb},cb);
+      user.invoke(command,paramobj,cb);
     break;
   }
 };

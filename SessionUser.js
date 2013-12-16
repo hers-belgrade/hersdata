@@ -44,7 +44,7 @@ function SessionFollower(keyring,path,txncb){
               if(typeof sv !== 'undefined'){
                 val.value = sv;
                 if(path[path.length-1]==='pots'){
-                  console.log(path.join('.'),'pushing',name,sv);
+                  //console.log(path.join('.'),'pushing',name,sv);
                 }
                 txnqueue.push([name,sv]);
               }else{
@@ -59,7 +59,7 @@ function SessionFollower(keyring,path,txncb){
 					//console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
 					if(followers[name]){
-            console.log(path.join('.'),'refreshing',name);
+            //console.log(path.join('.'),'refreshing',name);
 						followers[name].refresh();
 					}
         break;
@@ -78,7 +78,7 @@ function SessionFollower(keyring,path,txncb){
         scalars[name] = null;
         delete scalars[name];
       }else if(typeof collections[name] !== 'undefined'){
-        console.log(path.join('.'),'pushing deletion of',name);
+        //console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         delete collections[name];
       }else{
@@ -90,7 +90,7 @@ function SessionFollower(keyring,path,txncb){
   this.refresh = function(){
 		Follower.call(t,keyring,path,cb);
     for(var i in followers){
-      console.log('subrefreshing',i);
+      //console.log('subrefreshing',i);
       followers[i].refresh();
     }
 	};

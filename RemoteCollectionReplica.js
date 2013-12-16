@@ -50,12 +50,15 @@ RemoteCollectionReplica.prototype.go = function(cb){
     this.on('close',function(){
       _cb && _cb('disconnected');
       t.commands.clear();
+      var _t = t;
+      setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);
     });
     CollectionReplica.prototype.go.call(t);
-  }).on('error',function(){
+  }).on('error',function(e){
+    console.log('error',e);
     var _t = t,_cb = cb;
     cb && cb('disconnected');
-    setTimeout(function(){_cb && _cb('reconnecting');_t.go();},1000);
+    setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);
   });
 };
 module.exports = RemoteCollectionReplica;
