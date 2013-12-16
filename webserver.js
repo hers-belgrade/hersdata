@@ -40,8 +40,9 @@ RequestHandler.prototype.report_error = function(message){
 RequestHandler.prototype.report_end = function(){
   var res = this.response;
   if(!this.responseobj.username){
-    console.trace();
-    console.log(this.responseobj);
+		/// don't bother me, I know I am unknown user ...
+    //console.trace();
+    //console.log(this.responseobj);
   }
   var message = JSON.stringify(this.responseobj);
   if(res.writable){
