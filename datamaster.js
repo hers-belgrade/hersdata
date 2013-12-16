@@ -290,6 +290,10 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
+      if(txnalias === 'init' && !t.replicatingUser){
+        t.replicatingUser = (this.userFactory.create)(this,'*','');
+        t.replicatingUser.addKeys(['dcp','system']);
+      }
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
