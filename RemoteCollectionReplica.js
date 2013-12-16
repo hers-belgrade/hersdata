@@ -55,7 +55,6 @@ RemoteCollectionReplica.prototype.go = function(cb){
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(e){
-    console.log('error',e);
     var _t = t,_cb = cb;
     cb && cb('disconnected');
     setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);

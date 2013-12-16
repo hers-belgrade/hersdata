@@ -141,9 +141,9 @@ function onChildTxn(name,onntxn,txnc,txnb,txne){
     }
     txnc.inc();
     //console.log(txnalias,'firing on child',txnc.toString());
-    //txnb.fire(txnalias);
+    txnb.fire(txnalias);
+    txne.fire(txnalias);
     onntxn.fire([],txnalias,tp,txnc.clone());
-    //txne.fire(txnalias);
     //console.log(txnc.toString(),'fire done');
   };
 };
@@ -408,7 +408,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
   }
   var u = realm[username];
   if(!u){
-    //console.log(username+'@'+realmname,'not found');
+    console.log(username+'@'+realmname,'not found');
     var kr = (this.userFactory.create)(this,username,realmname);
     roles = roles||'';
     kr.addKeys(roles.split(','));

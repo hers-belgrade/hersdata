@@ -1,12 +1,13 @@
-var KeyRing = require('./keyring');
-var Follower = require('./follower');
+var KeyRing = require('./keyring'),
+  Follower = require('./follower'),
+  util = require('util');
 
 scalarValue = function(keyring,scalar){
   return keyring.contains(scalar.access_level()) ? scalar.value() : scalar.public_value();
 };
 
 function SessionFollower(keyring,path,txncb){
-  //console.log('new follower',path);
+  console.log('new follower',path,keyring.keys);
   var scalars={};
   var collections={};
   var followers = {};
@@ -25,7 +26,7 @@ function SessionFollower(keyring,path,txncb){
     for(var i in collections){
       mydump.push([i,null]);
     };
-    //console.log(path.join('.'),'dump',mydump);
+    console.log(path.join('.'),'dump',mydump);
     return mydump;
   };
   var txnqueue=[];
@@ -34,7 +35,7 @@ function SessionFollower(keyring,path,txncb){
   };
   function cb(name,ent){
     if(ent){
-      //console.log('scalars',scalars,'collections',collections);
+      //console.log(path.join('.'),'before: scalars',scalars,'collections',collections);
       switch(ent.type()){
         case 'Scalar':
           var val = {};
@@ -43,9 +44,7 @@ function SessionFollower(keyring,path,txncb){
               var sv = scalarValue(keyring,el);
               if(typeof sv !== 'undefined'){
                 val.value = sv;
-                if(path[path.length-1]==='pots'){
-                  //console.log(path.join('.'),'pushing',name,sv);
-                }
+                console.log(path.join('.'),'pushing',name,sv);
                 txnqueue.push([name,sv]);
               }else{
                 //console.log(path.join('.'),name,'cannot be pushed');
@@ -56,7 +55,7 @@ function SessionFollower(keyring,path,txncb){
         break;
         case 'Collection':
           collections[name] = null;
-					//console.log(path.join('.'),'pushing collection',name);
+					console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
 					if(followers[name]){
             //console.log(path.join('.'),'refreshing',name);
@@ -67,10 +66,11 @@ function SessionFollower(keyring,path,txncb){
           //console.log(path.join('.'),'cannot push',name);
         break;
       }
+      //console.log(path.join('.'),'after: scalars',scalars,'collections',collections);
     }else{
       //console.log('follower should delete',name,scalars,collections);
       if(typeof scalars[name] !== 'undefined'){
-        //console.log(path.join('.'),'pushing deletion of',name);
+        console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         if(scalars[name].handler){
           scalars[name].handler.destroy();
@@ -78,7 +78,7 @@ function SessionFollower(keyring,path,txncb){
         scalars[name] = null;
         delete scalars[name];
       }else if(typeof collections[name] !== 'undefined'){
-        //console.log(path.join('.'),'pushing deletion of',name);
+        console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         delete collections[name];
       }else{
@@ -112,6 +112,7 @@ function SessionFollower(keyring,path,txncb){
     this.doEndTxn = function(_txnalias){
       var et = t.endTxn(_txnalias);
       if(typeof et !== 'undefined'){
+        console.log(_txnalias,util.inspect(et,false,null,false));
         txncb(_txnalias,et);
       }
     };
@@ -173,7 +174,7 @@ SessionFollower.prototype.triggerTxn = function(virtualtxn){
 };
 SessionFollower.prototype.dump = function(){
   var childdumps = {};
-  var ret = [this._localdump(),childdumps]
+  var ret = [this._localdump(),childdumps];
   for(var i in this.followers){
     childdumps[i] = this.followers[i].dump();
   }
