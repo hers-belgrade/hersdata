@@ -290,7 +290,7 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
-      if(txnalias === 'init' && !t.replicatingUser){
+      if(txnalias === 'initDCPreplica' && !t.replicatingUser){
         t.replicatingUser = (this.userFactory.create)(this,'*','');
         t.replicatingUser.addKeys(['dcp','system']);
       }
@@ -754,7 +754,7 @@ Collection.prototype.processInput = function(sender,input){
         }
         sender._realmname = internal[1];
         this.replicatingClients[sender._realmname] = sender;
-        sender.send({rpc:['_commit','init',this.toMasterPrimitives()]});
+        sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
         break;
     }
   }
