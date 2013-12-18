@@ -453,7 +453,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   //console.log(methodname);
 	if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
   if (username==='*'){
-    if(typeof this.replicatingClients[realmname] !== 'undefined'){
+    if(this.replicatingClients && typeof this.replicatingClients[realmname] !== 'undefined'){
       username = realmname;
       realmname = '_dcp_';
     }else{
@@ -497,7 +497,9 @@ Collection.prototype.setKey = function(username,realmname,key){
     //console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
   });
-  if(this.replicatingClients){
+  if(this.replicatingClients && this.replicatingClients[realmname]){
+    this.replicatingClients[realmname].send({rpc:['setKey',username,realmname,key]});
+    /*
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
       if(rc._realmname === realmname){
@@ -505,6 +507,7 @@ Collection.prototype.setKey = function(username,realmname,key){
         rc.send({rpc:['setKey',username,realmname,key]});
       }
     }
+    */
   }
 };
 
@@ -518,6 +521,10 @@ Collection.prototype.removeKey = function(username,realmname,key){
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.removeKey(key,t);
   });
+  if(this.replicatingClients && this.replicatingClients[realmname]){
+    this.replicatingClients[realmname].send({rpc:['removeKey',username,realmname,key]});
+  }
+  /*
   if(this.replicatingClients){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
@@ -527,6 +534,7 @@ Collection.prototype.removeKey = function(username,realmname,key){
       }
     }
   }
+  */
 };
 
 Collection.prototype.attach = function(functionalityname, config, key, environment, consumeritf){
@@ -683,6 +691,18 @@ Collection.prototype.createRemoteReplica = function(localname,realmname,url){
   //skipping the txn mechanism, it will be fired when the communication is established
 };
 
+Collection.prototype.closeReplicatingClient = function(realmname){
+  if(!this.replicatingClients){return;}
+  var rc = this.replicatingClients[realmname];
+  if(!rc){return;}
+  delete this.replicatingClients[realmname];
+  this.onNewTransaction.detach(rc.listener);
+  for(var i in rc){
+    delete rc[i];
+  }
+  rc = null;
+};
+
 Collection.prototype.openReplication = function(port){
   var t = this;
   var server = net.createServer(function(c){
@@ -690,17 +710,11 @@ Collection.prototype.openReplication = function(port){
     var collection = t;
     var rc = new ReplicatorCommunication(t);
     rc.listenTo(c);
-    rc.listener = collection.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-      rc.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
-    });
     function finalize(){
-      collection.replicatingClients && delete collection.replicatingClients[rp];
       c.removeAllListeners();
-      collection.onNewTransaction.detach(rc.listener);
-      for(var i in rc){
-        delete rc[i];
-      }
-      rc = null;
+      c = null;
+      console.log('connection broke on',rc._realmname);
+      collection.closeReplicatingClient(rc._realmname);
     }
     c.on('error',finalize);
     c.on('end',finalize);
@@ -753,8 +767,19 @@ Collection.prototype.processInput = function(sender,input){
           this.replicatingClients = {};
         }
         sender._realmname = internal[1];
+        if(this.replicatingClients[sender._realmname]){
+          //now what??
+          this.closeReplicatingClient(sender._realmname);
+        }
         this.replicatingClients[sender._realmname] = sender;
         sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
+        sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+        });
+        break;
+      case 'going_down':
+        console.log(sender._realmname,'going down');
+        delete this.replicatingClients[sender._realmname];
         break;
     }
   }
