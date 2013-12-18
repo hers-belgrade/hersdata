@@ -58,9 +58,9 @@ function Follower(keyring,path,cb){
       case 'Scalar':
         if(keyring.contains(data.access_level())){
           cb.call(t,name,el);
-        }/*else{
+        }else{
           console.log(name,'will not be shown',data.access_level(),keyring.keys);
-        }*/
+        }
         break;
     }
   });

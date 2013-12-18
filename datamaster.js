@@ -292,7 +292,7 @@ function Collection(a_l){
     return function (txnalias,txnprimitives) {
       if(txnalias === 'initDCPreplica' && !t.replicatingUser){
         t.replicatingUser = (this.userFactory.create)(this,'*','');
-        t.replicatingUser.addKeys(['dcp','system']);
+        t.replicatingUser.addKeys(['dcp','system',this.realmname]);
       }
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
@@ -408,7 +408,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
   }
   var u = realm[username];
   if(!u){
-    console.log(username+'@'+realmname,'not found');
+    //console.log(username+'@'+realmname,'not found');
     var kr = (this.userFactory.create)(this,username,realmname);
     roles = roles||'';
     kr.addKeys(roles.split(','));
