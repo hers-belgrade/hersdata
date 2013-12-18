@@ -12,6 +12,20 @@ function CollectionReplica(realmname,sendcb){
     sendobj[code]=params;
     sendcb(sendobj);
   };
+  var t = this;
+  function going_down(){
+    if(t.downnotified){
+      process.exit();
+    }
+    t.downnotified=true;
+    t.send('internal','going_down');
+    process.exit();
+  };
+  process.on('exit',going_down);
+  process.on('SIGINT',going_down);
+  process.on('SIGTERM',going_down);
+  process.on('SIGKILL',going_down);
+  process.on('SIGQUIT',going_down);
   Collection.call(this);
 };
 CollectionReplica.prototype = new Collection();
