@@ -62,7 +62,7 @@ RequestHandler.prototype.process = function(urlpath,data){
       var commands=[];
       var dcmds = data.commands;
       try{
-        console.log('data commands are',typeof dcmds,dcmds);
+        //console.log('data commands are',typeof dcmds,dcmds);
         commands = JSON.parse(dcmds);
       }
       catch(e){
@@ -113,8 +113,7 @@ RequestHandler.prototype.execute = function(command,paramobj,cb){
     case 'init':
     break;
     default:
-      //this.functionality.invokeOnUserSession({user:this.user,session:this.session,path:command,paramobj:paramobj,cb:cb},cb);
-      user.invoke(command,paramobj,cb);
+      this.user.invoke(command,paramobj,cb);
     break;
   }
 };
