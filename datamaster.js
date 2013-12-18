@@ -292,7 +292,7 @@ function Collection(a_l){
     return function (txnalias,txnprimitives) {
       if(txnalias === 'initDCPreplica' && !t.replicatingUser){
         t.replicatingUser = (this.userFactory.create)(this,'*','');
-        t.replicatingUser.addKeys(['dcp','system']);
+        t.replicatingUser.addKeys(['dcp','system',this.realmname]);
       }
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);

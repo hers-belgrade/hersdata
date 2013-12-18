@@ -18,11 +18,11 @@ function TypeFollower(addscalarcb,addcollectioncb,removecb,ctx){
 function ScalarFollower(scalarname,addcb,removecb,ctx){
   return TypeFollower(function(name,val){
     if(addcb && name===scalarname){
-      addcb.call(this,name,val);
+      addcb.call(this,val);
     }
-  },function(name){
+  },null,function(name){
     if(removecb && name===scalarname){
-      removecb.call(this,name,val);
+      removecb.call(this,val);
     }
   },ctx);
 };
