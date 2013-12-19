@@ -60,4 +60,10 @@ RemoteCollectionReplica.prototype.go = function(cb){
     setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);
   });
 };
+RemoteCollectionReplica.prototype.destroy = function(){
+  if(this.communication && this.communication.socket){
+    this.communication.socket.destroy();
+  }
+  CollectionReplica.prototype.destroy.call(this);
+};
 module.exports = RemoteCollectionReplica;

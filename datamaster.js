@@ -230,6 +230,8 @@ function Collection(a_l){
   };
 
   this.destroy = function(){
+    console.trace();
+    console.log('destruction');
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
@@ -704,9 +706,9 @@ Collection.prototype.closeReplicatingClient = function(realmname){
     console.log('no replicatingClient named',realmname,'to close');//'in',this.replicatingClients);
     return;
   }
+  console.log('closing replicatingClient',realmname);
   delete this.replicatingClients[realmname];
   this.onNewTransaction.detach(rc.listener);
-  console.log(rc);
   rc.socket && rc.socket.destroy();
   for(var i in rc){
     delete rc[i];
@@ -774,12 +776,15 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
-        console.log('remote replica announcing at realm',internal[1]);
+        console.log('remote replica announcing as',internal[1]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
         sender._realmname = internal[1];
         if(this.replicatingClients[sender._realmname]){
+          //console.log('but it is a duplicate of',this.replicatingClients[sender._realmname]);
+          //console.log('but it is a duplicate on',this.dataDebug());
+          console.log('but it is a duplicate');
           //now what??
           //this.closeReplicatingClient(sender._realmname); //sloppy, leads to ping-pong between several replicas with the same realmname
           sender.send({giveup:true});
