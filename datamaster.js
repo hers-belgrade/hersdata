@@ -187,6 +187,7 @@ function Collection(a_l){
 	this.onNewFunctionality = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
+  this.newReplica = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
     if(a_l===null){a_l=undefined;}
@@ -238,6 +239,7 @@ function Collection(a_l){
     this.onNewFunctionality.destruct();
     this.txnBegins.destruct();
     this.txnEnds.destruct();
+    this.newReplica.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
   };
@@ -652,7 +654,11 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 								if(typeof __p === 'undefined'){
 									var __pd = pd[_ps[i]];
 									if(typeof __pd === 'undefined'){
-										errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
+										if(errcb){
+                      errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
+                    }else{
+                      console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
+                    }
                     return;
 									}
 								}
@@ -694,9 +700,14 @@ Collection.prototype.createRemoteReplica = function(localname,realmname,url){
 Collection.prototype.closeReplicatingClient = function(realmname){
   if(!this.replicatingClients){return;}
   var rc = this.replicatingClients[realmname];
-  if(!rc){return;}
+  if(!rc){
+    console.log('no replicatingClient named',realmname,'to close');//'in',this.replicatingClients);
+    return;
+  }
   delete this.replicatingClients[realmname];
   this.onNewTransaction.detach(rc.listener);
+  console.log(rc);
+  rc.socket && rc.socket.destroy();
   for(var i in rc){
     delete rc[i];
   }
@@ -763,23 +774,28 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
+        console.log('remote replica announcing at realm',internal[1]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
         sender._realmname = internal[1];
         if(this.replicatingClients[sender._realmname]){
           //now what??
-          this.closeReplicatingClient(sender._realmname);
+          //this.closeReplicatingClient(sender._realmname); //sloppy, leads to ping-pong between several replicas with the same realmname
+          sender.send({giveup:true});
+          sender.socket.destroy();
+          return;
         }
         this.replicatingClients[sender._realmname] = sender;
         sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
           sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
         });
+        this.newReplica.fire(sender);
         break;
       case 'going_down':
         console.log(sender._realmname,'going down');
-        delete this.replicatingClients[sender._realmname];
+        this.closeReplicatingClient(sender._realmname);
         break;
     }
   }

@@ -7,11 +7,16 @@ function ReplicatorCommunication(data){
 };
 ReplicatorCommunication.prototype.send = function(obj){
   if(!this.socket){return;}
-  var objstr = JSON.stringify(obj);
+  var objstr = JSON.stringify(obj)||'';
   var objlen = new Buffer(4);
   objlen.writeUInt32LE(objstr.length,0);
-  this.socket.write(objlen);
-  this.socket.write(objstr);
+  try{
+    this.socket.write(objlen);
+    this.socket.write(objstr);
+  }
+  catch(e){
+    //socket closed...
+  }
 };
 ReplicatorCommunication.prototype.listenTo = function(socket){
   var t = this;
@@ -49,6 +54,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
       try{
         this.data.processInput(this,JSON.parse(this.dataRead));
       }catch(e){
+        console.log(e.stack);
         console.log(e);
       }
     }
