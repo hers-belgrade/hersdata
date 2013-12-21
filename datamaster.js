@@ -230,8 +230,6 @@ function Collection(a_l){
   };
 
   this.destroy = function(){
-    console.trace();
-    console.log('destruction');
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
@@ -481,7 +479,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
           m(paramobj,cb,username,realmname);
         }
       }else{
-        console.log(functionalityname,'is not a functionalityname');
+        console.log(functionalityname,'is not a functionalityname while processing',path);
         return cb('NO_FUNCTIONALITY');
       }
     });
@@ -692,6 +690,19 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   this.functionalities[fqnname] = {f:ret,key:key};
   this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
+};
+
+Collection.prototype.getReplicatingUser = function(cb){
+  if(this.replicatingUser){
+    cb(this.replicatingUser);
+    return;
+  }
+  var t=this,rul = this.txnEnds.attach(function(txnalias){
+    if(txnalias==='initDCPreplica'){
+      t.txnEnds.detach(rul);
+      cb(t.replicatingUser);
+    }
+  });
 };
 
 Collection.prototype.createRemoteReplica = function(localname,realmname,url){
