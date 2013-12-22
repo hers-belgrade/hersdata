@@ -789,7 +789,12 @@ Collection.prototype.processInput = function(sender,input){
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
-        sender.replicaToken = {realmname : internal[1]};
+        var srt = internal[2];
+        if(srt && typeof srt === 'object'){
+          sender.replicaToken = srt;
+        }else{
+          sender.replicaToken = {realmname : internal[1]};
+        }
         if(this.replicatingClients[sender.replicaToken.realmname]){
           //console.log('but it is a duplicate of',this.replicatingClients[sender.replicaToken.realmname]);
           //console.log('but it is a duplicate on',this.dataDebug());
