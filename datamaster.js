@@ -736,6 +736,8 @@ Collection.prototype.openReplication = function(port){
       if(rc.replicaToken){
         console.log('connection broke on',rc.replicaToken.realmname);
         collection.closeReplicatingClient(rc.replicaToken.realmname);
+      }else{
+        console.log('connection broke on',rc);
       }
     }
     c.on('error',finalize);
