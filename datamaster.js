@@ -504,7 +504,7 @@ Collection.prototype.setKey = function(username,realmname,key){
     /*
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
-      if(rc._realmname === realmname){
+      if(rc.replicaToken.realmname === realmname){
         //console.log('sending',key,'to set for',realmname);
         rc.send({rpc:['setKey',username,realmname,key]});
       }
@@ -530,7 +530,7 @@ Collection.prototype.removeKey = function(username,realmname,key){
   if(this.replicatingClients){
     for(var i in this.replicatingClients){
       var rc = this.replicatingClients[i];
-      if(rc._realmname === realmname){
+      if(rc.replicaToken.realmname === realmname){
         //console.log('sending',key,'to remove for',realmname);
         rc.send({rpc:['removeKey',username,realmname,key]});
       }
@@ -737,8 +737,10 @@ Collection.prototype.openReplication = function(port){
     function finalize(){
       c.removeAllListeners();
       c = null;
-      console.log('connection broke on',rc._realmname);
-      collection.closeReplicatingClient(rc._realmname);
+      if(rc.replicaToken){
+        console.log('connection broke on',rc.replicaToken.realmname);
+        collection.closeReplicatingClient(rc.replicaToken.realmname);
+      }
     }
     c.on('error',finalize);
     c.on('end',finalize);
@@ -787,31 +789,32 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
-        console.log('remote replica announcing as',internal[1]);
+        console.log('remote replica announcing as',internal[1],internal[2]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
-        sender._realmname = internal[1];
-        if(this.replicatingClients[sender._realmname]){
-          //console.log('but it is a duplicate of',this.replicatingClients[sender._realmname]);
+        sender.replicaToken = {realmname : internal[1]};
+        if(this.replicatingClients[sender.replicaToken.realmname]){
+          //console.log('but it is a duplicate of',this.replicatingClients[sender.replicaToken.realmname]);
           //console.log('but it is a duplicate on',this.dataDebug());
           console.log('but it is a duplicate');
           //now what??
-          //this.closeReplicatingClient(sender._realmname); //sloppy, leads to ping-pong between several replicas with the same realmname
+          //this.closeReplicatingClient(sender.replicaToken.realmname); //sloppy, leads to ping-pong between several replicas with the same realmname
           sender.send({giveup:true});
           sender.socket.destroy();
           return;
         }
-        this.replicatingClients[sender._realmname] = sender;
+        this.replicatingClients[sender.replicaToken.realmname] = sender;
+        this.newReplica.fire(sender);
+        sender.send({internal:['initToken',sender.replicaToken]});
         sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
           sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
         });
-        this.newReplica.fire(sender);
         break;
       case 'going_down':
-        console.log(sender._realmname,'going down');
-        this.closeReplicatingClient(sender._realmname);
+        console.log(sender.replicaToken.realmname,'going down');
+        this.closeReplicatingClient(sender.replicaToken.realmname);
         break;
     }
   }
