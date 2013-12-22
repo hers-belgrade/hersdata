@@ -1,7 +1,7 @@
 function Follower(keyring,path,cb){
   var data = keyring.data.element(path);
   if(!data){
-    //console.log('no data found at',path,keyring.data.dataDebug());
+    console.log('no data found at',path,keyring.data.dataDebug());
     this.destroy = function(){};
     return;
   }

@@ -188,6 +188,7 @@ function Collection(a_l){
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
+  this.replicationInitiated = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
     if(a_l===null){a_l=undefined;}
@@ -240,6 +241,7 @@ function Collection(a_l){
     this.txnBegins.destruct();
     this.txnEnds.destruct();
     this.newReplica.destruct();
+    this.replicationInitiated.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
   };
@@ -292,10 +294,6 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
-      if(txnalias === 'initDCPreplica' && !t.replicatingUser){
-        t.replicatingUser = (this.userFactory.create)(this,'*','');
-        t.replicatingUser.addKeys(['dcp','system',this.realmname]);
-      }
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
@@ -697,11 +695,9 @@ Collection.prototype.getReplicatingUser = function(cb){
     cb(this.replicatingUser);
     return;
   }
-  var t=this,rul = this.txnEnds.attach(function(txnalias){
-    if(txnalias==='initDCPreplica'){
-      t.txnEnds.detach(rul);
-      cb(t.replicatingUser);
-    }
+  var t=this,rul = this.replicationInitiated.attach(function(user){
+    t.replicationInitiated.detach(rul);
+    cb(user);
   });
 };
 
@@ -811,6 +807,14 @@ Collection.prototype.processInput = function(sender,input){
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
           sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
         });
+        break;
+      case 'initToken':
+        var tkn = internal[1];
+        console.log('initToken',internal[1]);
+        this.replicatingUser = (this.userFactory.create)(this,'*','');
+        this.replicatingUser.addKeys(['dcp','system',tkn.realmname]);
+        this.replicationInitiated.fire(this.replicatingUser);
+        this.replicaToken = tkn;
         break;
       case 'going_down':
         console.log(sender.replicaToken.realmname,'going down');
