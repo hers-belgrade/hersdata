@@ -31,7 +31,7 @@ function augmentpath(pathelem,txn){
 
 function throw_if_invalid_scalar(val) {
   var tov = typeof val;
-	if (('string' !== tov)&&('number' !== tov)){
+  if (('string' !== tov)&&('number' !== tov)){
     console.trace();
     throw val+' can be nothing but a string or a number (found '+tov+')' ;
   }
@@ -39,7 +39,7 @@ function throw_if_invalid_scalar(val) {
 
 function throw_if_invalid_scalar_or_undefined(val){
   var tov = typeof val;
-	if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)&&('boolean' !== tov)){
+  if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)&&('boolean' !== tov)){
     console.trace();
     throw val+' can be nothing but a string or a number ';
   }
@@ -70,22 +70,22 @@ function Scalar(res_val,pub_val, access_lvl) {
 
   this.changed = new HookCollection();
 
-	function set_from_vals (ra,pa,al,path) {
+  function set_from_vals (ra,pa,al,path) {
     ra = nullconversion(ra);
     pa = nullconversion(pa);
     al = nullconversion(al);
-		throw_if_any_invalid(ra,pa,al);
+    throw_if_any_invalid(ra,pa,al);
     if(equals(ra,restricted_value)&&equals(pa,public_value)&&equals(al,access_level)){
       return;
     }
     //console.trace();
     //console.log('[',public_value,restricted_value,access_level,'] changed to [',pa,ra,al,']');
-		restricted_value = ra;
-		public_value = pa;
-		access_level = al;
+    restricted_value = ra;
+    public_value = pa;
+    access_level = al;
     //console.log(this.changed.counter);
     this.changed.fire();
-	}
+  }
 
   this.subscribeToValue = function(cb){
     if(typeof cb !== 'function'){return;}
@@ -95,17 +95,17 @@ function Scalar(res_val,pub_val, access_lvl) {
     return {destroy:function(){this.changed&&this.changed.detach(hook);}};
   };
 
-	set_from_vals.call(this,res_val, pub_val, access_lvl);
+  set_from_vals.call(this,res_val, pub_val, access_lvl);
 
   this.access_level = function(){
     return access_level;
   };
-	this.alter = function (r_v,p_v,a_l,path) { 
+  this.alter = function (r_v,p_v,a_l,path) { 
     r_v = (r_v===null) ? undefined : r_v;
     p_v = (p_v===null) ? undefined : p_v;
     a_l = (a_l===null) ? undefined : a_l;
     return set_from_vals.call(this,r_v,p_v,a_l,path);
-	};
+  };
   this.value = function(){
     return restricted_value;
   };
@@ -119,12 +119,12 @@ function Scalar(res_val,pub_val, access_lvl) {
     return [['set',path,[restricted_value,public_value,access_level]]];
   }
 
-	this.destroy = function  () {
-		public_value = undefined;
-		restricted_value = undefined;
-		access_level = undefined;
+  this.destroy = function  () {
+    public_value = undefined;
+    restricted_value = undefined;
+    access_level = undefined;
     this.changed.destruct();
-	}
+  }
 };
 Scalar.prototype.type = function(){
   return 'Scalar';
@@ -159,33 +159,34 @@ function Collection(a_l){
   this.access_level = function(){
     return access_level;
   };
-	var data = {};
+  var data = {};
   this.functionalities = {};
 
-	this.keys = function () {return Object.keys(data);}
+  this.keys = function () {return Object.keys(data);}
 
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
   };
 
-	this.dataDebug = function () {
+  this.dataDebug = function () {
     var ret = {_key:access_level};
     for(var i in data){
       var _d = data[i];
       ret[i] = (_d.type() === 'Scalar') ? _d.debugValue() : _d.dataDebug();
     }
     return ret;
-	}
+  }
 
   var onNewElement = new HookCollection();
   var onElementDestroyed = new HookCollection();
 
-	this.onNewTransaction = new HookCollection();
-	this.onNewFunctionality = new HookCollection();
+  this.onNewTransaction = new HookCollection();
+  this.onNewFunctionality = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
   this.replicationInitiated = new HookCollection();
+  this.destroyed = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
     if(a_l===null){a_l=undefined;}
@@ -239,11 +240,12 @@ function Collection(a_l){
     this.txnEnds.destruct();
     this.newReplica.destruct();
     this.replicationInitiated.destruct();
+    this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
   };
 
-	this.element = function(name){
+  this.element = function(name){
     if(utils.isArray(name)){
       if(name.length<1){
         return this;
@@ -320,7 +322,7 @@ Collection.prototype.commit = function(txnalias,txnprimitives){
 };
 
 Collection.prototype.type = function(){
-	return 'Collection';
+  return 'Collection';
 };
 
 Collection.prototype.perform_set = function(path,param,txnc){
@@ -439,6 +441,7 @@ Collection.prototype.removeUser = function(username,realmname){
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
+  console.log('invoke',arguments);
   if(!path){return cb('NO_FUNCTIONALITY');}
   if(path.charAt(0)==='/'){
     path = path.substring(1);
@@ -448,7 +451,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
+  if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
   if (username==='*'){
     if(this.replicatingClients && typeof this.replicatingClients[realmname] !== 'undefined'){
       username = realmname;
@@ -555,14 +558,14 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     throw functionalityname+" does not have the 'errors' map";
   }
   var env;
-	if ('string' === environment) {
-		try{
-			env= require(environment);
-		}
-		catch(e){}
-	}else{
-		env= environment;
-	}
+  if ('string' === environment) {
+    try{
+      env= require(environment);
+    }
+    catch(e){}
+  }else{
+    env= environment;
+  }
   
   function localerrorhandler(originalerrcb){
     var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb;
@@ -592,94 +595,96 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     };
   };
 
-	if ('function' === typeof(m.validate_config)) {
-		if (!m.validate_config(config)) {
-			console.log('Configuration validation failed, functionality: '+functionalityname, config);
-			return null;
-		}
-	}	
+  if ('function' === typeof(m.validate_config)) {
+    if (!m.validate_config(config)) {
+      console.log('Configuration validation failed, functionality: '+functionalityname, config);
+      return null;
+    }
+  } 
 
-	var my_mod = {};
-	var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf||self);
-	if (m.requirements) {
-		if (!env) {
-			//console.log('NO environment, use defaults');
-			env = m.requirements;
-		}
-		for (var j in m.requirements) {
-			(function (_j) {
+  var my_mod = {};
+  var SELF = (function(s,r,m,ci){var _s=s,_r=r,_m=m,_ci=ci;return function(){return {data:_s, self:_r, cbs: _m, consumeritf:_ci};}})(self,ret,my_mod,consumeritf||self);
+  if (m.requirements) {
+    if (!env) {
+      //console.log('NO environment, use defaults');
+      env = m.requirements;
+    }
+    for (var j in m.requirements) {
+      (function (_j) {
         var _e = env;
-				if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
-				//console.log('setting requirement '+j+' to '+functionalityname);
-				my_mod[_j] = function () {
-					return _e[_j].apply(SELF(), arguments);
-				};
-			})(j);
-		}
-		//console.log('Reqirement successfully set on: '+functionalityname);
-	}
+        if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
+        //console.log('setting requirement '+j+' to '+functionalityname);
+        my_mod[_j] = function () {
+          return _e[_j].apply(SELF(), arguments);
+        };
+      })(j);
+    }
+    //console.log('Reqirement successfully set on: '+functionalityname);
+  }
 
-	for(var i in m){
-		var p = m[i];
-		if((typeof p !== 'function')) continue;
-		ret[i] = (function(mname,_p){
-			if (mname.charAt(0) == '_') {
-				return function () {
-					return _p.apply(SELF(), arguments);
-				}
-			}
+  for(var i in m){
+    var p = m[i];
+    if((typeof p !== 'function')) continue;
+    ret[i] = (function(mname,_p){
+      if (mname.charAt(0) == '_') {
+        return function () {
+          return _p.apply(SELF(), arguments);
+        }
+      }
 
-			if(mname!=='init'){
-				return function(obj,errcb,callername,realmname){
-					var pa = [];
-					if(_p.params){
-						if(_p.params==='originalobj'){
-							if(typeof obj !== 'object'){
-								throw 'First parameter to '+mname+' has to be an object';
-							}
-							pa.push(obj);
-						}else{
-							var pd = _p.defaults||{};
-							var _ps = _p.params;
-							if(typeof obj !== 'object'){
-								throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
-							}
-							for(var i=0; i<_ps.length; i++){
-								var __p = obj[_ps[i]];
-								if(typeof __p === 'undefined'){
-									var __pd = pd[_ps[i]];
-									if(typeof __pd === 'undefined'){
-										if(errcb){
+      if(mname!=='init'){
+        return function(obj,errcb,callername,realmname){
+          var pa = [];
+          if(_p.params){
+            if(_p.params==='originalobj'){
+              if(typeof obj !== 'object'){
+                throw 'First parameter to '+mname+' has to be an object';
+              }
+              pa.push(obj);
+            }else{
+              var pd = _p.defaults||{};
+              var _ps = _p.params;
+              if(typeof obj !== 'object'){
+                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+              }
+              for(var i=0; i<_ps.length; i++){
+                var __p = obj[_ps[i]];
+                if(typeof __p === 'undefined'){
+                  var __pd = pd[_ps[i]];
+                  if(typeof __pd === 'undefined'){
+                    if(errcb){
                       errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
                     }else{
                       console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
                     }
                     return;
-									}
-								}
-								pa.push(__p);
-							}
-						}
+                  }else{
+                    __p = __pd;
+                  }
+                }
+                pa.push(__p);
+              }
+            }
             pa.push(localerrorhandler(errcb),callername,realmname);
-					}else{
+          }else{
             pa.push(localerrorhandler(errcb),callername,realmname);
           }
-					_p.apply(SELF(),pa);
-				};
-			}else{
-				return function(errcb,callername,realmname){
-					_p.call(SELF(),localerrorhandler(errcb),callername,realmname);
-				};
-			}
-		})(i,p);
-		ret['__DESTROY__'] = function(){
-			for(var i in ret){
-				delete ret[i];
-			}
-			m = undefined;
-			ret = undefined;
-		};
-	}
+          _p.apply(SELF(),pa);
+        };
+      }else{
+        return function(errcb,callername,realmname){
+          _p.call(SELF(),localerrorhandler(errcb),callername,realmname);
+        };
+      }
+    })(i,p);
+    ret['__DESTROY__'] = function(){
+      for(var i in ret){
+        delete ret[i];
+      }
+      m = undefined;
+      ret = undefined;
+    };
+  }
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.functionalities[fqnname] = {f:ret,key:key};
@@ -745,10 +750,10 @@ Collection.prototype.openReplication = function(port){
 };
 
 Collection.prototype.killAllProcesses = function () {
-	while(this.processes && this.processes.length) {
-		var p = this.processes.shift();
-		p.send('die_right_now');
-	}
+  while(this.processes && this.processes.length) {
+    var p = this.processes.shift();
+    p.send('die_right_now');
+  }
 };
 
 Collection.prototype.setSessionUserFactory = function(){
@@ -760,8 +765,8 @@ Collection.prototype.setSessionUserFactory = function(){
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
   var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
-	if (!this.processes) this.processes = [];
-	this.processes.push (cp);
+  if (!this.processes) this.processes = [];
+  this.processes.push (cp);
 
   var t = this;
   cp.on('message',function(input){
@@ -854,7 +859,7 @@ Collection.prototype.processInput = function(sender,input){
     if(commandresult.length){
       cbref = commandresult.splice(0,1)[0];
       var cb = this.cbs[cbref];
-			//console.log('cb for',cbref,'is',cb);
+      //console.log('cb for',cbref,'is',cb);
       if(typeof cb === 'function'){
         cb.apply(null,commandresult);
         delete this.cbs[cbref];
@@ -876,7 +881,7 @@ function DeadCollection(){
 
 
 module.exports = {
-	Scalar : Scalar,
-	Collection : Collection,
-	HookCollection : HookCollection
+  Scalar : Scalar,
+  Collection : Collection,
+  HookCollection : HookCollection
 }
