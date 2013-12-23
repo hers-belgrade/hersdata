@@ -14,7 +14,7 @@ function KeyRing(data,username,realmname, roles){
 };
 
 KeyRing.prototype.invoke = function (request, paramobj, cb) {
-	this.data && this.data.invoke(request, paramobj,this.username, this.roles, cb);
+	this.data && this.data.invoke(request, paramobj,this.username, this.realmname, this.roles, cb);
 }
 
 
