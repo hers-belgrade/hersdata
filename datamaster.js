@@ -410,10 +410,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
   var u = realm[username];
   if(!u){
     //console.log(username+'@'+realmname,'not found');
-    var kr = (this.userFactory.create)(this,username,realmname);
-    roles = roles||'';
-    kr.addKeys(roles.split(','));
-    u = kr;
+    u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
   }
   if(typeof cb === 'function'){
