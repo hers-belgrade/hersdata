@@ -67,18 +67,25 @@ function Follower(keyring,path,cb,selfdestruct){
         break;
     }
   });
-  if(selfdestruct===true){
-    this.selfdestroyer = data.destroyed.attach(function(){
-    });
-  }
-  this.destroy = function(){
+  var selfdestroyer = function(){
     keyring.newKey.detach(newKeyListener);
     keyring.keyRemoved.detach(keyRemovedListener);
     newElementListener.destroy();
+    if(this.selfdestroyer && data.destroyed){
+      data.destroyed.detach(this.selfdestroyer);
+    }
+    if(typeof selfdestruct==='function'){
+      selfdestruct.call(t);
+    }
     for(var i in this){
       delete this[i];
     }
   };
+  this.selfdestroyer = data.destroyed.attach(function(){
+    console.log('selfdesctruction');
+    selfdestroyer.call(t);
+  });
+  this.destroy = selfdestroyer;
 };
 
 module.exports = Follower;
