@@ -830,8 +830,7 @@ Collection.prototype.processInput = function(sender,input){
       case 'initToken':
         var tkn = internal[1];
         console.log('initToken',internal[1]);
-        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.realmname);
-        this.replicatingUser.addKeys(['dcp','system',tkn.realmname]);
+        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.realmname,'dcp,system,'+tkn.realmname);
         this.replicationInitiated.fire(this.replicatingUser);
         this.replicaToken = tkn;
         break;

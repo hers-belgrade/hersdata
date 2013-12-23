@@ -1,6 +1,6 @@
 var HookCollection = require('./hookcollection');
 
-function KeyRing(data,username,realmname, roles){
+function KeyRing(data,username,realmname,roles){
   if(!data){
     //console.trace();
   }
@@ -11,6 +11,9 @@ function KeyRing(data,username,realmname, roles){
 	this.roles = roles;
 	this.username = username;
 	this.realmname = realmname;
+  if(roles){
+    this.addKeys(roles.split(','));
+  }
 };
 
 KeyRing.prototype.invoke = function (request, paramobj, cb) {
@@ -89,8 +92,8 @@ KeyRing.prototype.destroy = function(){
   this.keyRemoved.destruct();
 };
 
-KeyRing.create = function(data,username,realmname){
-  return new KeyRing(data,username,realmname);
+KeyRing.create = function(data,username,realmname,roles){
+  return new KeyRing(data,username,realmname,roles);
 };
 
 module.exports = KeyRing;
