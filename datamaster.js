@@ -69,7 +69,6 @@ function Scalar(res_val,pub_val, access_lvl) {
   var access_level = nullconversion(access_lvl);
 
   this.changed = new HookCollection();
-  destroyed = new HookCollection();
 
 	function set_from_vals (ra,pa,al,path) {
     ra = nullconversion(ra);
@@ -124,9 +123,7 @@ function Scalar(res_val,pub_val, access_lvl) {
 		public_value = undefined;
 		restricted_value = undefined;
 		access_level = undefined;
-    destroyed.fire();
     this.changed.destruct();
-    destroyed.destruct();
 	}
 };
 Scalar.prototype.type = function(){

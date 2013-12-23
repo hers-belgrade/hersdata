@@ -1,4 +1,7 @@
-function Follower(keyring,path,cb){
+function Follower(keyring,path,cb,selfdestruct){
+  if(selfdestruct===true){
+    console.log('WILL SELFDESTRUCT');
+  }
   var data = keyring.data.element(path);
   if(!data){
     console.log('no data found at',path,keyring.data.dataDebug());
@@ -64,6 +67,10 @@ function Follower(keyring,path,cb){
         break;
     }
   });
+  if(selfdestruct===true){
+    this.selfdestroyer = data.destroyed.attach(function(){
+    });
+  }
   this.destroy = function(){
     keyring.newKey.detach(newKeyListener);
     keyring.keyRemoved.detach(keyRemovedListener);
