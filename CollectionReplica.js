@@ -54,10 +54,11 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   Collection.prototype.commit.call(this,txnalias,txnprimitives);
   this.send('rpc','_commit',txnalias,txnprimitives);
 };
-CollectionReplica.prototype.invoke = function(path,paramobj,username,roles,cb) {
+CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
   //controversial solution
   this.setUser(username,this.realmname,roles,function(){});
-  this.send('rpc','invoke',path,paramobj,username,this.realmname,roles,cb);
+  console.log('remotely invoking',path);
+  this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 
 module.exports = CollectionReplica;

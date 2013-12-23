@@ -37,6 +37,7 @@ function RemoteCollectionReplica(name,url){
   CollectionReplica.call(this,name,function(obj){
     communication.send(obj);
   });
+  this.realms = {};
   this.communication = communication;
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();

@@ -399,6 +399,8 @@ Collection.prototype.perform_remove = function (path) {
 
 Collection.prototype.setUser = function(username,realmname,roles,cb){
   if(!this.realms){
+    cb();
+    return;
     this.realms = {};
   }
   var realm = this.realms[realmname];
@@ -452,18 +454,26 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   var functionalityname = path[path.length-2];
   //console.log(methodname);
 	if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
-  if (username==='*'){
-    if(this.replicatingClients && typeof this.replicatingClients[realmname] !== 'undefined'){
-      username = realmname;
-      realmname = '_dcp_';
-    }else{
-      return cb('ACCESS_FORBIDDEN');
+  var targetpath = path.slice(0,-2);
+  var target = this;
+  while(targetpath.length && target){
+    var tph = targetpath.splice(0,1);
+    target = target.element(tph);
+    if(target && target.realms){
+      return target.invoke(path.slice(-(targetpath.length+2)).join('/'),paramobj,username,realmname,roles,cb);
     }
   }
-  var target = this.element(path.slice(0,-2));
   if(target){
+    if (username==='*'){
+      if(this.replicatingClients && typeof this.replicatingClients[realmname] !== 'undefined'){
+        username = realmname;
+        realmname = '_dcp_';
+      }else{
+        return cb('ACCESS_FORBIDDEN');
+      }
+    }
     this.setUser(username,realmname,roles,function(u){
-      if(!u){return cb('NO_USER');}
+      if(!u){return cb ? cb('NO_USER') : undefined;}
       var f = target.functionalities[functionalityname];
       if(f){
         var key = f.key;
