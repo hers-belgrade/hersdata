@@ -57,7 +57,6 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
   //controversial solution
   this.setUser(username,this.realmname,roles,function(){});
-  console.log('remotely invoking',path);
   this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 

@@ -764,6 +764,9 @@ Collection.prototype.killAllProcesses = function () {
 };
 
 Collection.prototype.setSessionUserFactory = function(){
+  if(!this.realms){
+    this.realms = {};
+  }
   this.userFactory = {create:function(data,username,realmname){
     return new SessionUser(data,username,realmname);
   }};
