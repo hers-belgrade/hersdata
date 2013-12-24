@@ -398,6 +398,7 @@ Collection.prototype.perform_remove = function (path) {
 
 Collection.prototype.setUser = function(username,realmname,roles,cb){
   if(!this.realms){
+    console.log('cannot set user',username,realmname,'because there is no realms hash');
     cb();
     return;
     this.realms = {};
@@ -420,6 +421,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
 
 Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
+    console.log(this.dataDebug());
     throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
   }
   //console.log(this.realms[realmname]);
@@ -440,7 +442,6 @@ Collection.prototype.removeUser = function(username,realmname){
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  console.log('invoke',arguments);
   if(!path){return cb('NO_FUNCTIONALITY');}
   if(path.charAt(0)==='/'){
     path = path.substring(1);
@@ -480,6 +481,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         f = f.f;
         var m = f[methodname];
         if(typeof m === 'function'){
+          console.log('invoking',path,paramobj,username,realmname,roles);
           //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
         }
@@ -505,6 +507,7 @@ Collection.prototype.setKey = function(username,realmname,key){
     keyring && keyring.addKey(key,t);
   });
   if(this.replicatingClients && this.replicatingClients[realmname]){
+    console.log('broadcasting setKey for',username,realmname,'on key',key);
     this.replicatingClients[realmname].send({rpc:['setKey',username,realmname,key]});
     /*
     for(var i in this.replicatingClients){
@@ -515,6 +518,8 @@ Collection.prototype.setKey = function(username,realmname,key){
       }
     }
     */
+  }else{
+    console.log('no replicatingClient',realmname,'to broadcast setKey',this.replicatingClients);
   }
 };
 
@@ -715,15 +720,15 @@ Collection.prototype.createRemoteReplica = function(localname,realmname,url){
   //skipping the txn mechanism, it will be fired when the communication is established
 };
 
-Collection.prototype.closeReplicatingClient = function(realmname){
+Collection.prototype.closeReplicatingClient = function(replicatorname){
   if(!this.replicatingClients){return;}
-  var rc = this.replicatingClients[realmname];
+  var rc = this.replicatingClients[replicatorname];
   if(!rc){
-    console.log('no replicatingClient named',realmname,'to close');//'in',this.replicatingClients);
+    console.log('no replicatingClient named',replicatorname,'to close');//'in',this.replicatingClients);
     return;
   }
-  console.log('closing replicatingClient',realmname);
-  delete this.replicatingClients[realmname];
+  console.log('closing replicatingClient',replicatorname);
+  delete this.replicatingClients[replicatorname];
   this.onNewTransaction.detach(rc.listener);
   rc.socket && rc.socket.destroy();
   for(var i in rc){
@@ -733,6 +738,9 @@ Collection.prototype.closeReplicatingClient = function(realmname){
 };
 
 Collection.prototype.openReplication = function(port){
+  if(!this.realms){
+    this.realms = {};
+  }
   var t = this;
   var server = net.createServer(function(c){
     var rp = c.remotePort;
@@ -743,8 +751,8 @@ Collection.prototype.openReplication = function(port){
       c.removeAllListeners();
       c = null;
       if(rc.replicaToken){
-        console.log('connection broke on',rc.replicaToken.realmname);
-        collection.closeReplicatingClient(rc.replicaToken.realmname);
+        console.log('connection broke on',rc.replicaToken.name);
+        collection.closeReplicatingClient(rc.replicaToken.name);
       }else{
         console.log('connection broke on',rc);
       }
@@ -764,8 +772,8 @@ Collection.prototype.killAllProcesses = function () {
 };
 
 Collection.prototype.setSessionUserFactory = function(){
-  this.userFactory = {create:function(data,username,realmname){
-    return new SessionUser(data,username,realmname);
+  this.userFactory = {create:function(data,username,realmname,roles){
+    return new SessionUser(data,username,realmname,roles);
   }};
 };
 
@@ -801,22 +809,21 @@ Collection.prototype.processInput = function(sender,input){
           this.replicatingClients = {};
         }
         var srt = internal[2];
-        if(srt && typeof srt === 'object'){
-          sender.replicaToken = srt;
-        }else{
-          sender.replicaToken = {realmname : internal[1]};
+        if(!(srt && typeof srt === 'object')){
+          srt = {name : internal[1]};
         }
-        if(this.replicatingClients[sender.replicaToken.realmname]){
-          //console.log('but it is a duplicate of',this.replicatingClients[sender.replicaToken.realmname]);
+        sender.replicaToken = srt;
+        if(this.replicatingClients[sender.replicaToken.name]){
+          //console.log('but it is a duplicate of',this.replicatingClients[sender.replicaToken.name]);
           //console.log('but it is a duplicate on',this.dataDebug());
           console.log('but it is a duplicate');
           //now what??
-          //this.closeReplicatingClient(sender.replicaToken.realmname); //sloppy, leads to ping-pong between several replicas with the same realmname
+          //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
           sender.send({giveup:true});
           sender.socket.destroy();
           return;
         }
-        this.replicatingClients[sender.replicaToken.realmname] = sender;
+        this.replicatingClients[sender.replicaToken.name] = sender;
         this.newReplica.fire(sender);
         sender.send({internal:['initToken',sender.replicaToken]});
         sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
@@ -827,13 +834,13 @@ Collection.prototype.processInput = function(sender,input){
       case 'initToken':
         var tkn = internal[1];
         console.log('initToken',internal[1]);
-        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.realmname,'dcp,system,'+tkn.realmname);
+        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.name,'dcp,system,'+tkn.name);
         this.replicationInitiated.fire(this.replicatingUser);
         this.replicaToken = tkn;
         break;
       case 'going_down':
-        console.log(sender.replicaToken.realmname,'going down');
-        this.closeReplicatingClient(sender.replicaToken.realmname);
+        console.log(sender.replicaToken.name,'going down');
+        this.closeReplicatingClient(sender.replicaToken.name);
         break;
     }
   }

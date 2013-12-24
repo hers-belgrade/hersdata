@@ -1,10 +1,10 @@
 var Collection = require('./datamaster').Collection;
 var BigCounter = require('./BigCounter');
 
-function CollectionReplica(realmname,sendcb){
-  if(!(realmname&&sendcb)){return;}
+function CollectionReplica(name,sendcb){
+  if(!(name&&sendcb)){return;}
   this.counter = new BigCounter();
-  this.realmname = realmname;
+  this.replicaToken = {name:name};
   this.cbs = {};
   this.send = function(code){
     var params = this.prepareCallParams(Array.prototype.slice.call(arguments,1));
@@ -48,7 +48,7 @@ CollectionReplica.prototype.prepareCallParams = function(ca){
 };
 CollectionReplica.prototype.go = function(){
   //console.log(this,'should go');
-  this.send('internal','need_init',this.realmname,this.replicaToken);
+  this.send('internal','need_init',this.replicaToken);
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   Collection.prototype.commit.call(this,txnalias,txnprimitives);
