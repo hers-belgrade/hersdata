@@ -29,12 +29,16 @@ function QueueProcessor(){
   };
 };
 
-function RemoteCollectionReplica(name,url){
-  console.log('new RemoteCollectionReplica',name,url);
+function RemoteCollectionReplica(name,realmname,url){
+  if(!url){
+    console.trace();
+    throw "RemoteCollectionReplica ctor expects 3 params now";
+  }
+  console.log('new RemoteCollectionReplica',name,realmname,url);
   this.url = url;
   var communication = new replicator_communication(this);
   this.commands = new QueueProcessor();
-  CollectionReplica.call(this,name,function(obj){
+  CollectionReplica.call(this,name,realmname,function(obj){
     communication.send(obj);
   });
   this.realms = {};

@@ -715,8 +715,12 @@ Collection.prototype.getReplicatingUser = function(cb){
   });
 };
 
-Collection.prototype.createRemoteReplica = function(localname,realmname,url){
-  this.add(localname,new (require('./RemoteCollectionReplica'))(realmname,url));
+Collection.prototype.createRemoteReplica = function(localname,name,realmname,url){
+  if(!url){
+    console.trace();
+    throw "createRemoteReplica expects 4 params now";
+  }
+  this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url));
   //skipping the txn mechanism, it will be fired when the communication is established
 };
 

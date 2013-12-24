@@ -2,7 +2,7 @@ var CollectionReplica = require('./CollectionReplica');
 
 function ChildProcessCollectionReplica(realm){
   if(!realm){return;}
-  CollectionReplica.call(this,realm,function(obj){
+  CollectionReplica.call(this,realm,realm,function(obj){
     try{
       process.send(obj);
     }catch(e){

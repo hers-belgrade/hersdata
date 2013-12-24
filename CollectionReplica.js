@@ -1,10 +1,14 @@
 var Collection = require('./datamaster').Collection;
 var BigCounter = require('./BigCounter');
 
-function CollectionReplica(name,sendcb){
+function CollectionReplica(name,realmname,sendcb){
+  if(name && !sendcb){
+    console.trace();
+    throw "CollectionReplica ctor expects 3 params now";
+  }
   if(!(name&&sendcb)){return;}
   this.counter = new BigCounter();
-  this.replicaToken = {name:name};
+  this.replicaToken = {name:name,realmname:realmname};
   this.cbs = {};
   this.send = function(code){
     var params = this.prepareCallParams(Array.prototype.slice.call(arguments,1));
