@@ -421,7 +421,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
 
 Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
-    console.log(this.dataDebug());
+    //console.log(this.dataDebug());
+    console.log('this realms',this.realms);
     throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
   }
   //console.log(this.realms[realmname]);
