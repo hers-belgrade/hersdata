@@ -505,22 +505,22 @@ Collection.prototype.setKey = function(username,realmname,key){
   this.findUser(username,realmname,function(keyring){
     //console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
-  });
-  if(this.replicatingClients && this.replicatingClients[realmname]){
-    console.log('broadcasting setKey for',username,realmname,'on key',key);
-    this.replicatingClients[realmname].send({rpc:['setKey',username,realmname,key]});
-    /*
-    for(var i in this.replicatingClients){
-      var rc = this.replicatingClients[i];
-      if(rc.replicaToken.realmname === realmname){
-        //console.log('sending',key,'to set for',realmname);
-        rc.send({rpc:['setKey',username,realmname,key]});
+    if(keyring.replicatorName && this.replicatingClients && this.replicatingClients[keyring.replicatorName]){
+      console.log('broadcasting setKey for',username,realmname,'on key',key);
+      this.replicatingClients[keyring.replicatorName].send({rpc:['setKey',username,realmname,key]});
+      /*
+      for(var i in this.replicatingClients){
+        var rc = this.replicatingClients[i];
+        if(rc.replicaToken.realmname === realmname){
+          //console.log('sending',key,'to set for',realmname);
+          rc.send({rpc:['setKey',username,realmname,key]});
+        }
       }
+      */
+    }else{
+      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey',this.replicatingClients);
     }
-    */
-  }else{
-    console.log('no replicatingClient',realmname,'to broadcast setKey',this.replicatingClients);
-  }
+  });
 };
 
 Collection.prototype.removeKey = function(username,realmname,key){
@@ -727,7 +727,7 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
     console.log('no replicatingClient named',replicatorname,'to close');//'in',this.replicatingClients);
     return;
   }
-  console.log('closing replicatingClient',replicatorname);
+  console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
   delete this.replicatingClients[replicatorname];
   this.onNewTransaction.detach(rc.listener);
   rc.socket && rc.socket.destroy();
@@ -868,7 +868,20 @@ Collection.prototype.processInput = function(sender,input){
       };
     }
     //console.log('invoking',methodname,args,method);
-    method.apply(this,args);
+    if(method==='invoke'){
+      var t = this;
+      var username = args[2],realmname= args[3],roles=args[4];
+      if(!(username&&realmname)){
+        args[args.length-1]('NO_USER');
+        return;
+      }
+      this.setUser(username,realmname,roles,function(user){
+        user.replicatorName = sender.replicaToken.name;
+        method.apply(t,args);
+      });
+    }else{
+      method.apply(this,args);
+    }
   }
   var commandresult = input.commandresult;
   if(commandresult){
