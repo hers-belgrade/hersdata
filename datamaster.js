@@ -481,7 +481,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         f = f.f;
         var m = f[methodname];
         if(typeof m === 'function'){
-          console.log('invoking',path,paramobj,username,realmname,roles);
+          //console.log('invoking',path,paramobj,username,realmname,roles);
           //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
         }
@@ -505,9 +505,9 @@ Collection.prototype.setKey = function(username,realmname,key){
   this.findUser(username,realmname,function(keyring){
     //console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
-    if(keyring.replicatorName && this.replicatingClients && this.replicatingClients[keyring.replicatorName]){
+    if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
       console.log('broadcasting setKey for',username,realmname,'on key',key);
-      this.replicatingClients[keyring.replicatorName].send({rpc:['setKey',username,realmname,key]});
+      t.replicatingClients[keyring.replicatorName].send({rpc:['setKey',username,realmname,key]});
       /*
       for(var i in this.replicatingClients){
         var rc = this.replicatingClients[i];
@@ -871,15 +871,16 @@ Collection.prototype.processInput = function(sender,input){
         sender.send({commandresult:args});
       };
     }
-    //console.log('invoking',methodname,args,method);
-    if(method==='invoke'){
+    if(methodname==='invoke'){
       var t = this;
       var username = args[2],realmname= args[3],roles=args[4];
       if(!(username&&realmname)){
-        args[args.length-1]('NO_USER');
+        console.log('invalid user',username,realmname);
+        typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
         return;
       }
       this.setUser(username,realmname,roles,function(user){
+        console.log('remote rpc invoke set a User',username,realmname,'now setting replicatorName',sender.replicaToken.name);
         user.replicatorName = sender.replicaToken.name;
         method.apply(t,args);
       });
