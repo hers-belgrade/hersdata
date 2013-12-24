@@ -518,7 +518,7 @@ Collection.prototype.setKey = function(username,realmname,key){
       }
       */
     }else{
-      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey',this.replicatingClients);
+      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey for',username,realmname,'replicatingClients',this.replicatingClients,'user',keyring);
     }
   });
 };
@@ -746,8 +746,14 @@ Collection.prototype.openReplication = function(port){
     this.realms = {};
   }
   var t = this;
+  if(!this.replicatingOnPorts){
+    this.replicatingOnPorts = [];
+  }
+  if(this.replicatingOnPorts.indexOf(port)>=0){
+    return;
+  }
+  this.replicatingOnPorts.push(port);
   var server = net.createServer(function(c){
-    var rp = c.remotePort;
     var collection = t;
     var rc = new ReplicatorCommunication(t);
     rc.listenTo(c);

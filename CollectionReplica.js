@@ -60,7 +60,7 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
   //controversial solution
-  this.setUser(username,this.realmname,roles,function(){});
+  this.setUser(username,realmname,roles,function(){});
   this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 
