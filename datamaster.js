@@ -775,6 +775,9 @@ Collection.prototype.setSessionUserFactory = function(){
   this.userFactory = {create:function(data,username,realmname,roles){
     return new SessionUser(data,username,realmname,roles);
   }};
+  if(!this.realms){
+    this.realms = {};
+  }
 };
 
 Collection.prototype.startHTTP = function(port,root,name){
