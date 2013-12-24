@@ -807,13 +807,13 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
-        console.log('remote replica announcing as',internal[1],internal[2]);
+        console.log('remote replica announcing as',internal[1]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
-        var srt = internal[2];
+        var srt = internal[1];
         if(!(srt && typeof srt === 'object')){
-          srt = {name : internal[1]};
+          sender.socket.destroy();
         }
         sender.replicaToken = srt;
         if(this.replicatingClients[sender.replicaToken.name]){
