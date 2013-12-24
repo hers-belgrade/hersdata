@@ -6,7 +6,7 @@ function ReplicatorCommunication(data){
   this.data = data;
 };
 ReplicatorCommunication.prototype.send = function(obj){
-  if(!this.socket){return;}
+  if(!(this.socket && this.socket.writable)){return;}
   var objstr = JSON.stringify(obj)||'';
   var objlen = new Buffer(4);
   objlen.writeUInt32LE(objstr.length,0);
