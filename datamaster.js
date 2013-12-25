@@ -751,7 +751,8 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
   this.onNewTransaction.detach(rc.listener);
   rc.socket && rc.socket.destroy();
   for(var i in rc){
-    delete rc[i];
+		//OVDE SAM GA ZEZNUO ....
+    //delete rc[i];
   }
   rc = null;
 };
@@ -820,8 +821,11 @@ Collection.prototype.startHTTP = function(port,root,name){
     cp.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
   });
   process.on('uncaughtException',function(e){
+		//console.log('===========', cp);
     console.log(e.stack);
     console.log(e);
+
+		/// error: cp has no method disconnect
     cp.disconnect();
   });
   //return this.attach('./consumer',{port:port,root:root},'system');
