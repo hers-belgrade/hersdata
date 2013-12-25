@@ -421,7 +421,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
 
 Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
-    console.log(this.dataDebug());
+    //console.log(this.dataDebug());
+    console.log('this realms',this.realms);
     throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
   }
   //console.log(this.realms[realmname]);
@@ -518,7 +519,7 @@ Collection.prototype.setKey = function(username,realmname,key){
       }
       */
     }else{
-      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey',this.replicatingClients);
+      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey for',username,realmname,'replicatingClients',this.replicatingClients,'user',keyring);
     }
   });
 };
@@ -747,8 +748,14 @@ Collection.prototype.openReplication = function(port){
     this.realms = {};
   }
   var t = this;
+  if(!this.replicatingOnPorts){
+    this.replicatingOnPorts = [];
+  }
+  if(this.replicatingOnPorts.indexOf(port)>=0){
+    return;
+  }
+  this.replicatingOnPorts.push(port);
   var server = net.createServer(function(c){
-    var rp = c.remotePort;
     var collection = t;
     var rc = new ReplicatorCommunication(t);
     rc.listenTo(c);
