@@ -547,10 +547,8 @@ Collection.prototype.removeKey = function(username,realmname,key){
   //console.log('removing key',key,'for',username+'@'+realmname);
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.removeKey(key,t);
+    t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
   });
-  if(this.replicatingClients && this.replicatingClients[realmname]){
-    this.replicatingClients[realmname].send({rpc:['removeKey',username,realmname,key]});
-  }
   /*
   if(this.replicatingClients){
     for(var i in this.replicatingClients){
