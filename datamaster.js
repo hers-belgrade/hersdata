@@ -523,17 +523,6 @@ Collection.prototype.setKey = function(username,realmname,key){
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
       console.log('broadcasting setKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['setKey',username,realmname,key]});
-      /*
-      for(var i in this.replicatingClients){
-        var rc = this.replicatingClients[i];
-        if(rc.replicaToken.realmname === realmname){
-          //console.log('sending',key,'to set for',realmname);
-          rc.send({rpc:['setKey',username,realmname,key]});
-        }
-      }
-      */
-    }else{
-      //console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey for',username,realmname,'replicatingClients',t.replicatingClients,'user',keyring);
     }
   });
 };
@@ -547,19 +536,10 @@ Collection.prototype.removeKey = function(username,realmname,key){
   //console.log('removing key',key,'for',username+'@'+realmname);
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.removeKey(key,t);
-    t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
-  });
-  /*
-  if(this.replicatingClients){
-    for(var i in this.replicatingClients){
-      var rc = this.replicatingClients[i];
-      if(rc.replicaToken.realmname === realmname){
-        //console.log('sending',key,'to remove for',realmname);
-        rc.send({rpc:['removeKey',username,realmname,key]});
-      }
+    if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
+      t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
     }
-  }
-  */
+  });
 };
 
 Collection.prototype.attach = function(functionalityname, config, key, environment, consumeritf){
