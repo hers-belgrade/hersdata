@@ -443,23 +443,37 @@ Collection.prototype.removeUser = function(username,realmname){
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  if(!path){return cb('NO_FUNCTIONALITY');}
+  function exit(code){
+    if(cb){
+      cb(code);
+    }else{
+      console.log('invoke exited with',code,'for',path,paramobj);
+    }
+  }
+  if(!path){return exit('NO_FUNCTIONALITY');}
   if(path.charAt(0)==='/'){
     path = path.substring(1);
   }
   path = path.split('/');
-  if(!path.length){return cb('NO_FUNCTIONALITY');}
+  if(!path.length){return exit('NO_FUNCTIONALITY');}
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return cb('ACCESS_FORBIDDEN');}
+	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN');}
   var targetpath = path.slice(0,-2);
   var target = this;
-  while(targetpath.length && target){
+  while(targetpath.length){
     var tph = targetpath.splice(0,1);
-    target = target.element(tph);
-    if(target && target.realms){
-      return target.invoke(path.slice(-(targetpath.length+2)).join('/'),paramobj,username,realmname,roles,cb);
+    var _target = target.element(tph);
+    if(_target){
+      target = _target;
+      if(target.realms){
+        return target.invoke(path.slice(-(targetpath.length+2)).join('/'),paramobj,username,realmname,roles,cb);
+      }else{
+        //console.log(tph[0],'has no realms');
+      }
+    }else{
+      break;
     }
   }
   if(target){
@@ -468,7 +482,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         username = realmname;
         realmname = '_dcp_';
       }else{
-        return cb('ACCESS_FORBIDDEN');
+        return exit('ACCESS_FORBIDDEN');
       }
     }
     this.setUser(username,realmname,roles,function(u){
@@ -477,7 +491,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
       if(f){
         var key = f.key;
         if((typeof key !== 'undefined')&&(!u.contains(key))){
-          return cb('ACCESS_FORBIDDEN');
+          return exit('ACCESS_FORBIDDEN');
         }
         f = f.f;
         var m = f[methodname];
@@ -488,11 +502,11 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         }
       }else{
         console.log(functionalityname,'is not a functionalityname while processing',path);
-        return cb('NO_FUNCTIONALITY');
+        return exit('NO_FUNCTIONALITY');
       }
     });
   }else{
-    return cb('NO_FUNCTIONALITY');
+    return exit('NO_FUNCTIONALITY');
   }
 };
 
@@ -519,7 +533,7 @@ Collection.prototype.setKey = function(username,realmname,key){
       }
       */
     }else{
-      console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey for',username,realmname,'replicatingClients',this.replicatingClients,'user',keyring);
+      //console.log('no replicatingClient',keyring.replicatorName,'to broadcast setKey for',username,realmname,'replicatingClients',t.replicatingClients,'user',keyring);
     }
   });
 };
@@ -889,7 +903,7 @@ Collection.prototype.processInput = function(sender,input){
         return;
       }
       this.setUser(username,realmname,roles,function(user){
-        console.log('remote rpc invoke set a User',username,realmname,'now setting replicatorName',sender.replicaToken.name);
+        //console.log('remote rpc invoke set a User',username,realmname,'now setting replicatorName',sender.replicaToken.name);
         user.replicatorName = sender.replicaToken.name;
         method.apply(t,args);
       });

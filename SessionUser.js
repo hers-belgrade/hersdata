@@ -244,8 +244,8 @@ UserSession.prototype.dumpQueue = function(cb,justpeek){
     this.setTimeout();
   }
 };
-function SessionUser(data,username,realmname){
-  KeyRing.call(this,data,username,realmname);
+function SessionUser(data,username,realmname,roles){
+  KeyRing.call(this,data,username,realmname,roles);
   var sessions = {};
   this.sessions = sessions;
   this.username=username;
@@ -255,12 +255,14 @@ function SessionUser(data,username,realmname){
     for(var i in sessions){
       sessions[i].add(txnalias,txns);
     }
+    //console.log('txn done',util.inspect(sessions,false,null,false));
   });
 };
 SessionUser.prototype = new KeyRing();
 SessionUser.prototype.constructor = SessionUser;
 SessionUser.prototype.addKey = function(key){
   KeyRing.prototype.addKey.call(this,key);
+  if(!this.follower){return;}
   this.follower.triggerTxn('new_key_'+key);
   for(var i in this.sessions){
     this.sessions[i].dumpQueue();
@@ -279,6 +281,7 @@ SessionUser.prototype.makeSession = function(session){
       //console.log('deleting session',session);
       delete ss[session];
     },session);
+    //console.log('made session',session);
   }
 };
 SessionUser.prototype.follow = function(path){
