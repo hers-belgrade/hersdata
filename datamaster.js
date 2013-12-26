@@ -737,8 +737,7 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
   this.onNewTransaction.detach(rc.listener);
   rc.socket && rc.socket.destroy();
   for(var i in rc){
-		//OVDE SAM GA ZEZNUO ....
-    //delete rc[i];
+    delete rc[i];
   }
   rc = null;
 };
@@ -810,9 +809,8 @@ Collection.prototype.startHTTP = function(port,root,name){
 		//console.log('===========', cp);
     console.log(e.stack);
     console.log(e);
-
-		/// error: cp has no method disconnect
-    cp.disconnect();
+		//no need to disconnect dead process
+    //cp.disconnect();
   });
   //return this.attach('./consumer',{port:port,root:root},'system');
 };
