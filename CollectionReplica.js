@@ -28,7 +28,6 @@ function CollectionReplica(name,realmname,sendcb){
   process.on('exit',going_down);
   process.on('SIGINT',going_down);
   process.on('SIGTERM',going_down);
-  process.on('SIGKILL',going_down);
   process.on('SIGQUIT',going_down);
   Collection.call(this);
 };
