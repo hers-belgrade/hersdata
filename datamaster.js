@@ -328,19 +328,28 @@ Collection.prototype.resetTxns = function(){
   return ret;
 };
 
-Collection.prototype.dump = function(){
+Collection.prototype.dump = function(forrealmname){
   var ret = {
     data:this.toMasterPrimitives(),
   };
   if(this.realms){
     var us = {};
-    for(var _r in this.realms){
-      var r = this.realms[_r];
+    if(typeof forrealmname !== 'undefined'){
+      var r = this.realms[forrealmname];
       var rus = {};
       for(var _u in r){
         rus[_u] = r[_u].dump();
       }
-      us[_r] = rus;
+      us[forrealmname] = rus;
+    }else{
+      for(var _r in this.realms){
+        var r = this.realms[_r];
+        var rus = {};
+        for(var _u in r){
+          rus[_u] = r[_u].dump();
+        }
+        us[_r] = rus;
+      }
     }
     ret.users = us;
   }
@@ -860,7 +869,7 @@ Collection.prototype.processInput = function(sender,input){
         }
         this.replicatingClients[sender.replicaToken.name] = sender;
         this.newReplica.fire(sender);
-        var ret = this.dump();
+        var ret = this.dump(srt.realmname || null);
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
