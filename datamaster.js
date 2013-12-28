@@ -877,7 +877,7 @@ Collection.prototype.processInput = function(sender,input){
             var _u = r[_un];
             var _keys = _u.keys;
             this.setUser(_un,_rn,_u.roles,function(user){
-              user.setKeys(_keys);
+              user.addKeys(_keys);
             });
           }
         }
