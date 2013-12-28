@@ -862,7 +862,7 @@ Collection.prototype.processInput = function(sender,input){
         this.newReplica.fire(sender);
         var ret = this.dump();
         ret.token = sender.replicaToken;
-        sender.send({internal:['initDCPreplica',ret});
+        sender.send({internal:['initDCPreplica',ret]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
           sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
         });
@@ -878,7 +878,7 @@ Collection.prototype.processInput = function(sender,input){
             var _keys = _u.keys;
             this.setUser(_un,_rn,_u.roles,function(user){
               user.setKeys(_keys);
-            }
+            });
           }
         }
         var remotedata = remotedump.data;
