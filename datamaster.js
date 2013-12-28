@@ -827,7 +827,7 @@ Collection.prototype.processInput = function(sender,input){
           console.log('but it is a duplicate');
           //now what??
           //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
-          sender.send({giveup:true});
+          sender.send({internal:'give_up'});
           sender.socket.destroy();
           return;
         }
@@ -849,6 +849,9 @@ Collection.prototype.processInput = function(sender,input){
       case 'going_down':
         console.log(sender.replicaToken.name,'going down');
         this.closeReplicatingClient(sender.replicaToken.name);
+        break;
+      case 'give_up':
+        this.destroy(); 
         break;
     }
   }
