@@ -878,7 +878,11 @@ Collection.prototype.processInput = function(sender,input){
         break;
       case 'initDCPreplica':
         var remotedump = internal[1];
-        console.log('initDCPreplica',internal[1]);
+        //console.log('initDCPreplica',internal[1]);
+        var remotedata = remotedump.data;
+        this._commit('initDCPreplica',remotedata);
+        var tkn = remotedump.token;
+        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.name,'dcp,system,'+tkn.name);
         var remoteusers = remotedump.users;
         for(var _rn in remoteusers){
           var r = remoteusers[_rn];
@@ -886,14 +890,10 @@ Collection.prototype.processInput = function(sender,input){
             var _u = r[_un];
             var _keys = _u.keys;
             this.setUser(_un,_rn,_u.roles,function(user){
-              user.addKeys(_keys);
+              user.addKeys(_keys.split(','));
             });
           }
         }
-        var remotedata = remotedump.data;
-        this._commit('initDCPreplica',remotedata);
-        var tkn = remotedump.token;
-        this.replicatingUser = (this.userFactory.create)(this,'*',tkn.name,'dcp,system,'+tkn.name);
         this.replicationInitiated.fire(this.replicatingUser);
         this.replicaToken = tkn;
         break;
