@@ -67,7 +67,7 @@ KeyRing.prototype.destroy = function(){
 };
 KeyRing.prototype.dump = function(){
   var ret = {roles:this.roles};
-  var ra = this.roles.split(',');
+  var ra = this.roles ? this.roles.split(',') : [];
   var ks = [];
   for(var k in this.keys){
     if(ra.indexOf(k)<0){
