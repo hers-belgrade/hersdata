@@ -65,6 +65,18 @@ KeyRing.prototype.destroy = function(){
     delete this[i];
   }
 };
+KeyRing.prototype.dump = function(){
+  var ret = {roles:this.roles};
+  var ra = this.roles.split(',');
+  var ks = [];
+  for(var k in this.keys){
+    if(ra.indexOf(k)<0){
+      ks.push(k);
+    }
+  }
+  ret.keys = ks.join(',');
+  return ret;
+};
 
 KeyRing.create = function(data,username,realmname,roles){
   return new KeyRing(data,username,realmname,roles);

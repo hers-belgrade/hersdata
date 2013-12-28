@@ -162,8 +162,6 @@ function Collection(a_l){
   var data = {};
   this.functionalities = {};
 
-  this.keys = function () {return Object.keys(data);}
-
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
   };
@@ -201,14 +199,6 @@ function Collection(a_l){
       data[name].destroy();
       delete data[name];
     }
-  };
-
-  this.resetTxns = function(){
-    var ret = [];
-    for(var i in data){
-      ret.push(['remove',[i]]);
-    }
-    return ret;
   };
 
   this.traverseElements = function(cb){
@@ -311,9 +301,6 @@ function Collection(a_l){
     };
   })(this,txnCounter);
 
-  this.dump = function(){
-    return ['init',this.toMasterPrimitives(),txnCounter.clone()];
-  };
   this.userFactory = KeyRing;
 };
 
@@ -323,6 +310,42 @@ Collection.prototype.commit = function(txnalias,txnprimitives){
 
 Collection.prototype.type = function(){
   return 'Collection';
+};
+
+Collection.prototype.keys = function (){
+  var ret = [];
+  this.traverseElements(function(name){
+    ret.push(name);
+  });
+  return ret;
+}
+
+Collection.prototype.resetTxns = function(){
+  var ret = [];
+  this.traverseElements(function(name){
+    ret.push(['remove',[name]]);
+  });
+  return ret;
+};
+
+Collection.prototype.dump = function(){
+  var ret = {
+    data:this.toMasterPrimitives(),
+  };
+  if(this.realms){
+    var us = {};
+    for(var _r in this.realms){
+      var r = this.realms[_r];
+      var rus = {};
+      for(var _u in r){
+        rus[_u] = r[_u].dump();
+      }
+      us[_r] = rus;
+    }
+    ret.users = us;
+  }
+  console.log('Collection dump',ret);
+  return ret;
 };
 
 Collection.prototype.perform_set = function(path,param,txnc){
@@ -837,15 +860,30 @@ Collection.prototype.processInput = function(sender,input){
         }
         this.replicatingClients[sender.replicaToken.name] = sender;
         this.newReplica.fire(sender);
-        sender.send({internal:['initToken',sender.replicaToken]});
-        sender.send({rpc:['_commit','initDCPreplica',this.toMasterPrimitives()]});
+        var ret = this.dump();
+        ret.token = sender.replicaToken;
+        sender.send({internal:['initDCPreplica',ret});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
           sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
         });
         break;
-      case 'initToken':
-        var tkn = internal[1];
-        console.log('initToken',internal[1]);
+      case 'initDCPreplica':
+        var remotedump = internal[1];
+        console.log('initDCPreplica',internal[1]);
+        var remoteusers = remotedump.users;
+        for(var _rn in remoteusers){
+          var r = remoteusers[_rn];
+          for(var _un in r){
+            var _u = r[_un];
+            var _keys = _u.keys;
+            this.setUser(_un,_rn,_u.roles,function(user){
+              user.setKeys(_keys);
+            }
+          }
+        }
+        var remotedata = remotedump.data;
+        this._commit('initDCPreplica',remotedata);
+        var tkn = remotedump.token;
         this.replicatingUser = (this.userFactory.create)(this,'*',tkn.name,'dcp,system,'+tkn.name);
         this.replicationInitiated.fire(this.replicatingUser);
         this.replicaToken = tkn;
