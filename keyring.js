@@ -8,6 +8,7 @@ function KeyRing(data,username,realmname,roles){
   this.keys = {};
   this.newKey = new HookCollection();
   this.keyRemoved = new HookCollection();
+  this.destroyed = new HookCollection();
 	this.roles = roles;
 	this.username = username;
 	this.realmname = realmname;
@@ -15,30 +16,9 @@ function KeyRing(data,username,realmname,roles){
     this.addKeys(roles.split(','));
   }
 };
-
 KeyRing.prototype.invoke = function (request, paramobj, cb) {
 	this.data && this.data.invoke(request, paramobj,this.username, this.realmname, this.roles, cb);
 }
-
-
-KeyRing.prototype.take = function(keyring){
-  if(typeof keyring === 'undefined'){
-    return;
-  }
-  var kk = keyring.keys;
-  var tk = this.keys;
-  for(var k in kk){
-    if(typeof tk[k] === 'undefined'){
-      tk[k] = kk[k];
-    }else{
-      tk[k] += kk[k];
-    }
-  }
-};
-KeyRing.prototype.reset = function(otherkeyring){
-  this.keys = {};
-  this.take(otherkeyring);
-};
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
     if(typeof this.keys[k] === 'undefined'){
@@ -76,20 +56,14 @@ KeyRing.prototype.removeKey = function(key){
     }
   }
 };
-function beginsWith(haystack,needle){
-  if(!haystack){return false;}
-  for(var i in needle){
-    var h = haystack[i];
-    if(!h){return false;}
-    if(h!==needle[i]){
-      return false;
-    }
-  }
-  return true;
-}
 KeyRing.prototype.destroy = function(){
   this.newKey.destruct();
   this.keyRemoved.destruct();
+  this.destroyed.fire();
+  this.destroyed.destruct();
+  for(var i in this){
+    delete this[i];
+  }
 };
 
 KeyRing.create = function(data,username,realmname,roles){

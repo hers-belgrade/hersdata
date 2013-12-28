@@ -435,11 +435,15 @@ Collection.prototype.findUser = function(username,realmname,cb){
 };
 
 Collection.prototype.removeUser = function(username,realmname){
-  if(!this.realms){return;}
-  var realm = this.realms[realmname];
+  var rs = this.realms;
+  if(!rs){return;}
+  var realm = rs[realmname];
   if(!realm){return;}
-  realm[username].destroy();
-  delete realm[username];
+  this.findUser(username,realmname,function(user){
+    if(!user){return;}
+    delete realm[username];
+    user.destroy();
+  });
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
