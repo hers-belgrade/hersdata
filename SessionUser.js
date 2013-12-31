@@ -197,15 +197,16 @@ function checkAndClear(){
   }
   for(var i in userSessions){
     var us = userSessions[i];
-    if(now - us.lastAccess < 15000){
+    if(now - us.lastAccess > 15000){
       if(us.destroycb()){//ok to destroy
+        //console.log(i,us,'reported it is ok to destroy');
         for(var k in us){
           delete us[k];
         }
         delete userSessions[i];
       }
     }else{
-      console.log(i,'should not be deleted yet',us.lastAccess,now);
+      //console.log(i,'should not be deleted yet',us.lastAccess,now);
     }
   }
   lastCheck = now;

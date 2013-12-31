@@ -25,7 +25,8 @@ function RequestHandler(functionality,request,response,urlpath,data){
       request.on('close', function () {_func.deleteUserSession(uo)});
       t.process(urlpath,data);
     }else{
-      t.report_end(JSON.stringify({errorcode:errcode,errorparams:errparams,errormessage:errmess}));
+      this.responseobj = {errorcode:errcode,errorparams:errparams,errormessage:errmess};
+      t.report_end();
     }
   });
 };
@@ -88,6 +89,7 @@ RequestHandler.prototype.process = function(urlpath,data){
             _t.commandsdone++;
             //console.log(_t.commandsdone,'commands done out of',_t.commandstodo);
             if(_t.commandsdone===_t.commandstodo){
+              //console.log('finalizing');
               _t.finalize();
             }
           };
@@ -126,10 +128,11 @@ RequestHandler.prototype.finalize = function(){
       t.responseobj.roles = t.user.roles;
       t.responseobj.session = errparams[0][0];
       t.responseobj.data = errparams[0][1];
-      t.report_end();
     }else{
-      console.log('dumpUserSession returned',errcode,errparams);
+      console.log('Ooops',errcode);
+      t.responseobj = {errorcode:errcode,errorparams:errparams,errormessage:errmess};
     }
+    t.report_end();
     for(var i in t){
       delete t[i];
     }
