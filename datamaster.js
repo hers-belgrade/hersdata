@@ -837,6 +837,9 @@ Collection.prototype.openReplication = function(port){
   if(!this.realms){
     this.realms = {};
   }
+  if(!this.functionalities.system){
+    this.attach('./system',{});
+  }
   var t = this;
   if(!this.replicatingOnPorts){
     this.replicatingOnPorts = [];
@@ -884,6 +887,12 @@ Collection.prototype.setSessionUserFactory = function(){
 
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
+  if(!this.realms){
+    this.realms = {};
+  }
+  if(!this.functionalities.system){
+    this.attach('./system',{});
+  }
   var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
   if (!this.processes) this.processes = [];
   this.processes.push (cp);
@@ -903,7 +912,6 @@ Collection.prototype.startHTTP = function(port,root,name){
 		//no need to disconnect dead process
     //cp.disconnect();
   });
-  //return this.attach('./consumer',{port:port,root:root},'system');
 };
 
 Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){

@@ -1,6 +1,7 @@
 var KeyRing = require('./keyring'),
   Follower = require('./follower'),
-  util = require('util');
+  util = require('util'),
+  BigCounter = require('./BigCounter');
 
 scalarValue = function(keyring,scalar){
   return keyring.contains(scalar.access_level()) ? scalar.value() : scalar.public_value();
@@ -181,35 +182,57 @@ SessionFollower.prototype.dump = function(){
   return ret;
 };
 
-function UserSession(datadump,destroycb,id){
-  this.id = id;
+function _now(){
+  return (new Date()).getTime();
+}
+
+var userSessions = {};
+var userSessionCounter = new BigCounter();
+var lastCheck = _now();
+
+function checkAndClear(){
+  var now = _now();
+  if(now - lastCheck < 15000){
+    return;
+  }
+  for(var i in userSessions){
+    var us = userSessions[i];
+    if(now - us.lastAccess < 15000){
+      if(us.destroycb()){//ok to destroy
+        for(var k in us){
+          delete us[k];
+        }
+        delete userSessions[i];
+      }
+    }else{
+      console.log(i,'should not be deleted yet',us.lastAccess,now);
+    }
+  }
+  lastCheck = now;
+}
+
+function UserSession(datadump,destroycb){
+  this.lastAccess = _now();
+  userSessionCounter.inc();
+  userSessions[userSessionCounter.toString()] = this;
   this.queue = [['init',datadump]];
   var t = this;
   this.destroycb = function(){
     if(t.cb){
-      console.log(t.id,'will not die, got cb in the meantime');
+      t.dumpQueue();
       return;
     }
     delete t.queue;
     destroycb();
+    return true;
   }
 };
 UserSession.prototype.add = function(txnalias,txns){
   this.queue.push([txnalias,txns]);
   this.dumpQueue();
 };
-UserSession.prototype.setTimeout = function(){
-  if(!this.timeout){
-    //console.log(this.id,'setting timeout to die');
-    this.timeout = setTimeout(this.destroycb,15000);
-  }
-};
 UserSession.prototype.dumpQueue = function(cb,justpeek){
-  if(cb && this.timeout){
-    //console.log(this.id,'clearing timeout to die');
-    clearTimeout(this.timeout);
-    delete this.timeout;
-  }
+  this.lastAccess = _now();
   if(this.cb){
     //console.log('dumping on previous cb with queue length',this.queue.length);
     //console.log('dumping',util.inspect(this.queue,false,null,false));
@@ -237,14 +260,10 @@ UserSession.prototype.dumpQueue = function(cb,justpeek){
       }
     }
   }
-  if(!this.cb){
-    if(this.timeout){
-      clearTimeout(this.timeout);
-    }
-    this.setTimeout();
-  }
+  checkAndClear();
 };
 function SessionUser(data,username,realmname,roles){
+  console.log('new SessionUser',roles);
   KeyRing.call(this,data,username,realmname,roles);
   var sessions = {};
   this.sessions = sessions;
@@ -278,9 +297,14 @@ SessionUser.prototype.makeSession = function(session){
   if(!s){
     //console.log('there is no session',session);
     ss[session] = new UserSession(this.follower.dump(),function(){
-      //console.log('deleting session',session);
+      /*
+      console.log('deleting session',session);
+      if(!ss[session]){
+        console.log('but it does not exist?');
+      }
+      */
       delete ss[session];
-    },session);
+    });
     //console.log('made session',session);
   }
 };

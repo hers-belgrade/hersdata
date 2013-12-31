@@ -71,8 +71,11 @@ function Follower(keyring,path,cb,selfdestruct){
     keyring.newKey.detach(newKeyListener);
     keyring.keyRemoved.detach(keyRemovedListener);
     newElementListener.destroy();
-    if(this.selfdestroyer && data.destroyed){
-      data.destroyed.detach(this.selfdestroyer);
+    if(this.dataselfdestroyer && data.destroyed){
+      data.destroyed.detach(this.dataselfdestroyer);
+    }
+    if(this.userselfdestroyer && data.destroyed){
+      data.destroyed.detach(this.userselfdestroyer);
     }
     if(typeof selfdestruct==='function'){
       selfdestruct.call(t);
@@ -81,8 +84,10 @@ function Follower(keyring,path,cb,selfdestruct){
       delete this[i];
     }
   };
-  this.selfdestroyer = data.destroyed.attach(function(){
-    console.log('selfdesctruction');
+  this.dataselfdestroyer = data.destroyed.attach(function(){
+    selfdestroyer.call(t);
+  });
+  this.userselfdestroyer = keyring.destroyed.attach(function(){
     selfdestroyer.call(t);
   });
   this.destroy = selfdestroyer;
