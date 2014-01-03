@@ -236,6 +236,10 @@ function Collection(a_l){
     this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
+    for(var i in this){
+      delete this[i];
+    }
+    //console.log('destroyed',process.memoryUsage().rss);
   };
 
   this.element = function(name){
@@ -305,6 +309,7 @@ function Collection(a_l){
   })(this,txnCounter);
 
   this.userFactory = KeyRing;
+  //console.log('created',process.memoryUsage().rss);
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
@@ -782,6 +787,9 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       }
     })(i,p);
     ret['__DESTROY__'] = function(){
+      for(var i in SELF){
+        delete SELF[i];
+      }
       for(var i in ret){
         delete ret[i];
       }

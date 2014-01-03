@@ -52,13 +52,16 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     this.lenBufread=0;
     if(this.socket){
       try{
-        this.data.processInput(this,JSON.parse(this.dataRead));
+        var dr = this.dataRead;
+        this.dataRead = '';
+        var drp = JSON.parse(dr);
+        dr = null;
+        this.data.processInput(this,drp);
       }catch(e){
         console.log(e.stack);
         console.log(e);
       }
     }
-    this.dataRead = '';
     if(this.socket){
       this.processData(data,i);
     }

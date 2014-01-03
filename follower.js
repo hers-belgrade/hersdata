@@ -13,37 +13,21 @@ function Follower(keyring,path,cb,selfdestruct){
     return;
   }
   var t = this;
-  var newKeyListener = keyring.newKey.attach(function(key){
-    //console.log('new key',typeof key,key,'on',path);
-    var _cb = cb;
-    var _t = t;
-    data.traverseElements(function(name,ent){
-      switch(ent.type()){
-        case 'Collection':
-          if(ent.access_level()===key){
-            _cb.call(_t,name,ent);
-          }/*else{
-            console.log(path.join('.'),'Collection',name,'will not be followed',key,'<>',ent.access_level());
-          }*/
-          break;
-        case 'Scalar':
-          _cb.call(_t,name,ent);
-          break;
-      }
-    });
-  });
-  var keyRemovedListener = keyring.keyRemoved.attach(function(key){
-    //console.log('removing key',key);
-    var _cb = cb;
-    var _t = t;
-    data.traverseElements(function(name,ent){
+  this.destroy = function(){
+    t.shouldDie = true;
+  };
+  var cbcall = function(name,ent){
+    cb.call(t,name,ent);
+  };
+  var filtercollectioncb = function(key){
+    return function(name,ent){
       if(ent.access_level()===key){
-        //console.log('deleting',name,'because of removed',key);
-        _cb.call(_t,name);
+        cbcall(name,ent);
+      }else{
+        cbcall(name);
       }
-    });
-    //console.log(key,'removed');
-  });
+    };
+  };
   var newElementListener = data.subscribeToElements(function(name,el){
     if(!el){
       //console.log(name,'deleted');
@@ -53,19 +37,35 @@ function Follower(keyring,path,cb,selfdestruct){
     switch(el.type()){
       case 'Collection':
         if(keyring.contains(data.access_level())&&keyring.contains(el.access_level())){
-          cb.call(t,name,el);
+          cbcall(name,el);
         }/*else{
           console.log(name,'will not be shown',data.access_level(),el.access_level(),keyring.keys);
         }*/
         break;
       case 'Scalar':
         if(keyring.contains(data.access_level())){
-          cb.call(t,name,el);
+          cbcall(name,el);
         }else{
           console.log(name,'will not be shown',data.access_level(),keyring.keys);
         }
         break;
     }
+  });
+  var newKeyListener = keyring.newKey.attach(function(key){
+    var fcb = filtercollectioncb(key);
+    data.traverseElements(function(name,ent){
+      switch(ent.type()){
+        case 'Collection':
+          fcb(name,ent);
+          break;
+        case 'Scalar':
+          cbcall(name,ent);
+          break;
+      }
+    });
+  });
+  var keyRemovedListener = keyring.keyRemoved.attach(function(key){
+    data.traverseElements(filtercollectioncb(key));
   });
   var selfdestroyer = function(){
     keyring.newKey.detach(newKeyListener);
@@ -91,6 +91,10 @@ function Follower(keyring,path,cb,selfdestruct){
     selfdestroyer.call(t);
   });
   this.destroy = selfdestroyer;
+  if(this.shouldDie){
+    console.log('shouldDie');
+    selfdestroyer.call(t);
+  }
 };
 
 module.exports = Follower;
