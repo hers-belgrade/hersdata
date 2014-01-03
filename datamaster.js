@@ -84,14 +84,13 @@ function Scalar(res_val,pub_val, access_lvl) {
     public_value = pa;
     access_level = al;
     //console.log(this.changed.counter);
-    this.changed.fire();
+    this.changed.fire(this);
   }
 
   this.subscribeToValue = function(cb){
     if(typeof cb !== 'function'){return;}
     cb(this);
-    var t = this;
-    var hook = this.changed.attach(function(){cb(t);});
+    var hook = this.changed.attach(cb);
     return {destroy:function(){this.changed&&this.changed.detach(hook);}};
   };
 
@@ -309,6 +308,7 @@ function Collection(a_l){
   })(this,txnCounter);
 
   this.userFactory = KeyRing;
+  //console.log('created',process.memoryUsage().rss);
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
@@ -786,6 +786,9 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       }
     })(i,p);
     ret['__DESTROY__'] = function(){
+      for(var i in SELF){
+        delete SELF[i];
+      }
       for(var i in ret){
         delete ret[i];
       }

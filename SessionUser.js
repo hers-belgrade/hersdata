@@ -101,9 +101,11 @@ function SessionFollower(keyring,path,txncb){
     superDestroy.call();
     for(var i in followers){
       this.followers[i].destroy();
+      delete this.followers[i];
     }
     for(var i in scalars){
       scalars[i].handler.destroy();
+      delete scalars[i];
     }
   };
   if(typeof txncb==='function'){
