@@ -236,6 +236,10 @@ function Collection(a_l){
     this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
+    for(var i in this.functionalities){
+      this.functionalities[i].f.__DESTROY__();
+    }
+    delete this.functionalities;
   };
 
   this.element = function(name){
