@@ -235,10 +235,10 @@ function Collection(a_l){
     this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
-    for(var i in this){
-      delete this[i];
+    for(var i in this.functionalities){
+      this.functionalities[i].f.__DESTROY__();
     }
-    //console.log('destroyed',process.memoryUsage().rss);
+    delete this.functionalities;
   };
 
   this.element = function(name){
