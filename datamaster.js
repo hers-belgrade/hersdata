@@ -676,18 +676,18 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   }
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
     return function(errorkey){
       if(!errorkey){
         ecb(0,'ok');
         return;
       }
       var errorparams = Array.prototype.slice.call(arguments,1);
-      if(typeof m.errors[errorkey] !== 'object'){
+      if(typeof _m.errors[errorkey] !== 'object'){
         console.trace();
         throw 'Error key '+errorkey+' not specified in the error map';
       }
-      var eo = m.errors[errorkey];
+      var eo = _m.errors[errorkey];
       var errmess = eo.message;
       var eop = eo.params;
       if(eop && eop.length){
