@@ -84,14 +84,13 @@ function Scalar(res_val,pub_val, access_lvl) {
     public_value = pa;
     access_level = al;
     //console.log(this.changed.counter);
-    this.changed.fire();
+    this.changed.fire(this);
   }
 
   this.subscribeToValue = function(cb){
     if(typeof cb !== 'function'){return;}
     cb(this);
-    var t = this;
-    var hook = this.changed.attach(function(){cb(t);});
+    var hook = this.changed.attach(cb);
     return {destroy:function(){this.changed&&this.changed.detach(hook);}};
   };
 
