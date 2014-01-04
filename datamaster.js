@@ -546,9 +546,9 @@ Collection.prototype.removeUser = function(username,realmname){
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  function exit(code){
+  function exit(code,params,message){
     if(cb){
-      cb(code);
+      cb(code,params,message);
     }else{
       console.log('invoke exited with',code,'for',path,paramobj);
     }
@@ -562,7 +562,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN');}
+	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
   var targetpath = path.slice(0,-2);
   var target = this;
   while(targetpath.length){
@@ -585,16 +585,18 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         username = realmname;
         realmname = '_dcp_';
       }else{
-        return exit('ACCESS_FORBIDDEN');
+        return exit('ACCESS_FORBIDDEN',[realmname],'User * may come only from a replica');
       }
     }
     this.setUser(username,realmname,roles,function(u){
-      if(!u){return cb ? cb('NO_USER') : undefined;}
+      if(!u){
+        return exit('NO_USER',[username,realmname],'No user '+username+'@'+realmname+' found');
+      }
       var f = target.functionalities[functionalityname];
       if(f){
         var key = f.key;
         if((typeof key !== 'undefined')&&(!u.contains(key))){
-          return exit('ACCESS_FORBIDDEN');
+          return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
         }
         f = f.f;
         var m = f[methodname];
@@ -602,14 +604,16 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
           //console.log('invoking',path,paramobj,username,realmname,roles);
           //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
+        }else{
+          return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
         }
       }else{
         console.log(functionalityname,'is not a functionalityname while processing',path);
-        return exit('NO_FUNCTIONALITY');
+        return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
       }
     });
   }else{
-    return exit('NO_FUNCTIONALITY');
+    return exit('NO_DATA',path,'No data found');
   }
 };
 
