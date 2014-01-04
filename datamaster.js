@@ -785,17 +785,19 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
         };
       }
     })(i,p);
-    ret['__DESTROY__'] = function(){
-      for(var i in SELF){
-        delete SELF[i];
-      }
-      for(var i in ret){
-        delete ret[i];
-      }
-      m = undefined;
-      ret = undefined;
-    };
   }
+  ret['__DESTROY__'] = function(){
+    var self = SELF();
+    delete self.data.functionalities[fqnname];
+    for(var i in self){
+      delete self[i];
+    }
+    for(var i in ret){
+      delete ret[i];
+    }
+    m = undefined;
+    ret = undefined;
+  };
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.functionalities[fqnname] = {f:ret,key:key};
