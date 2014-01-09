@@ -44,12 +44,12 @@ RequestHandler.prototype.report_end = function(){
     //console.trace();
     //console.log(this.responseobj);
   }
-  var message = JSON.stringify(this.responseobj);
+  var message = new Buffer(JSON.stringify(this.responseobj),'utf8');
   if(res.writable){
-    var header = {'Content-Type':'text/plain'};
+    var header = {'Content-Type':'text/plain;charset=utf-8'};
     if (message) header['Content-Length']= message.length;
     res.writeHead(200,header);
-    res.write(message);
+    res.write(message.toString('utf8'));
   }
   res.end();
 };
