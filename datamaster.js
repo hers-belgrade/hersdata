@@ -891,7 +891,7 @@ Collection.prototype.processInput = function(sender,input){
         return;
       }
       this.setUser(username,realmname,roles,function(user){
-        console.log('remote rpc invoke set a User',username,realmname,'now setting replicatorName',sender.replicaToken.name);
+        //console.log('remote rpc invoke set a User',username,realmname,'now setting replicatorName',sender.replicaToken.name);
         user.replicatorName = sender.replicaToken.name;
         method.apply(t,args);
       });
