@@ -20,5 +20,9 @@ function ChildProcessCollectionReplica(realm){
 }
 ChildProcessCollectionReplica.prototype = new CollectionReplica();
 ChildProcessCollectionReplica.prototype.constructor = ChildProcessCollectionReplica;
+ChildProcessCollectionReplica.prototype.destroy = function(){
+  CollectionReplica.prototype.destroy.call(this);
+  process.exit();
+};
 
 module.exports = ChildProcessCollectionReplica;
