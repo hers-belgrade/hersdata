@@ -19,12 +19,15 @@ function Follower(keyring,path,cb,selfdestruct){
   var cbcall = function(name,ent){
     cb.call(t,name,ent);
   };
-  var filtercollectioncb = function(key){
+  var filtercollectioncb = function(key,withremove){
     return function(name,ent){
       if(ent.access_level()===key){
         cbcall(name,ent);
       }else{
-        cbcall(name);
+        if(withremove){
+          console.log('remove',name);
+          cbcall(name);
+        }
       }
     };
   };
@@ -46,17 +49,18 @@ function Follower(keyring,path,cb,selfdestruct){
         if(keyring.contains(data.access_level())){
           cbcall(name,el);
         }else{
-          console.log(name,'will not be shown',data.access_level(),keyring.keys);
+          //console.log(name,'will not be shown',data.access_level(),keyring.keys);
         }
         break;
     }
   });
   var newKeyListener = keyring.newKey.attach(function(key){
-    var fcb = filtercollectioncb(key);
     data.traverseElements(function(name,ent){
       switch(ent.type()){
         case 'Collection':
-          fcb(name,ent);
+          if(ent.access_level()===key){
+            cbcall(name,ent);
+          }
           break;
         case 'Scalar':
           cbcall(name,ent);
@@ -65,7 +69,11 @@ function Follower(keyring,path,cb,selfdestruct){
     });
   });
   var keyRemovedListener = keyring.keyRemoved.attach(function(key){
-    data.traverseElements(filtercollectioncb(key));
+    data.traverseElements(function(name,ent){
+      if(ent.access_level()===key){
+        cbcall(name);
+      }
+    });
   });
   var selfdestroyer = function(){
     keyring.newKey.detach(newKeyListener);

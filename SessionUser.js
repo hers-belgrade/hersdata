@@ -25,6 +25,7 @@ function SessionFollower(keyring,path,txncb){
       }
     };
     for(var i in collections){
+      //console.log(path.join('.'),'dumping collection',i);
       mydump.push([i,null]);
     };
     //console.log(path.join('.'),'dump',mydump);
@@ -98,7 +99,6 @@ function SessionFollower(keyring,path,txncb){
 	this.refresh();
   var superDestroy = this.destroy;
   this.destroy = function(){
-    superDestroy.call();
     for(var i in followers){
       this.followers[i].destroy();
       delete this.followers[i];
@@ -107,9 +107,12 @@ function SessionFollower(keyring,path,txncb){
       scalars[i].handler.destroy();
       delete scalars[i];
     }
+    t.txnBeginsListener && keyring.data.txnBegins.detach(t.txnBeginsListener);
+    t.txnEndsListener && keyring.data.txnEnds.detach(t.txnEndsListener);
+    superDestroy.call(t);
   };
   if(typeof txncb==='function'){
-    keyring.data.txnBegins.attach(function(_txnalias){
+    this.txnBeginsListener = keyring.data.txnBegins.attach(function(_txnalias){
       t.startTxn(_txnalias);
     });
     this.doEndTxn = function(_txnalias){
@@ -119,7 +122,7 @@ function SessionFollower(keyring,path,txncb){
         txncb(_txnalias,et);
       }
     };
-    keyring.data.txnEnds.attach(this.doEndTxn);
+    this.txnEndsListener = keyring.data.txnEnds.attach(this.doEndTxn);
   }
   //console.log(this._localdump(),'<>',txnqueue);
 };
@@ -292,7 +295,9 @@ SessionUser.prototype.addKey = function(key){
 };
 SessionUser.prototype.destroy = function(){
   this.follower.destroy();
-  this.destroytree();
+  //this.destroytree();
+  for(var i in this.sessions){
+  }
 };
 SessionUser.prototype.makeSession = function(session){
   var ss = this.sessions;
