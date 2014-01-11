@@ -520,6 +520,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
 
 Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
+    cb();
+    return;
     //console.log(this.dataDebug());
     console.log('this realms',this.realms);
     throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
@@ -889,9 +891,11 @@ Collection.prototype.killAllProcesses = function () {
   }
 };
 
-Collection.prototype.setSessionUserFactory = function(){
+Collection.prototype.setSessionUserFactory = function(newusercb){
   this.userFactory = {create:function(data,username,realmname,roles){
-    return new SessionUser(data,username,realmname,roles);
+    var ret =  new SessionUser(data,username,realmname,roles);
+    (typeof newusercb === 'function') && newusercb(ret);
+    return ret;
   }};
   if(!this.realms){
     this.realms = {};
