@@ -183,6 +183,7 @@ function Collection(a_l){
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
   this.replicationInitiated = new HookCollection();
+  this.newUser = new HookCollection();
   this.destroyed = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
@@ -232,6 +233,7 @@ function Collection(a_l){
     this.txnEnds.destruct();
     this.newReplica.destruct();
     this.replicationInitiated.destruct();
+    this.newUser.destruct();
     this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
@@ -512,6 +514,7 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     //console.log(username+'@'+realmname,'not found');
     u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
+    this.newUser.fire(u);
     u.destroyed.attach(function(){
       delete realm[username];
     });
