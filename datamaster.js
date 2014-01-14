@@ -897,11 +897,9 @@ Collection.prototype.killAllProcesses = function () {
   }
 };
 
-Collection.prototype.setSessionUserFactory = function(newusercb){
+Collection.prototype.setSessionUserFactory = function(){
   this.userFactory = {create:function(data,username,realmname,roles){
-    var ret =  new SessionUser(data,username,realmname,roles);
-    (typeof newusercb === 'function') && newusercb(ret);
-    return ret;
+    return new SessionUser(data,username,realmname,roles);
   }};
   if(!this.realms){
     this.realms = {};
