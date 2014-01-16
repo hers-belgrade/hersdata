@@ -184,6 +184,7 @@ function Collection(a_l){
   this.newReplica = new HookCollection();
   this.replicationInitiated = new HookCollection();
   this.newUser = new HookCollection();
+  this.userOut = new HookCollection();
   this.destroyed = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
@@ -234,6 +235,7 @@ function Collection(a_l){
     this.newReplica.destruct();
     this.replicationInitiated.destruct();
     this.newUser.destruct();
+    this.userOut.destruct();
     this.destroyed.destruct();
     onNewElement.destruct();
     onElementDestroyed.destruct();
@@ -498,6 +500,16 @@ Collection.prototype.perform_remove = function (path) {
 };
 
 Collection.prototype.setUser = function(username,realmname,roles,cb){
+  if(typeof realmname === 'undefined'){
+    console.log('cannot set user without a realmname');
+    console.trace();
+    return cb();
+  }
+  if(typeof username === 'undefined'){
+    console.log('cannot set user without a username');
+    console.trace();
+    return cb();
+  }
   if(!this.realms){
     console.log('cannot set user',username,realmname,'because there is no realms hash');
     cb();
@@ -514,8 +526,11 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     //console.log(username+'@'+realmname,'not found');
     u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
+    console.log('firing newUser',u.username,u.realmname);
     this.newUser.fire(u);
+    var userout = this.userOut;
     u.destroyed.attach(function(){
+      userout.fire(u);
       delete realm[username];
     });
   }

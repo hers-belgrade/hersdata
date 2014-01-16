@@ -32,8 +32,9 @@ function SessionFollower(keyring,path,txncb){
     return mydump;
   };
   var txnqueue=[];
+  var userqueue = [];
   this.dumptxnqueue = function(){
-    return txnqueue.splice(0);
+    return [txnqueue.splice(0),userqueue.splice(0)];
   };
   function cb(name,ent){
     if(ent){
@@ -88,9 +89,14 @@ function SessionFollower(keyring,path,txncb){
       }
     }
   };
+  var usercb = function(operation,username,realmname){
+    //console.log(path.join('.'),'user',operation,username,realmname);
+    userqueue.push([operation,username,realmname]);
+  };
 	var t = this;
   this.refresh = function(){
-		Follower.call(t,keyring,path,cb);
+    //console.log(path.join('.'),'refresh');
+		Follower.call(t,keyring,path,cb,usercb);
     for(var i in followers){
       //console.log('subrefreshing',i);
       followers[i].refresh();
@@ -180,7 +186,8 @@ SessionFollower.prototype.triggerTxn = function(virtualtxn){
 };
 SessionFollower.prototype.dump = function(){
   var childdumps = {};
-  var ret = [this._localdump(),childdumps];
+  var cu = this.currentUsers ? this.currentUsers() : [];
+  var ret = [[this._localdump(),cu],childdumps];
   for(var i in this.followers){
     childdumps[i] = this.followers[i].dump();
   }
@@ -269,7 +276,7 @@ UserSession.prototype.dumpQueue = function(cb,justpeek){
   checkAndClear();
 };
 function SessionUser(data,username,realmname,roles){
-  console.log('new SessionUser',roles);
+  console.log('new SessionUser',username,realmname,roles);
   KeyRing.call(this,data,username,realmname,roles);
   var sessions = {};
   this.sessions = sessions;

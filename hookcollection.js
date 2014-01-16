@@ -1,6 +1,4 @@
 function HookCollection(){
-  this.collection = {};
-	this.counter = 0;
 };
 HookCollection.prototype.empty = function(){
 	var c = 0;
@@ -9,18 +7,30 @@ HookCollection.prototype.empty = function(){
 	}
   return true;
 };
+HookCollection.prototype._inc = function(){
+  this.counter++;
+  if(this.counter>10000000){
+    this.counter=1;
+  }
+};
 HookCollection.prototype.inc = function(){
-	var t = this;
-	function _inc(){
-		t.counter++;
-		if(t.counter>10000000){
-			t.counter=1;
-		}
-	};
-	_inc();
+  if(!this.collection){
+    this.collection = {};
+    this.counter = 0;
+  }
+	this._inc();
 	while(this.counter in this.collection){
-		_inc();
+		this._inc();
 	}
+};
+HookCollection.prototype.isEmpty = function(){
+  if(!this.collection){
+    return true;
+  }
+  for(var i in this.collection){
+    return false;
+  }
+  return true;
 };
 HookCollection.prototype.attach = function(cb){
   if(typeof cb === 'function'){
@@ -32,6 +42,10 @@ HookCollection.prototype.attach = function(cb){
 };
 HookCollection.prototype.detach = function(i){
 	delete this.collection[i];
+  if(this.isEmpty()){
+    delete this.counter;
+    delete this.collection;
+  }
 };
 HookCollection.prototype.fire = function(){
   var c = this.collection;

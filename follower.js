@@ -1,7 +1,4 @@
-function Follower(keyring,path,cb,selfdestruct){
-  if(selfdestruct===true){
-    console.log('WILL SELFDESTRUCT');
-  }
+function Follower(keyring,path,cb,usercb){
   var data = keyring.data.element(path);
   if(!data){
     //console.log('no data found at',path,keyring.data.dataDebug());
@@ -85,8 +82,8 @@ function Follower(keyring,path,cb,selfdestruct){
     if(this.userselfdestroyer && data.destroyed){
       data.destroyed.detach(this.userselfdestroyer);
     }
-    if(typeof selfdestruct==='function'){
-      selfdestruct.call(t);
+    if(this.newuser && data.newUser){
+      data.newUser.detach(this.newuser);
     }
     for(var i in this){
       delete this[i];
@@ -102,6 +99,30 @@ function Follower(keyring,path,cb,selfdestruct){
   if(this.shouldDie){
     console.log('shouldDie');
     selfdestroyer.call(t);
+  }
+  this.currentUsers = function(){
+    var ret = [];
+    for(var _r in data.realms){
+      var r = data.realms[_r];
+      for(var _un in r){
+        ret.push([1,_un,_r]);
+      }
+    }
+    return ret;
+  };
+  if(typeof usercb === 'function'){
+    for(var _r in data.realms){
+      var r = data.realms[_r];
+      for(var _un in r){
+        usercb(1,_un,_r);
+      }
+    }
+    this.newuser = data.newUser.attach(function(u){
+      usercb(1,u.username,u.realmname);
+    });
+    this.userout = data.userOut.attach(function(u){
+      usercb(2,u.username,u.realmname);
+    });
   }
 };
 
