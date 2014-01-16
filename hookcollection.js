@@ -41,6 +41,9 @@ HookCollection.prototype.attach = function(cb){
   }
 };
 HookCollection.prototype.detach = function(i){
+  if(!this.collection){
+    return;
+  }
 	delete this.collection[i];
   if(this.isEmpty()){
     delete this.counter;
