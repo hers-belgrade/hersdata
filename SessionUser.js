@@ -304,7 +304,10 @@ SessionUser.prototype.destroy = function(){
   this.follower.destroy();
   //this.destroytree();
   for(var i in this.sessions){
+    var s = this.sessions[i];
+    s.destroycb();
   }
+  KeyRing.prototype.destroy.call(this);
 };
 SessionUser.prototype.makeSession = function(session){
   var ss = this.sessions;
