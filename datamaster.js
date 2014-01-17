@@ -529,8 +529,9 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     console.log('firing newUser',u.username,u.realmname);
     this.newUser.fire(u);
     var userout = this.userOut;
+    var t = this;
     u.destroyed.attach(function(){
-      userout.fire(u);
+      t.handleUserDestruction(u);
       delete realm[username];
     });
   }
@@ -566,6 +567,10 @@ Collection.prototype.removeUser = function(username,realmname){
     delete realm[username];
     user.destroy();
   });
+};
+
+Collection.prototype.handleUserDestruction = function(u){
+  this.userOut.fire(u);
 };
 
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {

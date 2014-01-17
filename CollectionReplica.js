@@ -63,5 +63,8 @@ CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,r
     t.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
   });
 };
-
+CollectionReplica.prototype.handleUserDestruction = function(u){
+  Collection.prototype.handleUserDestruction.call(this,u);
+  this.send('rpc','removeUser',u.username,u.realmname);
+};
 module.exports = CollectionReplica;
