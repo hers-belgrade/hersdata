@@ -12,7 +12,7 @@ function SessionFollower(keyring,path,txncb){
   var scalars={};
   var collections={};
   var followers = {};
-	this.followers = followers;
+  this.followers = followers;
   this.keyring = keyring;
   this.path = path;
   this._localdump = function(){
@@ -34,7 +34,10 @@ function SessionFollower(keyring,path,txncb){
   var txnqueue=[];
   var userqueue = [];
   this.dumptxnqueue = function(){
-    return [txnqueue.splice(0),userqueue.splice(0)];
+    var ts = txnqueue.splice(0), us = userqueue.splice(0);
+    if (ts.length>0||us.length>0) { 
+      return [ts,us];
+    }
   };
   function cb(name,ent){
     if(ent){
@@ -58,12 +61,12 @@ function SessionFollower(keyring,path,txncb){
         break;
         case 'Collection':
           collections[name] = null;
-					//console.log(path.join('.'),'pushing collection',name);
+          //console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
-					if(followers[name]){
+          if(followers[name]){
             //console.log(path.join('.'),'refreshing',name);
-						followers[name].refresh();
-					}
+            followers[name].refresh();
+          }
         break;
         default:
           //console.log(path.join('.'),'cannot push',name);
@@ -93,16 +96,16 @@ function SessionFollower(keyring,path,txncb){
     //console.log(path.join('.'),'user',operation,username,realmname);
     userqueue.push([operation,username,realmname]);
   };
-	var t = this;
+  var t = this;
   this.refresh = function(){
     //console.log(path.join('.'),'refresh');
-		Follower.call(t,keyring,path,cb,usercb);
+    Follower.call(t,keyring,path,cb,usercb);
     for(var i in followers){
       //console.log('subrefreshing',i);
       followers[i].refresh();
     }
-	};
-	this.refresh();
+  };
+  this.refresh();
   var superDestroy = this.destroy;
   this.destroy = function(){
     for(var i in followers){
@@ -161,14 +164,14 @@ SessionFollower.prototype.endTxn = function(txnalias){
     }
   }
   var tq = this.dumptxnqueue();
-  if(has_data || tq.length>0){
+  if(has_data || (tq&&tq.length>0)){
     return [tq,childtxns];
   }
 };
 SessionFollower.prototype.follow = function(name){
-	//console.log('should follow',name);
+  //console.log('should follow',name);
   if(!this.followers[name]){
-		//console.log(this.path.join('.'),'created follower',name);
+    //console.log(this.path.join('.'),'created follower',name);
     this.followers[name] = new SessionFollower(this.keyring,this.path.concat([name]));
     return true;
   }else{
@@ -333,19 +336,19 @@ SessionUser.prototype.follow = function(path){
   var f = this.follower;
   while(path.length>1){
     var pe = path.shift();
-		//console.log('investigating',pe);
+    //console.log('investigating',pe);
     var _f = f.follower(pe);
     if(!_f){
-			f.follow(pe);
-			_f = f.follower(pe);
-			if(!_f){
-				//console.log('following',path,'on',pe,'failed');
-			}else{
-				f=_f;
-			}
-		}else{
-			f = _f;
-		}
+      f.follow(pe);
+      _f = f.follower(pe);
+      if(!_f){
+        //console.log('following',path,'on',pe,'failed');
+      }else{
+        f=_f;
+      }
+    }else{
+      f = _f;
+    }
   }
   if(f){
     if(f.follow(path[0])){
