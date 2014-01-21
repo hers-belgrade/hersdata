@@ -246,6 +246,7 @@ function Collection(a_l){
   };
 
   this.element = function(name){
+    if(!data){return;}
     if(utils.isArray(name)){
       if(name.length<1){
         return this;
@@ -819,11 +820,8 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
     })(i,p);
   }
   ret['__DESTROY__'] = function(){
-    var self = SELF();
-    delete self.data.functionalities[fqnname];
-    for(var i in self){
-      delete self[i];
-    }
+    delete self.functionalities[fqnname];
+    self = null;
     for(var i in ret){
       delete ret[i];
     }
