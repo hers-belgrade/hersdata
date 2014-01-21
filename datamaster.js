@@ -447,6 +447,10 @@ Collection.prototype.perform_set = function(path,param,txnc){
   }
   //name = name[0];
   var target = this.element(path.slice(0,-1));
+  if(!target){
+    console.log(path.slice(0,-1),'gives no element');
+    return;
+  }
   var e = target.element(name);
   name = name[0];
   if(utils.isArray(param)){

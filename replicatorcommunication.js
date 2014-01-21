@@ -59,7 +59,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
         dr = null;
         this.data.processInput(this,drp);
       }catch(e){
-				console.log('ERROR processing input', this.dataRead);
+				//console.log('ERROR processing input', util.inspect(drp,false,null,false));
         console.log(e.stack);
         console.log(e);
       }
