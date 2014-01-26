@@ -179,6 +179,7 @@ function Collection(a_l){
 
   this.onNewTransaction = new HookCollection();
   this.onNewFunctionality = new HookCollection();
+  this.accessLevelChanged = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
@@ -191,6 +192,7 @@ function Collection(a_l){
     if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
+      this.accessLevelChanged.fire(access_level);
     }
   };
 
@@ -230,6 +232,7 @@ function Collection(a_l){
     data = null;
     this.onNewTransaction.destruct();
     this.onNewFunctionality.destruct();
+    this.accessLevelChanged.destruct();
     this.txnBegins.destruct();
     this.txnEnds.destruct();
     this.newReplica.destruct();
@@ -294,6 +297,15 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
+      if(t.__commitunderway){
+        if(t.__commitstodo){
+          t.__commitstodo=[[txnalias,txnprimitives]];
+        }else{
+          t.__commitstodo.push([txnalias,txnprimitives]);
+        }
+        return;
+      }
+      t.__commitunderway = true;
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
@@ -308,6 +320,14 @@ function Collection(a_l){
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
+      delete t.__commitunderway;
+      if(t.__commitstodo){
+        if(t.__commitstodo.length){
+          t._commit.apply(t,t.__commitstodo.splice(0,1)[0]);
+        }else{
+          delete t.__commitstodo;
+        }
+      }
       //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
@@ -383,7 +403,7 @@ Collection.prototype.pathToScalars = function(name,value,path){
     if(e.type()==='Collection'){
       var t = e.pathToScalars(name,value,tp);
       if(t.length){
-        ret.push(t);
+        ret.push.apply(ret,t);
       }
     }
   });
@@ -531,9 +551,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     //console.log(username+'@'+realmname,'not found');
     u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
-    console.log('firing newUser',u.username,u.realmname);
+    //console.log('firing newUser',u.username,u.realmname);
     this.newUser.fire(u);
-    var userout = this.userOut;
     var t = this;
     u.destroyed.attach(function(){
       t.handleUserDestruction(u);

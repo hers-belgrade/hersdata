@@ -89,9 +89,12 @@ HookCollection.prototype.fireAndForget = function(){
 }
 */
 HookCollection.prototype.destruct = function(){
-  //console.log('destructing');
-  for(var i in this.collection){
-    delete this.collection[i];
+  if(this.collection){
+    for(var i in this.collection){
+      delete this.collection[i];
+    }
+    delete this.collection;
+    delete this.counter;
   }
 }
 
