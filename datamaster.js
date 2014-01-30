@@ -174,8 +174,8 @@ function Collection(a_l){
     return ret;
   }
 
-  var onNewElement = new HookCollection();
-  var onElementDestroyed = new HookCollection();
+  this.newElement = new HookCollection();
+  this.elementDestroyed = new HookCollection();
 
   this.onNewTransaction = new HookCollection();
   this.onNewFunctionality = new HookCollection();
@@ -198,7 +198,7 @@ function Collection(a_l){
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
-      onElementDestroyed.fire(name);
+      this.elementDestroyed.fire(name);
       data[name].destroy();
       delete data[name];
     }
@@ -216,15 +216,17 @@ function Collection(a_l){
   this.subscribeToElements = function(cb){
     if(typeof cb !== 'function'){return;}
     this.traverseElements(cb);
-    var onel = onNewElement.attach(cb);
-    var ondel = onElementDestroyed.attach(cb);
+    var onel = this.newElement.attach(cb);
+    var ondel = this.elementDestroyed.attach(cb);
+    var t = this;
     return {destroy:function(){
-      onNewElement.detach(onel);
-      onElementDestroyed.detach(ondel);
+      t.newElement.detach(onel);
+      t.elementDestroyed.detach(ondel);
     }};
   };
 
   this.destroy = function(){
+    this.destroyed.fire();
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
@@ -240,12 +242,15 @@ function Collection(a_l){
     this.newUser.destruct();
     this.userOut.destruct();
     this.destroyed.destruct();
-    onNewElement.destruct();
-    onElementDestroyed.destruct();
+    this.newElement.destruct();
+    this.elementDestroyed.destruct();
     for(var i in this.functionalities){
       this.functionalities[i].f.__DESTROY__();
     }
     delete this.functionalities;
+    for(var i in this){
+      delete this[i];
+    }
   };
 
   this.element = function(name){
@@ -287,7 +292,7 @@ function Collection(a_l){
       data[key].destroy();
     }
     data[key] = entity;
-    onNewElement.fire(key,entity);
+    this.newElement.fire(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));

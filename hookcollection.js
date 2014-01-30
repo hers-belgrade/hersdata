@@ -38,10 +38,15 @@ HookCollection.prototype.attach = function(cb){
     this.collection[this.counter]=cb;
     //console.log('attached',cb,'to',this.counter);
 		return this.counter;
+  }else{
+    console.log(cb.toString(),'is not a function');
   }
 };
 HookCollection.prototype.detach = function(i){
   if(!this.collection){
+    console.trace();
+    console.log('no listeners when',i,'should be detached');
+    process.exit(0);
     return;
   }
 	delete this.collection[i];
