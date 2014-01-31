@@ -84,14 +84,13 @@ function Scalar(res_val,pub_val, access_lvl) {
     public_value = pa;
     access_level = al;
     //console.log(this.changed.counter);
-    this.changed.fire();
+    this.changed.fire(this);
   }
 
   this.subscribeToValue = function(cb){
     if(typeof cb !== 'function'){return;}
     cb(this);
-    var t = this;
-    var hook = this.changed.attach(function(){cb(t);});
+    var hook = this.changed.attach(cb);
     return {destroy:function(){this.changed&&this.changed.detach(hook);}};
   };
 
@@ -175,27 +174,31 @@ function Collection(a_l){
     return ret;
   }
 
-  var onNewElement = new HookCollection();
-  var onElementDestroyed = new HookCollection();
+  this.newElement = new HookCollection();
+  this.elementDestroyed = new HookCollection();
 
   this.onNewTransaction = new HookCollection();
   this.onNewFunctionality = new HookCollection();
+  this.accessLevelChanged = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
   this.replicationInitiated = new HookCollection();
+  this.newUser = new HookCollection();
+  this.userOut = new HookCollection();
   this.destroyed = new HookCollection();
 
   this.setAccessLevel = function(a_l,path){
     if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
+      this.accessLevelChanged.fire(access_level);
     }
   };
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
-      onElementDestroyed.fire(name);
+      this.elementDestroyed.fire(name);
       data[name].destroy();
       delete data[name];
     }
@@ -213,15 +216,17 @@ function Collection(a_l){
   this.subscribeToElements = function(cb){
     if(typeof cb !== 'function'){return;}
     this.traverseElements(cb);
-    var onel = onNewElement.attach(cb);
-    var ondel = onElementDestroyed.attach(cb);
+    var onel = this.newElement.attach(cb);
+    var ondel = this.elementDestroyed.attach(cb);
+    var t = this;
     return {destroy:function(){
-      onNewElement.detach(onel);
-      onElementDestroyed.detach(ondel);
+      t.newElement.detach(onel);
+      t.elementDestroyed.detach(ondel);
     }};
   };
 
   this.destroy = function(){
+    this.destroyed.fire();
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
@@ -229,16 +234,27 @@ function Collection(a_l){
     data = null;
     this.onNewTransaction.destruct();
     this.onNewFunctionality.destruct();
+    this.accessLevelChanged.destruct();
     this.txnBegins.destruct();
     this.txnEnds.destruct();
     this.newReplica.destruct();
     this.replicationInitiated.destruct();
+    this.newUser.destruct();
+    this.userOut.destruct();
     this.destroyed.destruct();
-    onNewElement.destruct();
-    onElementDestroyed.destruct();
+    this.newElement.destruct();
+    this.elementDestroyed.destruct();
+    for(var i in this.functionalities){
+      this.functionalities[i].f.__DESTROY__();
+    }
+    delete this.functionalities;
+    for(var i in this){
+      delete this[i];
+    }
   };
 
   this.element = function(name){
+    if(!data){return;}
     if(utils.isArray(name)){
       if(name.length<1){
         return this;
@@ -279,7 +295,7 @@ function Collection(a_l){
       data[key].destroy();
     }
     data[key] = entity;
-    onNewElement.fire(key,entity);
+    this.newElement.fire(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
@@ -289,6 +305,15 @@ function Collection(a_l){
 
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
+      if(t.__commitunderway){
+        if(t.__commitstodo){
+          t.__commitstodo=[[txnalias,txnprimitives]];
+        }else{
+          t.__commitstodo.push([txnalias,txnprimitives]);
+        }
+        return;
+      }
+      t.__commitunderway = true;
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
@@ -303,11 +328,20 @@ function Collection(a_l){
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
+      delete t.__commitunderway;
+      if(t.__commitstodo){
+        if(t.__commitstodo.length){
+          t._commit.apply(t,t.__commitstodo.splice(0,1)[0]);
+        }else{
+          delete t.__commitstodo;
+        }
+      }
       //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
 
   this.userFactory = KeyRing;
+  //console.log('created',process.memoryUsage().rss);
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
@@ -377,7 +411,7 @@ Collection.prototype.pathToScalars = function(name,value,path){
     if(e.type()==='Collection'){
       var t = e.pathToScalars(name,value,tp);
       if(t.length){
-        ret.push(t);
+        ret.push.apply(ret,t);
       }
     }
   });
@@ -392,19 +426,22 @@ Collection.prototype.resetTxns = function(){
   return ret;
 };
 
-Collection.prototype.dump = function(forrealmname){
+Collection.prototype.dump = function(forreplicatoken){
   var ret = {
     data:this.toMasterPrimitives(),
   };
   if(this.realms){
     var us = {};
-    if(typeof forrealmname !== 'undefined'){
-      var r = this.realms[forrealmname];
+    if(typeof forreplicatoken !== 'undefined' && typeof forreplicatoken.realmname !== 'undefined'){
+      var r = this.realms[forreplicatoken.realmname];
       var rus = {};
       for(var _u in r){
-        rus[_u] = r[_u].dump();
+        var __u = r[_u];
+        if(__u.replicatorName===forreplicatoken.name){
+          rus[_u] = __u.dump();
+        }
       }
-      us[forrealmname] = rus;
+      us[forreplicatoken.realmname] = rus;
     }else{
       for(var _r in this.realms){
         var r = this.realms[_r];
@@ -439,6 +476,10 @@ Collection.prototype.perform_set = function(path,param,txnc){
   }
   //name = name[0];
   var target = this.element(path.slice(0,-1));
+  if(!target){
+    console.log(path.slice(0,-1),'gives no element');
+    return;
+  }
   var e = target.element(name);
   name = name[0];
   if(utils.isArray(param)){
@@ -492,6 +533,16 @@ Collection.prototype.perform_remove = function (path) {
 };
 
 Collection.prototype.setUser = function(username,realmname,roles,cb){
+  if(typeof realmname === 'undefined'){
+    console.log('cannot set user without a realmname');
+    console.trace();
+    return cb();
+  }
+  if(typeof username === 'undefined'){
+    console.log('cannot set user without a username');
+    console.trace();
+    return cb();
+  }
   if(!this.realms){
     console.log('cannot set user',username,realmname,'because there is no realms hash');
     cb();
@@ -508,7 +559,11 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     //console.log(username+'@'+realmname,'not found');
     u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
+    //console.log('firing newUser',u.username,u.realmname);
+    this.newUser.fire(u);
+    var t = this;
     u.destroyed.attach(function(){
+      t.handleUserDestruction(u);
       delete realm[username];
     });
   }
@@ -519,6 +574,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
 
 Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
+    cb();
+    return;
     //console.log(this.dataDebug());
     console.log('this realms',this.realms);
     throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
@@ -544,10 +601,14 @@ Collection.prototype.removeUser = function(username,realmname){
   });
 };
 
+Collection.prototype.handleUserDestruction = function(u){
+  this.userOut.fire(u);
+};
+
 Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  function exit(code){
+  function exit(code,params,message){
     if(cb){
-      cb(code);
+      cb(code,params,message);
     }else{
       console.log('invoke exited with',code,'for',path,paramobj);
     }
@@ -561,7 +622,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN');}
+	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
   var targetpath = path.slice(0,-2);
   var target = this;
   while(targetpath.length){
@@ -584,16 +645,18 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
         username = realmname;
         realmname = '_dcp_';
       }else{
-        return exit('ACCESS_FORBIDDEN');
+        return exit('ACCESS_FORBIDDEN',[realmname],'User * may come only from a replica');
       }
     }
     this.setUser(username,realmname,roles,function(u){
-      if(!u){return cb ? cb('NO_USER') : undefined;}
+      if(!u){
+        return exit('NO_USER',[username,realmname],'No user '+username+'@'+realmname+' found');
+      }
       var f = target.functionalities[functionalityname];
       if(f){
         var key = f.key;
         if((typeof key !== 'undefined')&&(!u.contains(key))){
-          return exit('ACCESS_FORBIDDEN');
+          return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
         }
         f = f.f;
         var m = f[methodname];
@@ -601,14 +664,16 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
           //console.log('invoking',path,paramobj,username,realmname,roles);
           //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
           m(paramobj,cb,username,realmname);
+        }else{
+          return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
         }
       }else{
         console.log(functionalityname,'is not a functionalityname while processing',path);
-        return exit('NO_FUNCTIONALITY');
+        return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
       }
     });
   }else{
-    return exit('NO_FUNCTIONALITY');
+    return exit('NO_DATA',path,'No data found');
   }
 };
 
@@ -639,6 +704,7 @@ Collection.prototype.removeKey = function(username,realmname,key){
   this.findUser(username,realmname,function(keyring){
     keyring && keyring.removeKey(key,t);
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
+      console.log('broadcasting removeKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
     }
   });
@@ -675,18 +741,18 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   }
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
     return function(errorkey){
       if(!errorkey){
         ecb(0,'ok');
         return;
       }
       var errorparams = Array.prototype.slice.call(arguments,1);
-      if(typeof m.errors[errorkey] !== 'object'){
+      if(typeof _m.errors[errorkey] !== 'object'){
         console.trace();
         throw 'Error key '+errorkey+' not specified in the error map';
       }
-      var eo = m.errors[errorkey];
+      var eo = _m.errors[errorkey];
       var errmess = eo.message;
       var eop = eo.params;
       if(eop && eop.length){
@@ -784,14 +850,16 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
         };
       }
     })(i,p);
-    ret['__DESTROY__'] = function(){
-      for(var i in ret){
-        delete ret[i];
-      }
-      m = undefined;
-      ret = undefined;
-    };
   }
+  ret['__DESTROY__'] = function(){
+    delete self.functionalities[fqnname];
+    self = null;
+    for(var i in ret){
+      delete ret[i];
+    }
+    m = undefined;
+    ret = undefined;
+  };
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.functionalities[fqnname] = {f:ret,key:key};
@@ -969,7 +1037,7 @@ Collection.prototype.processInput = function(sender,input){
         this.replicatingClients[sender.replicaToken.name] = sender;
         this.cloneFromRemote(internal[2]);
         this.newReplica.fire(sender);
-        var ret = this.dump(srt.realmname || null);
+        var ret = this.dump(sender.replicaToken);
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){

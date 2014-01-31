@@ -9,7 +9,8 @@ ReplicatorCommunication.prototype.send = function(obj){
   if(!(this.socket && this.socket.writable)){return;}
   var objstr = JSON.stringify(obj)||'';
   var objlen = new Buffer(4);
-  objlen.writeUInt32LE(objstr.length,0);
+	var strbuf = new Buffer(objstr, 'utf8');
+  objlen.writeUInt32LE(strbuf.length,0);
   try{
     this.socket.write(objlen);
     this.socket.write(objstr);
@@ -52,13 +53,17 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     this.lenBufread=0;
     if(this.socket){
       try{
-        this.data.processInput(this,JSON.parse(this.dataRead));
+        var dr = this.dataRead;
+        this.dataRead = '';
+        var drp = JSON.parse(dr);
+        dr = null;
+        this.data.processInput(this,drp);
       }catch(e){
+				//console.log('ERROR processing input', util.inspect(drp,false,null,false));
         console.log(e.stack);
         console.log(e);
       }
     }
-    this.dataRead = '';
     if(this.socket){
       this.processData(data,i);
     }

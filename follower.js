@@ -1,7 +1,4 @@
-function Follower(keyring,path,cb,selfdestruct){
-  if(selfdestruct===true){
-    console.log('WILL SELFDESTRUCT');
-  }
+function Follower(keyring,path,cb,usercb){
   var data = keyring.data.element(path);
   if(!data){
     //console.log('no data found at',path,keyring.data.dataDebug());
@@ -13,37 +10,24 @@ function Follower(keyring,path,cb,selfdestruct){
     return;
   }
   var t = this;
-  var newKeyListener = keyring.newKey.attach(function(key){
-    //console.log('new key',typeof key,key,'on',path);
-    var _cb = cb;
-    var _t = t;
-    data.traverseElements(function(name,ent){
-      switch(ent.type()){
-        case 'Collection':
-          if(ent.access_level()===key){
-            _cb.call(_t,name,ent);
-          }/*else{
-            console.log(path.join('.'),'Collection',name,'will not be followed',key,'<>',ent.access_level());
-          }*/
-          break;
-        case 'Scalar':
-          _cb.call(_t,name,ent);
-          break;
-      }
-    });
-  });
-  var keyRemovedListener = keyring.keyRemoved.attach(function(key){
-    //console.log('removing key',key);
-    var _cb = cb;
-    var _t = t;
-    data.traverseElements(function(name,ent){
+  this.destroy = function(){
+    t.shouldDie = true;
+  };
+  var cbcall = function(name,ent){
+    cb.call(t,name,ent);
+  };
+  var filtercollectioncb = function(key,withremove){
+    return function(name,ent){
       if(ent.access_level()===key){
-        //console.log('deleting',name,'because of removed',key);
-        _cb.call(_t,name);
+        cbcall(name,ent);
+      }else{
+        if(withremove){
+          console.log('remove',name);
+          cbcall(name);
+        }
       }
-    });
-    //console.log(key,'removed');
-  });
+    };
+  };
   var newElementListener = data.subscribeToElements(function(name,el){
     if(!el){
       //console.log(name,'deleted');
@@ -53,19 +37,40 @@ function Follower(keyring,path,cb,selfdestruct){
     switch(el.type()){
       case 'Collection':
         if(keyring.contains(data.access_level())&&keyring.contains(el.access_level())){
-          cb.call(t,name,el);
+          cbcall(name,el);
         }/*else{
           console.log(name,'will not be shown',data.access_level(),el.access_level(),keyring.keys);
         }*/
         break;
       case 'Scalar':
         if(keyring.contains(data.access_level())){
-          cb.call(t,name,el);
+          cbcall(name,el);
         }else{
-          console.log(name,'will not be shown',data.access_level(),keyring.keys);
+          //console.log(name,'will not be shown',data.access_level(),keyring.keys);
         }
         break;
     }
+  });
+  var newKeyListener = keyring.newKey.attach(function(key){
+    data.traverseElements(function(name,ent){
+      switch(ent.type()){
+        case 'Collection':
+          if(ent.access_level()===key){
+            cbcall(name,ent);
+          }
+          break;
+        case 'Scalar':
+          cbcall(name,ent);
+          break;
+      }
+    });
+  });
+  var keyRemovedListener = keyring.keyRemoved.attach(function(key){
+    data.traverseElements(function(name,ent){
+      if(ent.access_level()===key){
+        cbcall(name);
+      }
+    });
   });
   var selfdestroyer = function(){
     keyring.newKey.detach(newKeyListener);
@@ -75,10 +80,10 @@ function Follower(keyring,path,cb,selfdestruct){
       data.destroyed.detach(this.dataselfdestroyer);
     }
     if(this.userselfdestroyer && data.destroyed){
-      data.destroyed.detach(this.userselfdestroyer);
+      keyring.destroyed.detach(this.userselfdestroyer);
     }
-    if(typeof selfdestruct==='function'){
-      selfdestruct.call(t);
+    if(this.newuser && data.newUser){
+      data.newUser.detach(this.newuser);
     }
     for(var i in this){
       delete this[i];
@@ -91,6 +96,34 @@ function Follower(keyring,path,cb,selfdestruct){
     selfdestroyer.call(t);
   });
   this.destroy = selfdestroyer;
+  if(this.shouldDie){
+    console.log('shouldDie');
+    selfdestroyer.call(t);
+  }
+  this.currentUsers = function(){
+    var ret = [];
+    for(var _r in data.realms){
+      var r = data.realms[_r];
+      for(var _un in r){
+        ret.push([1,_un,_r]);
+      }
+    }
+    return ret;
+  };
+  if(typeof usercb === 'function'){
+    for(var _r in data.realms){
+      var r = data.realms[_r];
+      for(var _un in r){
+        usercb(1,_un,_r);
+      }
+    }
+    this.newuser = data.newUser.attach(function(u){
+      usercb(1,u.username,u.realmname);
+    });
+    this.userout = data.userOut.attach(function(u){
+      usercb(2,u.username,u.realmname);
+    });
+  }
 };
 
 module.exports = Follower;
