@@ -97,7 +97,7 @@ function Follower(keyring,path,cb,usercb){
   });
   this.destroy = selfdestroyer;
   if(this.shouldDie){
-    console.log('shouldDie');
+    //console.log('shouldDie');
     selfdestroyer.call(t);
   }
   this.currentUsers = function(){
