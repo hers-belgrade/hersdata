@@ -69,6 +69,7 @@ function Scalar(res_val,pub_val, access_lvl) {
   var access_level = nullconversion(access_lvl);
 
   this.changed = new HookCollection();
+  this.destroyed = new HookCollection();
 
   function set_from_vals (ra,pa,al,path) {
     ra = nullconversion(ra);
@@ -119,10 +120,12 @@ function Scalar(res_val,pub_val, access_lvl) {
   }
 
   this.destroy = function  () {
+    this.destroyed.fire();
     public_value = undefined;
     restricted_value = undefined;
     access_level = undefined;
     this.changed.destruct();
+    this.destroyed.destruct();
   }
 };
 Scalar.prototype.type = function(){
@@ -576,14 +579,10 @@ Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
     cb();
     return;
-    //console.log(this.dataDebug());
-    console.log('this realms',this.realms);
-    throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
   }
-  //console.log(this.realms[realmname]);
   var kr = this.realms[realmname][username];
   if(!kr){
-    //throw "Username "+username+"@"+realmname+" cannot be found because the corresponding Collection's realm "+realmname+" has no user named "+username;
+    cb();
     return;
   }
   cb(kr);

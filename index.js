@@ -15,6 +15,8 @@ module.exports = {
   FollowerPatterns:require('./followerpatterns'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
-  HookCollection: require('./hookcollection')
+  HookCollection: require('./hookcollection'),
+  Listener: require('./listener'),
+  Bridge: require('./bridge')
 };
 
