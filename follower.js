@@ -80,7 +80,7 @@ function Follower(keyring,path,cb,usercb){
       data.destroyed.detach(this.dataselfdestroyer);
     }
     if(this.userselfdestroyer && data.destroyed){
-      data.destroyed.detach(this.userselfdestroyer);
+      keyring.destroyed.detach(this.userselfdestroyer);
     }
     if(this.newuser && data.newUser){
       data.newUser.detach(this.newuser);
@@ -97,7 +97,7 @@ function Follower(keyring,path,cb,usercb){
   });
   this.destroy = selfdestroyer;
   if(this.shouldDie){
-    console.log('shouldDie');
+    //console.log('shouldDie');
     selfdestroyer.call(t);
   }
   this.currentUsers = function(){

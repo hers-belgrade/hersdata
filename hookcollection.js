@@ -38,10 +38,15 @@ HookCollection.prototype.attach = function(cb){
     this.collection[this.counter]=cb;
     //console.log('attached',cb,'to',this.counter);
 		return this.counter;
+  }else{
+    console.log(cb.toString(),'is not a function');
   }
 };
 HookCollection.prototype.detach = function(i){
   if(!this.collection){
+    console.trace();
+    console.log('no listeners when',i,'should be detached');
+    process.exit(0);
     return;
   }
 	delete this.collection[i];
@@ -89,9 +94,12 @@ HookCollection.prototype.fireAndForget = function(){
 }
 */
 HookCollection.prototype.destruct = function(){
-  //console.log('destructing');
-  for(var i in this.collection){
-    delete this.collection[i];
+  if(this.collection){
+    for(var i in this.collection){
+      delete this.collection[i];
+    }
+    delete this.collection;
+    delete this.counter;
   }
 }
 

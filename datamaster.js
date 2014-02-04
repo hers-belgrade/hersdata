@@ -69,6 +69,7 @@ function Scalar(res_val,pub_val, access_lvl) {
   var access_level = nullconversion(access_lvl);
 
   this.changed = new HookCollection();
+  this.destroyed = new HookCollection();
 
   function set_from_vals (ra,pa,al,path) {
     ra = nullconversion(ra);
@@ -119,10 +120,12 @@ function Scalar(res_val,pub_val, access_lvl) {
   }
 
   this.destroy = function  () {
+    this.destroyed.fire();
     public_value = undefined;
     restricted_value = undefined;
     access_level = undefined;
     this.changed.destruct();
+    this.destroyed.destruct();
   }
 };
 Scalar.prototype.type = function(){
@@ -131,6 +134,9 @@ Scalar.prototype.type = function(){
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,txnid){
+    txnc.inc();
+    onntxn.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
+    return;
     var tp = deeparraycopy(txnprimitives);
     for(var i = 0; i<tp.length; i++){
       augmentpath(name,tp[i]);
@@ -174,11 +180,12 @@ function Collection(a_l){
     return ret;
   }
 
-  var onNewElement = new HookCollection();
-  var onElementDestroyed = new HookCollection();
+  this.newElement = new HookCollection();
+  this.elementDestroyed = new HookCollection();
 
   this.onNewTransaction = new HookCollection();
   this.onNewFunctionality = new HookCollection();
+  this.accessLevelChanged = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
   this.newReplica = new HookCollection();
@@ -191,12 +198,13 @@ function Collection(a_l){
     if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
+      this.accessLevelChanged.fire(access_level);
     }
   };
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
-      onElementDestroyed.fire(name);
+      this.elementDestroyed.fire(name);
       data[name].destroy();
       delete data[name];
     }
@@ -214,15 +222,17 @@ function Collection(a_l){
   this.subscribeToElements = function(cb){
     if(typeof cb !== 'function'){return;}
     this.traverseElements(cb);
-    var onel = onNewElement.attach(cb);
-    var ondel = onElementDestroyed.attach(cb);
+    var onel = this.newElement.attach(cb);
+    var ondel = this.elementDestroyed.attach(cb);
+    var t = this;
     return {destroy:function(){
-      onNewElement.detach(onel);
-      onElementDestroyed.detach(ondel);
+      t.newElement.detach(onel);
+      t.elementDestroyed.detach(ondel);
     }};
   };
 
   this.destroy = function(){
+    this.destroyed.fire();
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
@@ -230,6 +240,7 @@ function Collection(a_l){
     data = null;
     this.onNewTransaction.destruct();
     this.onNewFunctionality.destruct();
+    this.accessLevelChanged.destruct();
     this.txnBegins.destruct();
     this.txnEnds.destruct();
     this.newReplica.destruct();
@@ -237,12 +248,15 @@ function Collection(a_l){
     this.newUser.destruct();
     this.userOut.destruct();
     this.destroyed.destruct();
-    onNewElement.destruct();
-    onElementDestroyed.destruct();
+    this.newElement.destruct();
+    this.elementDestroyed.destruct();
     for(var i in this.functionalities){
       this.functionalities[i].f.__DESTROY__();
     }
     delete this.functionalities;
+    for(var i in this){
+      delete this[i];
+    }
   };
 
   this.element = function(name){
@@ -250,6 +264,9 @@ function Collection(a_l){
     if(utils.isArray(name)){
       if(name.length<1){
         return this;
+      }
+      if(!data){
+        return undefined;
       }
       if(name.length===1){
         return data[name[0]];
@@ -284,7 +301,7 @@ function Collection(a_l){
       data[key].destroy();
     }
     data[key] = entity;
-    onNewElement.fire(key,entity);
+    this.newElement.fire(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
@@ -303,8 +320,15 @@ function Collection(a_l){
         el._commit(txnalias,txnprimitives);
         return;
       }
-      console.log('_commit',arguments);
-      //console.log('performing',txnalias,txnprimitives);
+      if(t.__commitunderway){
+        if(!t.__commitstodo){
+          t.__commitstodo=[[txnalias,txnprimitives]];
+        }else{
+          t.__commitstodo.push([txnalias,txnprimitives]);
+        }
+        return;
+      }
+      t.__commitunderway = true;
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
         var it = txnprimitives[i];
@@ -318,6 +342,14 @@ function Collection(a_l){
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
+      delete t.__commitunderway;
+      if(t.__commitstodo){
+        if(t.__commitstodo.length){
+          t._commit.apply(t,t.__commitstodo.shift());
+        }else{
+          delete t.__commitstodo;
+        }
+      }
       //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
@@ -393,7 +425,7 @@ Collection.prototype.pathToScalars = function(name,value,path){
     if(e.type()==='Collection'){
       var t = e.pathToScalars(name,value,tp);
       if(t.length){
-        ret.push(t);
+        ret.push.apply(ret,t);
       }
     }
   });
@@ -541,9 +573,8 @@ Collection.prototype.setUser = function(username,realmname,roles,cb){
     //console.log(username+'@'+realmname,'not found');
     u = (this.userFactory.create)(this,username,realmname,roles);
     realm[username] = u;
-    console.log('firing newUser',u.username,u.realmname);
+    //console.log('firing newUser',u.username,u.realmname);
     this.newUser.fire(u);
-    var userout = this.userOut;
     var t = this;
     u.destroyed.attach(function(){
       t.handleUserDestruction(u);
@@ -559,14 +590,10 @@ Collection.prototype.findUser = function(username,realmname,cb){
   if(!(this.realms&&this.realms[realmname])){
     cb();
     return;
-    //console.log(this.dataDebug());
-    console.log('this realms',this.realms);
-    throw "User "+username+"@"+realmname+" cannot be found because the corresponding Collection has no realm named "+realmname;
   }
-  //console.log(this.realms[realmname]);
   var kr = this.realms[realmname][username];
   if(!kr){
-    //throw "Username "+username+"@"+realmname+" cannot be found because the corresponding Collection's realm "+realmname+" has no user named "+username;
+    cb();
     return;
   }
   cb(kr);
@@ -685,7 +712,8 @@ Collection.prototype.removeKey = function(username,realmname,key){
   //console.trace();
   //console.log('removing key',key,'for',username+'@'+realmname);
   this.findUser(username,realmname,function(keyring){
-    keyring && keyring.removeKey(key,t);
+    if(!keyring){return;}
+    keyring.removeKey(key,t);
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
       console.log('broadcasting removeKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
@@ -957,7 +985,7 @@ Collection.prototype.startHTTP = function(port,root,name){
     t.processInput(this,input);
   });
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
   });
   process.on('uncaughtException',function(e){
 		//console.log('===========', cp);
@@ -1024,7 +1052,7 @@ Collection.prototype.processInput = function(sender,input){
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
         });
         break;
       case 'initDCPreplica':

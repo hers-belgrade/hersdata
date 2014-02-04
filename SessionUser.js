@@ -12,9 +12,14 @@ function SessionFollower(keyring,path,txncb){
   var scalars={};
   var collections={};
   var followers = {};
+  var inactivefollowers = {};
   this.followers = followers;
+  this.inactivefollowers = inactivefollowers;
   this.keyring = keyring;
   this.path = path;
+  this.hasCollection = function(name){
+    return typeof collections[name] !== 'undefined';
+  };
   this._localdump = function(){
     var mydump = [];
     for(var i in scalars){
@@ -34,10 +39,10 @@ function SessionFollower(keyring,path,txncb){
   var txnqueue=[];
   var userqueue = [];
   this.dumptxnqueue = function(){
-    var ts = txnqueue.splice(0), us = userqueue.splice(0);
-    if (ts.length>0||us.length>0) { 
-      return [ts,us];
+    if(!(txnqueue.length||userqueue.length)){
+      return;
     }
+    return [txnqueue.splice(0),userqueue.splice(0)];
   };
   function cb(name,ent){
     if(ent){
@@ -64,7 +69,12 @@ function SessionFollower(keyring,path,txncb){
           //console.log(path.join('.'),'pushing collection',name);
           txnqueue.push([name,null]);
           if(followers[name]){
+            delete followers[name].shouldInactivate;
+          }
+          if(inactivefollowers[name]){
             //console.log(path.join('.'),'refreshing',name);
+            followers[name] = inactivefollowers[name];
+            delete inactivefollowers[name];
             followers[name].refresh();
           }
         break;
@@ -87,6 +97,9 @@ function SessionFollower(keyring,path,txncb){
         //console.log(path.join('.'),'pushing deletion of',name);
         txnqueue.push([name]);
         delete collections[name];
+        if(followers[name]){
+          followers[name].shouldInactivate = true;
+        }
       }else{
         //console.log(path.join('.'),'has no',name,'to delete');
       }
@@ -109,21 +122,30 @@ function SessionFollower(keyring,path,txncb){
   var superDestroy = this.destroy;
   this.destroy = function(){
     for(var i in followers){
-      this.followers[i].destroy();
-      delete this.followers[i];
+      followers[i].destroy();
+      delete followers[i];
+    }
+    for(var i in inactivefollowers){
+      inactivefollowers[i].destroy();
+      delete inactivefollowers[i];
     }
     for(var i in scalars){
       scalars[i].handler.destroy();
       delete scalars[i];
+    }
+    for(var i in collections){
+      delete collections[i];
     }
     t.txnBeginsListener && keyring.data.txnBegins.detach(t.txnBeginsListener);
     t.txnEndsListener && keyring.data.txnEnds.detach(t.txnEndsListener);
     superDestroy.call(t);
   };
   if(typeof txncb==='function'){
+    /*
     this.txnBeginsListener = keyring.data.txnBegins.attach(function(_txnalias){
       t.startTxn(_txnalias);
     });
+    */
     this.doEndTxn = function(_txnalias){
       var et = t.endTxn(_txnalias);
       if(typeof et !== 'undefined'){
@@ -136,11 +158,13 @@ function SessionFollower(keyring,path,txncb){
   //console.log(this._localdump(),'<>',txnqueue);
 };
 SessionFollower.prototype.follower = function(name){
-  return this.followers[name];
+  return this.followers[name] || this.inactivefollowers[name];
 };
 SessionFollower.prototype.startTxn = function(txnalias){
-  if(this.txnalias && txnalias!==txnalias){
-    throw 'Already in txn '+this.txnalias;
+  return;
+  if(this.txnalias){
+    console.log('Already in txn '+this.txnalias);
+    process.exit(0);
   }
   //console.log(this.path.join('.'),'starting txn',txnalias);
   this.txnalias=txnalias;
@@ -149,18 +173,27 @@ SessionFollower.prototype.startTxn = function(txnalias){
   }
 };
 SessionFollower.prototype.endTxn = function(txnalias){
+  /*
   if(this.txnalias!==txnalias){
-    throw 'Cannot end txn '+txnalias+', already in txn '+this.txnalias;
+    console.log('Cannot end txn '+txnalias+', already in txn '+this.txnalias);
+    process.exit(0);
   }
   delete this.txnalias;
   //console.log(this.path.join('.'),'ending txn',txnalias);
+  */
   var has_data = false;
   var childtxns={};
   for(var i in this.followers){
-    var ce = this.followers[i].endTxn(txnalias);
+    var f = this.followers[i];
+    var ce = f.endTxn(txnalias);
     if(typeof ce !== 'undefined'){
       has_data=true;
       childtxns[i] = ce;
+    }
+    if(f.shouldInactivate){
+      this.inactivefollowers[i] = this.followers[i];
+      delete this.followers[i];
+      delete f.shouldInactivate;
     }
   }
   var tq = this.dumptxnqueue();
@@ -170,13 +203,12 @@ SessionFollower.prototype.endTxn = function(txnalias){
 };
 SessionFollower.prototype.follow = function(name){
   //console.log('should follow',name);
-  if(!this.followers[name]){
-    //console.log(this.path.join('.'),'created follower',name);
-    this.followers[name] = new SessionFollower(this.keyring,this.path.concat([name]));
-    return true;
-  }else{
-    //console.log('follower for',name,'already exists');
+  if(this.followers[name]||this.inactivefollowers[name]){
+    return;
   }
+  var target = this.hasCollection(name) ? this.followers : this.inactivefollowers;
+  target[name] = new SessionFollower(this.keyring,this.path.concat([name]));
+  return true;
 };
 SessionFollower.prototype.triggerTxn = function(virtualtxn){
   if(this.doEndTxn){
@@ -220,14 +252,15 @@ function checkAndClear(){
         }
         delete userSessions[i];
       }
-    }else{
-      //console.log(i,'should not be deleted yet',us.lastAccess,now);
-    }
+    }/*else{
+      console.log(i,'should not be deleted yet',us);//.lastAccess,now,'cb',typeof us.cb,'qlen',us.queue.length);
+    }*/
   }
   lastCheck = now;
 }
 
-function UserSession(datadump,destroycb){
+function UserSession(datadump,destroycb,debug){
+  this.debug = debug;
   this.lastAccess = _now();
   userSessionCounter.inc();
   userSessions[userSessionCounter.toString()] = this;
@@ -246,35 +279,37 @@ function UserSession(datadump,destroycb){
 UserSession.prototype.add = function(txnalias,txns){
   this.queue.push([txnalias,txns]);
   this.dumpQueue();
+  if(this.debug){
+    console.log('qlen after dump',this.queue.length,'got cb',typeof this.cb);
+  }
+};
+UserSession.prototype.retrieveQueue = function(){
+  this.lastAccess = _now();
+  return this.queue.splice(0);
 };
 UserSession.prototype.dumpQueue = function(cb,justpeek){
-  this.lastAccess = _now();
-  if(this.cb){
-    //console.log('dumping on previous cb with queue length',this.queue.length);
-    //console.log('dumping',util.inspect(this.queue,false,null,false));
-    this.cb(this.queue);
-    this.queue=[];
-    if(justpeek){
-      delete this.cb;
-      cb();
+  if(justpeek){
+    if(this.queue.length){
+      cb(this.retrieveQueue());
     }else{
-      this.cb = cb;
+      cb();
     }
   }else{
-    if(this.queue.length){
-      if(typeof cb === 'function'){
-        //console.log('dumping on queue length',this.queue.length);
-        //console.log('dumping',util.inspect(this.queue,false,null,false));
-        cb(this.queue);
-        this.queue=[];
-      }
+    if(this.cb){
+      this.cb(this.retrieveQueue());
+      this.cb = cb;
     }else{
-      if(justpeek){
-        cb();
+      if(this.queue.length){
+        if(typeof cb === 'function'){
+          cb(this.retrieveQueue());
+        }
       }else{
         this.cb = cb;
       }
     }
+  }
+  if(this.debug){
+    console.log('after dumpQueue qlen',this.queue.length,'this.cb',typeof this.cb,'cb was',typeof cb,'justpeek was',justpeek);
   }
   checkAndClear();
 };
@@ -287,6 +322,11 @@ function SessionUser(data,username,realmname,roles){
   this.realmname=realmname;
   this.follower = new SessionFollower(this,[],function(txnalias,txns){
     //console.log('txn done',txnalias,util.inspect(txns,false,null,false));
+    /*
+    if(username==='milojko'){
+      console.log('done',txnalias);
+    }
+    */
     for(var i in sessions){
       sessions[i].add(txnalias,txns);
     }

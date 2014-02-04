@@ -13,6 +13,10 @@ module.exports = {
   KeyRing:require('./keyring'),
   Follower:require('./follower'),
   FollowerPatterns:require('./followerpatterns'),
-	helpers: require('./helpers')
+  BigCounter:require('./BigCounter'),
+	helpers: require('./helpers'),
+  HookCollection: require('./hookcollection'),
+  Listener: require('./listener'),
+  Bridge: require('./bridge')
 };
 
