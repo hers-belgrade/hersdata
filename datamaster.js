@@ -134,6 +134,9 @@ Scalar.prototype.type = function(){
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,txnid){
+    txnc.inc();
+    onntxn.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
+    return;
     var tp = deeparraycopy(txnprimitives);
     for(var i = 0; i<tp.length; i++){
       augmentpath(name,tp[i]);
@@ -973,7 +976,7 @@ Collection.prototype.startHTTP = function(port,root,name){
     t.processInput(this,input);
   });
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
   });
   process.on('uncaughtException',function(e){
 		//console.log('===========', cp);
@@ -1040,7 +1043,7 @@ Collection.prototype.processInput = function(sender,input){
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
         sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid]});
+          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
         });
         break;
       case 'initDCPreplica':
