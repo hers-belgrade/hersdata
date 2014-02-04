@@ -262,6 +262,9 @@ function Collection(a_l){
       if(name.length<1){
         return this;
       }
+      if(!data){
+        return undefined;
+      }
       if(name.length===1){
         return data[name[0]];
       }
