@@ -306,7 +306,7 @@ function Collection(a_l){
   this._commit = (function(t,txnc){
     return function (txnalias,txnprimitives) {
       if(t.__commitunderway){
-        if(t.__commitstodo){
+        if(!t.__commitstodo){
           t.__commitstodo=[[txnalias,txnprimitives]];
         }else{
           t.__commitstodo.push([txnalias,txnprimitives]);
@@ -331,7 +331,7 @@ function Collection(a_l){
       delete t.__commitunderway;
       if(t.__commitstodo){
         if(t.__commitstodo.length){
-          t._commit.apply(t,t.__commitstodo.splice(0,1)[0]);
+          t._commit.apply(t,t.__commitstodo.shift());
         }else{
           delete t.__commitstodo;
         }
