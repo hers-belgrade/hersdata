@@ -293,7 +293,17 @@ function Collection(a_l){
   };
 
   this._commit = (function(t,txnc){
-    return function (txnalias,txnprimitives) {
+    return function (txnalias,txnprimitives,_txnc,targetpath) {
+      if(targetpath && typeof targetpath === 'object' && targetpath instanceof Array){
+        var el = this.element(targetpath);
+        if(!el){
+          console.log('no element to _commit on');
+          process.exit(0);
+        }
+        el._commit(txnalias,txnprimitives);
+        return;
+      }
+      console.log('_commit',arguments);
       //console.log('performing',txnalias,txnprimitives);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
