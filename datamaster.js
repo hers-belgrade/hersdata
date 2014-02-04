@@ -698,7 +698,8 @@ Collection.prototype.removeKey = function(username,realmname,key){
   //console.trace();
   //console.log('removing key',key,'for',username+'@'+realmname);
   this.findUser(username,realmname,function(keyring){
-    keyring && keyring.removeKey(key,t);
+    if(!keyring){return;}
+    keyring.removeKey(key,t);
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
       console.log('broadcasting removeKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});

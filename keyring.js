@@ -57,6 +57,8 @@ KeyRing.prototype.removeKey = function(key){
   }
 };
 KeyRing.prototype.destroy = function(){
+  if(!this.destroyed){return;}
+  console.log(this.username,'destroying');
   this.destroyed.fire();
   this.newKey.destruct();
   this.keyRemoved.destruct();
