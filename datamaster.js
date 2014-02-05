@@ -595,12 +595,23 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
       console.log('invoke exited with',code,'for',path,paramobj);
     }
   }
-  if(!path){return exit('NO_FUNCTIONALITY');}
-  if(path.charAt(0)==='/'){
-    path = path.substring(1);
+  if(typeof path === 'string'){
+    if(!path){return exit('NO_FUNCTIONALITY');}
+    if(path.charAt(0)==='/'){
+      path = path.substring(1);
+    }
+    path = path.split('/');
   }
-  path = path.split('/');
   if(!path.length){return exit('NO_FUNCTIONALITY');}
+  if(path.length>2){
+    var targetpath = path.splice(0,1);
+    var target = this.element(targetpath);
+    if(!target){
+      return exit('NO_TARGET',targetpath,'Path not found to invoke functionality');
+    }else{
+      return target.invoke(path,paramobj,username,realmname,roles,cb);
+    }
+  }
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
@@ -613,7 +624,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
     if(_target){
       target = _target;
       if(target.realms){
-        return target.invoke(path.slice(-(targetpath.length+2)).join('/'),paramobj,username,realmname,roles,cb);
+        return target.invoke(path.slice(-(targetpath.length+2)),paramobj,username,realmname,roles,cb);
       }else{
         //console.log(tph[0],'has no realms');
       }

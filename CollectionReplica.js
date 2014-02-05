@@ -59,6 +59,9 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
   var t = this;
+  if(path.join){
+    path = path.join('/');
+  }
   this.setUser(username,realmname,roles,function(){
     t.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
   });
