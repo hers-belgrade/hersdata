@@ -9,26 +9,6 @@ var ReplicatorCommunication = require('./replicatorcommunication');
 var HookCollection = require('./hookcollection');
 var SessionUser = require('./SessionUser');
 
-function deeparraycopy(array){
-  var ret = [];
-  for(var i in array){
-    if(utils.isArray(array[i])){
-      ret.push(deeparraycopy(array[i]));
-    }else{
-      ret.push(array[i]);
-    }
-  }
-  return ret;
-}
-
-function augmentpath(pathelem,txn){
-  if(utils.isArray(txn)&&utils.isArray(txn[1])){
-    var p = txn[1].slice();
-    p.unshift(pathelem);
-    txn[1] = p;
-  }
-}
-
 function throw_if_invalid_scalar(val) {
   var tov = typeof val;
   if (('string' !== tov)&&('number' !== tov)){
@@ -135,18 +115,9 @@ Scalar.prototype.type = function(){
 function onChildTxn(name,onntxn,txnc,txnb,txne){
   return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,txnid){
     txnc.inc();
+    //txnb.fire(txnalias); //don't report txns that are not yours
+    //txne.fire(txnalias);
     onntxn.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
-    return;
-    var tp = deeparraycopy(txnprimitives);
-    for(var i = 0; i<tp.length; i++){
-      augmentpath(name,tp[i]);
-    }
-    txnc.inc();
-    //console.log(txnalias,'firing on child',txnc.toString());
-    txnb.fire(txnalias);
-    txne.fire(txnalias);
-    onntxn.fire([],txnalias,tp,txnc.clone());
-    //console.log(txnc.toString(),'fire done');
   };
 };
 
@@ -314,6 +285,7 @@ function Collection(a_l){
       if(targetpath && typeof targetpath === 'object' && targetpath instanceof Array){
         var el = this.element(targetpath);
         if(!el){
+          return;
           console.log('no element to _commit on');
           process.exit(0);
         }
