@@ -670,7 +670,6 @@ Collection.prototype.setKey = function(username,realmname,key){
     //console.log('setting key',key,'for',username+'@'+realmname,keyring);
     keyring && keyring.addKey(key,t);
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
-      console.log('broadcasting setKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['setKey',username,realmname,key]});
     }
   });
@@ -687,7 +686,6 @@ Collection.prototype.removeKey = function(username,realmname,key){
     if(!keyring){return;}
     keyring.removeKey(key,t);
     if(keyring.replicatorName && t.replicatingClients && t.replicatingClients[keyring.replicatorName]){
-      console.log('broadcasting removeKey for',username,realmname,'on key',key);
       t.replicatingClients[keyring.replicatorName].send({rpc:['removeKey',username,realmname,key]});
     }
   });
