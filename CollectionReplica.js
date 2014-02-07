@@ -62,9 +62,7 @@ CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,r
   if(path.join){
     path = path.join('/');
   }
-  this.setUser(username,realmname,roles,function(){
-    t.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
-  });
+  this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 CollectionReplica.prototype.handleUserDestruction = function(u){
   Collection.prototype.handleUserDestruction.call(this,u);

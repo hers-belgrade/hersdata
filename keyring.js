@@ -1,10 +1,11 @@
 var HookCollection = require('./hookcollection');
 
-function KeyRing(data,username,realmname,roles){
-  if(!data){
-    //console.trace();
+function KeyRing(username,realmname,roles){
+  if(typeof username !== 'string'){
+    console.trace();
+    console.log('backwards compatibility problem?');
+    process.exit(0);
   }
-  this.data = data;
   this.keys = {};
   this.newKey = new HookCollection();
   this.keyRemoved = new HookCollection();
@@ -16,8 +17,13 @@ function KeyRing(data,username,realmname,roles){
     this.addKeys(roles.split(','));
   }
 };
-KeyRing.prototype.invoke = function (request, paramobj, cb) {
-	this.data && this.data.invoke(request, paramobj,this.username, this.realmname, this.roles, cb);
+KeyRing.prototype.invoke = function (data, request, paramobj, cb) {
+  if(typeof data === 'string'){
+    console.trace();
+    console.log('backwards compatibility problem?');
+    process.exit(0);
+  }
+	data && data.invoke(request, paramobj,this.username, this.realmname, this.roles, cb);
 }
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
