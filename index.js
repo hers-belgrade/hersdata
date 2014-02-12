@@ -9,6 +9,7 @@ DataMaster.prototype.constructor = DataMaster;
 
 module.exports = {
   DataMaster:DataMaster,
+  UserBase : require('./userbase'),
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),

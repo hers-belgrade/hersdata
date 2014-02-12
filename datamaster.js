@@ -7,6 +7,7 @@ var child_process = require('child_process');
 var ReplicatorCommunication = require('./replicatorcommunication');
 var HookCollection = require('./hookcollection');
 var UserBase = require('./userbase');
+var Waiter = require('./bridge').Data_CollectionElementWaiter;
 
 function throw_if_invalid_scalar(val) {
   var tov = typeof val;
@@ -67,13 +68,6 @@ function Scalar(res_val,pub_val, access_lvl) {
     this.changed.fire(this);
   }
 
-  this.subscribeToValue = function(cb){
-    if(typeof cb !== 'function'){return;}
-    cb(this);
-    var hook = this.changed.attach(cb);
-    return {destroy:function(){this.changed&&this.changed.detach(hook);}};
-  };
-
   set_from_vals.call(this,res_val, pub_val, access_lvl);
 
   this.access_level = function(){
@@ -120,15 +114,6 @@ function onChildTxn(name,onntxn,txnc,txnb,txne){
   };
 };
 
-function onChildFunctionality(name,onnf){
-  return function(chldcollectionpath,functionalityalias,functionality){
-    var path = chldcollectionpath.slice();
-    path.unshift(name);
-    //console.log('new Functionality',path,functionalityalias);
-    onnf.fire(path,functionalityalias,functionality);
-  };
-}
-
 function Collection(a_l){
   var access_level = a_l;
   this.access_level = function(){
@@ -151,10 +136,8 @@ function Collection(a_l){
   }
 
   this.newElement = new HookCollection();
-  this.elementDestroyed = new HookCollection();
 
   this.onNewTransaction = new HookCollection();
-  this.onNewFunctionality = new HookCollection();
   this.accessLevelChanged = new HookCollection();
   this.txnBegins = new HookCollection();
   this.txnEnds = new HookCollection();
@@ -172,7 +155,6 @@ function Collection(a_l){
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
-      this.elementDestroyed.fire(name);
       data[name].destroy();
       delete data[name];
     }
@@ -187,18 +169,6 @@ function Collection(a_l){
     }
   };
 
-  this.subscribeToElements = function(cb){
-    if(typeof cb !== 'function'){return;}
-    this.traverseElements(cb);
-    var onel = this.newElement.attach(cb);
-    var ondel = this.elementDestroyed.attach(cb);
-    var t = this;
-    return {destroy:function(){
-      t.newElement.detach(onel);
-      t.elementDestroyed.detach(ondel);
-    }};
-  };
-
   this.destroy = function(){
     this.destroyed.fire();
     for(var i in data){
@@ -207,7 +177,6 @@ function Collection(a_l){
     }
     data = null;
     this.onNewTransaction.destruct();
-    this.onNewFunctionality.destruct();
     this.accessLevelChanged.destruct();
     this.txnBegins.destruct();
     this.txnEnds.destruct();
@@ -215,7 +184,6 @@ function Collection(a_l){
     this.replicationInitiated.destruct();
     this.destroyed.destruct();
     this.newElement.destruct();
-    this.elementDestroyed.destruct();
     for(var i in this.functionalities){
       this.functionalities[i].f.__DESTROY__();
     }
@@ -270,7 +238,6 @@ function Collection(a_l){
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
-      entity.onNewFunctionality.attach(onChildFunctionality(name,this.onNewFunctionality));
     }
   };
 
@@ -291,6 +258,7 @@ function Collection(a_l){
           t.__commitstodo=[[txnalias,txnprimitives]];
         }else{
           t.__commitstodo.push([txnalias,txnprimitives]);
+          console.log(t.__commitstodo.length,'pending');
         }
         return;
       }
@@ -327,14 +295,6 @@ Collection.prototype.commit = function(txnalias,txnprimitives){
 
 Collection.prototype.type = function(){
   return 'Collection';
-};
-
-Collection.prototype.keys = function (){
-  var ret = [];
-  this.traverseElements(function(name){
-    ret.push(name);
-  });
-  return ret;
 };
 
 Collection.prototype.pathToElement = function(name,path){
@@ -703,7 +663,6 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
 
   if ('function' === typeof(ret.init)) { ret.init(); }
   this.functionalities[fqnname] = {f:ret,key:key};
-  this.onNewFunctionality.fire([fqnname],ret,key);
   return ret;
 };
 
@@ -724,7 +683,6 @@ Collection.prototype.createRemoteReplica = function(localname,name,realmname,url
     throw "createRemoteReplica expects 4 params now";
   }
   this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url));
-  //skipping the txn mechanism, it will be fired when the communication is established
 };
 
 Collection.prototype.closeReplicatingClient = function(replicatorname){
@@ -890,6 +848,12 @@ Collection.prototype.processInput = function(sender,input){
         this.cloneFromRemote(internal[1],true);
         this.replicationInitiated.fire(this.replicatingUser);
         break;
+      case 'setKey':
+        UserBase.setKey(internal[1],internal[2],internal[3]);
+        break;
+      case 'removeKey':
+        UserBase.removeKey(internal[1],internal[2],internal[3]);
+        break;
       case 'going_down':
         console.log(sender.replicaToken.name,'going down');
         this.closeReplicatingClient(sender.replicaToken.name);
@@ -945,6 +909,17 @@ Collection.prototype.processInput = function(sender,input){
       }
     }
   }
+};
+
+Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
+  waiter = waiter||this;
+  startindex = startindex||0;
+  var el = this.element([querypath[startindex]]);
+  if(el && el.type() === 'Collection'){
+    el.waitFor(querypath,cb,waiter,startindex+1);
+    return;
+  }
+  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
 };
 
 module.exports = {

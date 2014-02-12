@@ -54,7 +54,7 @@ CollectionReplica.prototype.go = function(){
   this.send('internal','need_init',this.replicaToken,this.dump());
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
-  Collection.prototype.commit.call(this,txnalias,txnprimitives);
+  //Collection.prototype.commit.call(this,txnalias,txnprimitives);
   this.send('rpc','_commit',txnalias,txnprimitives);
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
