@@ -852,12 +852,12 @@ Collection.prototype.processInput = function(sender,input){
           var t = this;
           this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
             if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-              t.replicatingClients[user.replicatorName].send({rpc:['setKey',user.username,user.realmname,key]});
+              t.replicatingClients[user.replicatorName].send({internal:['setKey',user.username,user.realmname,key]});
             }
           });
           this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
             if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-              t.replicatingClients[user.replicatorName].send({rpc:['removeKey',user.username,user.realmname,key]});
+              t.replicatingClients[user.replicatorName].send({internal:['removeKey',user.username,user.realmname,key]});
             }
           });
         }
