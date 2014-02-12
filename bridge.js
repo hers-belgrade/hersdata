@@ -4,21 +4,30 @@ var Listener = require('./listener'),
 
 var BC = new BigCounter();
 var __Bridges = {};
+var __BridgeInstanceCounter=0;
 
 function Bridge(listener,data){
   if(!(listener&&data)){
     return;
   }
   BC.inc();
-  this.__counter = BC.toString();
-  __Bridges[this.__counter] = this;
+  //__BridgeInstanceCounter++;
+  //this.__counter = BC.toString();
+  //__Bridges[this.__counter] = this;
+  this.destroyed = new HookCollection();
   Listener.call(this);
   this.createListener('__listenerdestroyed',function(){this.destroy();},listener.destroyed);
   this.createListener('__datadestroyed',function(){this.destroy();},data.destroyed);
 };
 Bridge.prototype = new Listener();
+Bridge.prototype.constructor = Bridge;
 Bridge.prototype.destroy = function(){
-  delete __Bridges[this.__counter];
+  //console.log(this.__counter,'destroyed');
+  this.destroyed.fire();
+  this.destroyed.destruct();
+  //delete __Bridges[this.__counter];
+  //__BridgeInstanceCounter--;
+  //console.log(__BridgeInstanceCounter);
   Listener.prototype.destroy.call(this);
   for(var i in this){
     delete this[i];
@@ -28,17 +37,17 @@ Bridge.prototype.destroy = function(){
 function Data_Scalar(listener,scalar,cb,valueconstraint){
   if(!(listener&&scalar&&typeof cb === 'function')){return;}
   Bridge.call(this,listener,scalar);
-  this.destroyed = scalar.destroyed;
   this.value = scalar.value();
-  cb.call(this,this.value);
   this.createListener('__scalarchanged',function(el){
     var v = el.value();
     if(v===this.value){return;}
     this.value = v;
     cb.call(this,v);
   },scalar.changed);
+  cb.call(this,this.value);
 };
 Data_Scalar.prototype = new Bridge();
+Data_Scalar.prototype.constructor = Data_Scalar;
 
 function typefilter(type){
   var t = type;
@@ -106,10 +115,11 @@ function filterer(filters,cb){
 };
 
 function Data_CollectionElementWaiter(listener,collection,path,cb){
-  if(!(listener&&collection&&path&&typeof cb === 'function')){return;}
+  if(!(listener&&collection&&path&&typeof cb === 'function')){
+    return;
+  }
   //console.log('new Waiter',path);
   Bridge.call(this,listener,collection);
-  this.destroyed = collection.destroyed;
   var fn = path[0],tofn = typeof fn;
   switch(tofn){
     case 'string':
@@ -200,7 +210,9 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
   }
 };
 Data_CollectionElementWaiter.prototype = new Bridge();
+Data_CollectionElementWaiter.prototype.constructor = Data_CollectionElementWaiter;
 
 module.exports = {
+  Bridge:Bridge,
   Data_CollectionElementWaiter: Data_CollectionElementWaiter
 };
