@@ -807,18 +807,18 @@ Collection.prototype.processInput = function(sender,input){
         //console.log('remote replica announcing as',internal[1],internal[2]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
-          var t = this;
-          this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
-            if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-              t.replicatingClients[user.replicatorName].send({internal:['setKey',user.username,user.realmname,key]});
-            }
-          });
-          this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
-            if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-              t.replicatingClients[user.replicatorName].send({internal:['removeKey',user.username,user.realmname,key]});
-            }
-          });
         }
+        var t = this;
+        this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
+          if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
+            t.replicatingClients[user.replicatorName].send({internal:['setKey',user.username,user.realmname,key]});
+          }
+        });
+        this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
+          if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
+            t.replicatingClients[user.replicatorName].send({internal:['removeKey',user.username,user.realmname,key]});
+          }
+        });
         var srt = internal[1];
         if(!(srt && typeof srt === 'object')){
           sender.socket.destroy();
