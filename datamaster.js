@@ -810,13 +810,23 @@ Collection.prototype.processInput = function(sender,input){
         }
         var t = this;
         this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
-          if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-            t.replicatingClients[user.replicatorName].send({internal:['setKey',user.username,user.realmname,key]});
+          if(user.replicator){
+            try{
+              replicator.send({internal:['setKey',user.username,user.realmname,key]});
+            }
+            catch(e){
+              delete user.replicator;
+            }
           }
         });
         this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
-          if(user.replicatorName && t.replicatingClients && t.replicatingClients[user.replicatorName]){
-            t.replicatingClients[user.replicatorName].send({internal:['removeKey',user.username,user.realmname,key]});
+          if(user.replicator){
+            try{
+              replicator.send({internal:['removeKey',user.username,user.realmname,key]});
+            }
+            catch(e){
+              delete user.replicator;
+            }
           }
         });
         var srt = internal[1];
@@ -896,7 +906,7 @@ Collection.prototype.processInput = function(sender,input){
         typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
         return;
       }
-      (UserBase.setUser(username,realmname,roles)).replicatorName = sender.replicaToken.name;
+      (UserBase.setUser(username,realmname,roles)).replicator= sender;
       method.apply(t,args);
     }else{
       method.apply(this,args);
@@ -929,6 +939,16 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,function(){
     cb.apply(null,arguments);
   });
+};
+
+Collection.prototype.setFollower = function(username,realmname,roles){
+  if(!this.consumer){
+    this.consumer = new(require('./dataconsuming'))(this,[]);
+  }
+  var u = UserBase.setUser(username,realmname,roles);
+  if(u){
+    this.consumer.upgradeUserToConsumer(u);
+  }
 };
 
 module.exports = {
