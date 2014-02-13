@@ -952,6 +952,7 @@ Collection.prototype.setFollower = function(username,realmname,roles){
   if(u){
     this.consumer.upgradeUserToConsumer(u);
   }
+  return u;
 };
 
 module.exports = {

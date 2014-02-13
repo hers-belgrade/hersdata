@@ -301,7 +301,11 @@ ConsumingCollection.prototype.destroy = function(){
     delete this[i];
   }
 };
-ConsumingCollection.prototype.target = function(name){
+ConsumingCollection.prototype.target = function(name,user){
+  var c = this.collections[name];
+  if(c && c.send){
+    c.send('rpc','setFollower',user.username,user.realmname,user.roles);
+  };
   return this.collections[name] || this.scalars[name];
 };
 ConsumingCollection.prototype.reportTo = function(u){
@@ -556,7 +560,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     var pp = []; //pp <=> progresspath
     var target = coll;
     while(path.length){
-      var t = target.target([path[0]]);
+      var t = target.target([path[0]],u);
       if(!t){
         //console.log('follow stopped at',pp);
         var tn = path[0],
