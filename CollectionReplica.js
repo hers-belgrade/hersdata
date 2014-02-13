@@ -1,14 +1,10 @@
 var Collection = require('./datamaster').Collection;
 var BigCounter = require('./BigCounter');
 
-function CollectionReplica(name,realmname,sendcb){
-  if(name && !sendcb){
-    console.trace();
-    throw "CollectionReplica ctor expects 3 params now";
-  }
+function CollectionReplica(name,realmname,sendcb,skipdcp){
   if(!(name&&sendcb)){return;}
   this.counter = new BigCounter();
-  this.replicaToken = {name:name,realmname:realmname};
+  this.replicaToken = {name:name,realmname:realmname,skipdcp:skipdcp};
   this.cbs = {};
   this.send = function(code){
     var params = this.prepareCallParams(Array.prototype.slice.call(arguments,1));
@@ -33,14 +29,23 @@ function CollectionReplica(name,realmname,sendcb){
 };
 CollectionReplica.prototype = new Collection();
 CollectionReplica.prototype.constructor = CollectionReplica;
-CollectionReplica.prototype.prepareCallParams = function(ca){
+CollectionReplica.prototype.prepareCallParams = function(ca,persist){
   var cb = ca.pop();
+  if(cb==='__persistmycb'){
+    return this.prepareCallParams(ca,true);
+  }
   var tocb = typeof cb;
   if(tocb === 'function'){
     this.counter.inc();
     var cts = this.counter.toString();
     var cs = '#FunctionRef:'+cts;
     this.cbs[cts] = cb;
+    if(persist){
+      if(!this.persist){
+        this.persist = {};
+      }
+      this.persist[cts] = 1;
+    }
     ca.push(cs);
   }else{
     if(tocb !== 'undefined'){
@@ -67,5 +72,11 @@ CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,r
 CollectionReplica.prototype.handleUserDestruction = function(u){
   Collection.prototype.handleUserDestruction.call(this,u);
   this.send('rpc','removeUser',u.username,u.realmname);
+};
+CollectionReplica.prototype.waitFor = function(querypath,cb,waiter,startindex){
+  startindex = startindex||0;
+  this.send('rpc','waitFor',querypath.splice(startindex),function(){
+    cb.apply(null,arguments);//null is for now, gotta find ways to destroy listening on the other side
+  },'__persistmycb');
 };
 module.exports = CollectionReplica;
