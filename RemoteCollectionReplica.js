@@ -29,7 +29,7 @@ function QueueProcessor(){
   };
 };
 
-function RemoteCollectionReplica(name,realmname,url){
+function RemoteCollectionReplica(name,realmname,url,skipdcp){
   if(!url){
     console.trace();
     throw "RemoteCollectionReplica ctor expects 3 params now";
@@ -40,7 +40,7 @@ function RemoteCollectionReplica(name,realmname,url){
   this.commands = new QueueProcessor();
   CollectionReplica.call(this,name,realmname,function(obj){
     communication.send(obj);
-  });
+  },skipdcp);
   this.realms = {};
   this.communication = communication;
 };

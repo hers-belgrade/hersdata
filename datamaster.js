@@ -677,12 +677,12 @@ Collection.prototype.getReplicatingUser = function(cb){
   });
 };
 
-Collection.prototype.createRemoteReplica = function(localname,name,realmname,url){
+Collection.prototype.createRemoteReplica = function(localname,name,realmname,url,skipdcp){
   if(!url){
     console.trace();
     throw "createRemoteReplica expects 4 params now";
   }
-  this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url));
+  this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url,skipdcp));
 };
 
 Collection.prototype.closeReplicatingClient = function(replicatorname){
@@ -905,7 +905,9 @@ Collection.prototype.processInput = function(sender,input){
       //console.log('cb for',cbref,'is',cb);
       if(typeof cb === 'function'){
         cb.apply(null,commandresult);
-        delete this.cbs[cbref];
+        if(!(this.persist && this.persist[cbref])){
+          delete this.cbs[cbref];
+        }
       }
     }
   }
