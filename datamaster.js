@@ -835,14 +835,19 @@ Collection.prototype.processInput = function(sender,input){
           return;
         }
         this.replicatingClients[sender.replicaToken.name] = sender;
-        this.cloneFromRemote(internal[2]);
+        var dodcp = !sender.replicaToken.skipdcp;
+        if(dodcp){
+          this.cloneFromRemote(internal[2]);
+        }
         this.newReplica.fire(sender);
-        var ret = this.dump(sender.replicaToken);
+        var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
-        sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-          sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
-        });
+        if(dodcp){
+          sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+            sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
+          });
+        }
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
@@ -919,7 +924,9 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
     el.waitFor(querypath,cb,waiter,startindex+1);
     return;
   }
-  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
+  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,function(){
+    cb.apply(null,arguments);
+  });
 };
 
 module.exports = {
