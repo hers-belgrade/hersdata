@@ -899,7 +899,6 @@ Collection.prototype.processInput = function(sender,input){
       };
     }
     if(methodname==='invoke'){
-      var t = this;
       var username = args[2],realmname= args[3],roles=args[4];
       if(!(username&&realmname)){
         console.log('invalid user',username,realmname);
@@ -907,10 +906,16 @@ Collection.prototype.processInput = function(sender,input){
         return;
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
-      method.apply(t,args);
-    }else{
-      method.apply(this,args);
+    }else if(methodname==='setFollower'){
+      var username = args[1],realmname= args[2],roles=args[3];
+      if(!(username&&realmname)){
+        console.log('invalid user',username,realmname);
+        typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
+        return;
+      }
+      (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
+    method.apply(this,args);
   }
   var commandresult = input.commandresult;
   if(commandresult){
