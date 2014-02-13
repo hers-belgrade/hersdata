@@ -41,7 +41,6 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
   CollectionReplica.call(this,name,realmname,function(obj){
     communication.send(obj);
   },skipdcp);
-  this.realms = {};
   this.communication = communication;
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();
