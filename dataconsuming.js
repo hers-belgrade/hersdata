@@ -511,12 +511,15 @@ ConsumerSession.prototype.setSocketIO = function(sock){
     sock.emit('_',this.queue.shift());
   }
 };
-function upgradeUserToConsumer(u,coll){
+ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
+  var coll = this;
   u.fullname = u.username+'@'+u.realmname;
-  var udest = u.destroy;
   Listener.call(u);
   for(var i in Listener.prototype){
     u[i] = Listener.prototype[i];
+  }
+  if(u.clearConsumingExtension){
+    u.clearConsumingExtension();
   }
   u.sessions = {};
   u.followingpaths = {};
@@ -629,28 +632,40 @@ function upgradeUserToConsumer(u,coll){
       }
     }
   };
-  u.destroy = (function(){
-    Listener.prototype.destroy.call(u);
-    udest.call(u);
-    for(var i in this.sessions){
-      this.sessions[i].destroy();
-      delete this.sessions[i];
+  u.clearConsumingExtension = function(){
+    if(this.sessions){
+      for(var i in this.sessions){
+        this.sessions[i].destroy();
+        delete this.sessions[i];
+      }
+      delete this.sessions;
     }
-    for(var i in this.followingpaths){
-      delete this.followingpaths[i];
+    if(this.followingpaths){
+      for(var i in this.followingpaths){
+        delete this.followingpaths[i];
+      }
+      delete this.followingpaths;
     }
-    for(var i in this.unfollowpaths){
-      delete this.unfollowpaths[i];
+    if(this.unfollowpaths){
+      for(var i in this.unfollowpaths){
+        delete this.unfollowpaths[i];
+      }
+      delete this.unfollowpaths;
     }
-  });
+  };
+  u.destroy = function(){
+    Listener.prototype.destroy.call(this);
+    KeyRing.prototype.destroy.call(this);
+    this.clearConsumingExtension();
+  };
 };
 
+  /*
 function follow(dataMaster){
   var cc = new ConsumingCollection(dataMaster,[]);
   cc.createListener('elNewUser',function(u){
     upgradeUserToConsumer(u,this);
   },hersdata.UserBase.newUser);
-  /*
   dataMaster.txnEnds.attach(function(txnalias){
     for(var i in dataMaster.realms){
       var r = dataMaster.realms[i];
@@ -660,7 +675,7 @@ function follow(dataMaster){
       }
     }
   });
-  */
 }
+  */
 
-module.exports = follow;
+module.exports = ConsumingCollection;
