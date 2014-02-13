@@ -926,9 +926,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
     el.waitFor(querypath,cb,waiter,startindex+1);
     return;
   }
-  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,function(){
-    cb.apply(null,arguments);
-  });
+  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
 };
 
 module.exports = {
