@@ -547,8 +547,8 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     this.sessions[sess] = _s;
   };
   u.follow = function(path){
-    //console.log('follow',path);
-    if(!(path&&path.length)){
+    console.log('follow',path);
+    if(!(path)){
       return;
     }
     var ps = JSON.stringify(path);
@@ -559,6 +559,10 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     this.followingpaths[ps] = 1;
     var pp = []; //pp <=> progresspath
     var target = coll;
+    if(!path.length){
+      coll.add(u);
+      return;
+    }
     while(path.length){
       var t = target.target([path[0]],u);
       if(!t){
@@ -613,27 +617,6 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
         this.follow(JSON.parse(ps));
       };
       this.createListener(ppd, doitagain, target.el.destroyed);
-    }
-  };
-  u.push = function(item){
-    for(var i in this.sessions){
-      var s = this.sessions[i];
-      if(s.queue){
-        if(_now-s.lastAccess>15000){
-          s.destroy();
-          delete this.sessions[i];
-        }else{
-          s.lastAccess = _now;
-          if(s.sockio){
-            s.sockio.emit('_',item);
-          }else{
-            s.queue.push(item);
-          }
-        }
-      }else{
-        //should never get here
-        delete this.sessions[i];
-      }
     }
   };
   u.clearConsumingExtension = function(){

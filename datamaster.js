@@ -185,6 +185,7 @@ function Collection(a_l){
     this.destroyed.destruct();
     this.newElement.destruct();
     for(var i in this.functionalities){
+      console.log('__DESTROY__ing',i);
       this.functionalities[i].f.__DESTROY__();
     }
     delete this.functionalities;
@@ -393,6 +394,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
   //name = name[0];
   var target = this.element(path,0,path.length-2);
   if(!target){
+    console.trace();
     console.log(path,path.slice(0,-1),'gives no element');
     return;
   }
@@ -907,7 +909,7 @@ Collection.prototype.processInput = function(sender,input){
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }else if(methodname==='setFollower'){
-      var username = args[1],realmname= args[2],roles=args[3];
+      var username = args[0],realmname= args[1],roles=args[2];
       if(!(username&&realmname)){
         console.log('invalid user',username,realmname);
         typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
@@ -944,15 +946,25 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
 };
 
-Collection.prototype.setFollower = function(username,realmname,roles){
+Collection.prototype.setFollower = function(username,realmname,roles,cb){
+  console.log('setFollower',username,realmname,roles);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }
   var u = UserBase.setUser(username,realmname,roles);
   if(u){
     this.consumer.upgradeUserToConsumer(u);
+    u.push = cb;
   }
   return u;
+};
+
+Collection.prototype.doUserFollow = function(username,realmname){
+  console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
+  var u = UserBase.findUser(username,realmname);
+  if(u){
+    u.follow(Array.prototype.slice.call(arguments,2));
+  }
 };
 
 module.exports = {
