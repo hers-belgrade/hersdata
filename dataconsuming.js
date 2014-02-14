@@ -3,12 +3,6 @@ var Listener = require('./listener'),
 
 var allSessions = [];
 
-function now(){
-  return (new Date()).getTime();
-}
-
-var _now;
-
 /*
 setInterval(function(){
   _now = now();
@@ -188,16 +182,20 @@ ConsumingScalar.prototype.remove = function(u){
 };
 function ConsumingCollection(el,path,name){
   ConsumingEntity.call(this,el,path,name);
+  if(!el){
+    return;
+  }
+  this.describer = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]);
+  this.deleter = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name])]);
+  this.el = el;
+  this.path = path;
+  if(el.replicaToken && el.replicaToken.skipdcp){return;}
   this.scalars = {};
   this.collections = {};
   this.subscribers = [];
   this.pretendents = [];
   this.waiters = [];
-  this.destructionpackages = [];
   this.key = el.access_level();
-  this.describer = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]);
-  this.deleter = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name])]);
-  this.path = path;
   this.name = name;
   //console.log('new ConsumingCollection',path,name,this.describer);
   var t = this;
@@ -218,7 +216,8 @@ function ConsumingCollection(el,path,name){
         target = t.collections;
         if(target[name]){break;}
         //console.log(t.name,'creating new Collection',name);
-        ent = new ConsumingCollection(el,path.concat([name]),name);
+        var ctor = el.send ? ReplicatingConsumingCollection : ConsumingCollection;
+        ent = new ctor(el,path.concat([name]),name);
         var ek = ent.key;
         for(var i in t.subscribers){
           var s = t.subscribers[i];
@@ -235,14 +234,13 @@ function ConsumingCollection(el,path,name){
         }
         for(var i in rw){
           var w = rw[i];
-          t.remove(w.destructionindex);
           w.waitingpath.shift();
           var ok = !w.waitingpath.length;
           if(ok){
             delete w.waitingpath;
             //w.push(following_transaction_descriptor)?
           }
-          ent.add(w);
+          ent.add(w.user);
         }
         break;
     }
@@ -273,7 +271,6 @@ function ConsumingCollection(el,path,name){
   this.createListener('elDestroyed',function(){
     this.destroy();
   },el.destroyed);
-  this.el = el;
 };
 ConsumingCollection.prototype = new ConsumingEntity();
 ConsumingCollection.prototype.notifyDestroy = function(){
@@ -302,11 +299,24 @@ ConsumingCollection.prototype.destroy = function(){
   }
 };
 ConsumingCollection.prototype.target = function(name,user){
-  var c = this.collections[name];
-  if(c && c.send){
-    c.send('rpc','setFollower',user.username,user.realmname,user.roles);
-  };
   return this.collections[name] || this.scalars[name];
+};
+ConsumingCollection.prototype.followForUser = function(path,user,startindex){
+  startindex = startindex||0;
+  //console.log(path,user.username,startindex);
+  if(path.length>startindex){
+    var target = this.target(path[startindex],user);
+    if(target){
+      if(path.length>startindex+1){
+        target.followForUser(path,user,startindex+1);
+      }else{
+        //console.log('adding',user.username,'to',target);
+        target.add(user);
+      }
+    }else{
+      this.waiters.push({user:user,waitingpath:path.slice(startindex)});
+    }
+  }
 };
 ConsumingCollection.prototype.reportTo = function(u){
   for(var i in this.collections){
@@ -344,69 +354,18 @@ ConsumingCollection.prototype.handleUser = function(u,criterion){
     }
   }
 };
-ConsumingCollection.prototype.remove = function(destructionindex){
-  if(!destructionindex){
-    console.trace();
-    console.log('no destructionindex to remove');
-    process.exit(0);
-  }
-  var dp = this.destructionpackages[destructionindex];
-  if(!dp){return;}
-  delete dp.h.destructionindex;
-  delete this.destructionpackages[destructionindex];
-  dp.nk && this.destroyListener(dp.nk);
-  dp.kr && this.destroyListener(dp.kr);
-  this.destroyListener(dp.d);
-  var loc = dp.h.loc;
-  delete dp.h.loc;
-  if(loc===1){
-    removeFromArray(this.subscribers,dp.h);
-  }else if(loc===2){
-    removeFromArray(this.waiters,dp.h);
-  }else{
-    removeFromArray(this.pretendents,dp.h);
-  }
-  /*
-  for(var i in this.subscribers){
-    if(this.subscribers[i].session===dp.h.session){
-      console.log(dp.h.session,'still in subscribers');
-      console.log('subscribers index',this.subscribers.indexOf(dp.h));
-      process.exit(0);
-    }
-  }
-  for(var i in this.observers){
-    if(this.observers[i].session===dp.h.session){
-      console.log(dp.h.session,'still in observers');
-      console.log('observers index',this.observers.indexOf(dp.h));
-      process.exit(0);
-    }
-  }
-  for(var i in this.waiters){
-    if(this.waiters[i].session===dp.h.session){
-      console.log(dp.h.session,'still in waiters');
-      console.log('waiters index',this.waiters.indexOf(dp.h));
-      process.exit(0);
-    }
-  }
-  */
-  console.log('Collection removed',dp.h.session);
+ConsumingCollection.prototype.remove = function(user){
+  var fn = u.fullname,
+    nk = fn+'newKey', 
+    kr = fn+'keyRemoved'; 
 };
 ConsumingCollection.prototype.add = function(u){
   if(!this.subscribers){
     return;
   }
   var fn = u.fullname,
-    d = fn+'destroyed',
     nk = fn+'newKey', 
     kr = fn+'keyRemoved'; 
-  this.createListener(d,function(){
-    this.destroyListener(nk);
-    this.destroyListener(kr);
-    this.destroyListener(d);
-    removeFromArray(this.subscribers,u);
-    removeFromArray(this.waiters,u);
-    removeFromArray(this.pretendents,u);
-  },u.destroyed);
   this.createListener(nk,function(key){
     if(key===this.key){
       var pi = this.pretendents.indexOf(u);
@@ -442,79 +401,6 @@ ConsumingCollection.prototype.add = function(u){
     addToArray(this.pretendents,u);
   }
 };
-
-function inserter(pathstring){
-  var t = this, origsession = this.session;
-  return {
-    session:t.session,
-    destroyed:t.destroyed,
-    user:t.user,
-    push: function(item){
-      if(!t.queue){
-        console.trace();
-        console.log('no more queue on',origsession);
-        process.exit(0);
-      }
-      t.queue.push(JSON.stringify([pathstring,item]));
-      //console.log(this.session,'pushing',pathstring,item,'of',this.user.sessionStatus(),this.queue.length);
-    }
-  };
-};
-function describe(coll,u,q){
-  if(!u.contains(coll.key)){
-    return;
-  }
-  for(var i in coll.scalars){
-    var s = coll.scalars[i];
-    u.contains(s.key) ? q.push(s.value) : q.push(s.public_value);
-  }
-  for(var i in coll.collections){
-    var c = coll.collections[i];
-    if(u.contains(c.key)){
-      q.push(c.describer);
-    }
-  }
-}
-function ConsumerSession(u,coll,session){
-  this.queue = [];
-  this.queue.push(ConsumerSession.initTxn);
-  describe(coll,u,this.queue);
-  for(var i in u.followingpaths){
-    var f = u.followingpaths[i];
-    if(f===1){
-      continue;
-    }
-    describe(f,u,this.queue);
-  }
-  this.queue.push(ConsumerSession.initTxn);
-  this.user = u;
-};
-ConsumerSession.initTxn = JSON.stringify([JSON.stringify([]),JSON.stringify([null,'init'])]);
-ConsumerSession.prototype.destroy = function(){
-  for(var i in this){
-    delete this[i];
-  }
-};
-ConsumerSession.prototype.retrieveQueue = function(){
-  this.lastAccess = now();
-  if(this.queue.length){
-    //console.log(this.session,'splicing',this.queue);
-    return this.queue.splice(0);
-  }else{
-    //console.log('empty q');
-    return [];
-  }
-};
-ConsumerSession.prototype.setSocketIO = function(sock){
-  this.sockio = sock;
-  var t = this;
-  sock.on('disconnect',function(){
-    delete t.sockio;
-  });
-  while(this.queue.length){
-    sock.emit('_',this.queue.shift());
-  }
-};
 ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   var coll = this;
   u.fullname = u.username+'@'+u.realmname;
@@ -523,29 +409,11 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     u[i] = Listener.prototype[i];
   }
   if(u.clearConsumingExtension){
-    u.clearConsumingExtension();
+    return;
   }
   u.sessions = {};
   u.followingpaths = {};
   u.unfollowpaths = {};
-  u.sessionStatus = function(){
-    var ret = {};
-    for(var i in this.sessions){
-      ret[i] = this.sessions[i].queue.length;
-    }
-    return ret;
-  };
-  u.makeSession = function(sess){
-    if(!sess){
-      console.trace();
-      console.log('no session to make');
-      process.exit(0);
-    }
-    if(this.sessions[sess]){return;}
-    var _s = new ConsumerSession(this,coll,sess);
-    var t = this;
-    this.sessions[sess] = _s;
-  };
   u.follow = function(path){
     console.log('follow',path);
     if(!(path)){
@@ -557,67 +425,8 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
       return;
     }
     this.followingpaths[ps] = 1;
-    var pp = []; //pp <=> progresspath
-    var target = coll;
-    if(!path.length){
-      coll.add(u);
-      return;
-    }
-    while(path.length){
-      var t = target.target([path[0]],u);
-      if(!t){
-        //console.log('follow stopped at',pp);
-        var tn = path[0],
-          cps = JSON.stringify(path),
-          pps = JSON.stringify(pp),
-          ppsne = pps+'newElement'+cps,
-          ppsd = pps+'destroyed'+cps,
-          doitagain = function(){
-            console.log('continuing follow for',ps);
-            this.destroyListener(ppsne);
-            this.destroyListener(ppsd);
-            if(this.unfollowpaths[ps]){
-              console.log('oops, that is unfollowed in the meanwhile');
-              return;
-            }
-            if(this.followingpaths[ps]){
-              if(this.followingpaths[ps]===1){
-                delete this.followingpaths[ps];
-              }else{
-                console.log('nope, following already set');
-                return;
-              }
-            }
-            console.log('really');
-            this.follow(JSON.parse(ps));
-          };
-        this.createListener(ppsne, function(name,el){
-          if(el.type()==='Collection' && name===tn){
-            doitagain.call(this);
-          }
-        },target.el.newElement);
-        this.createListener(ppsd, doitagain, target.el.destroyed);
-        return;
-      }
-      target = t;
-      pp.push(path.shift());
-    }
-    console.log('follow successful');
-    target.add(this);
-    this.followingpaths[ps] = target;
-    var ppd = ps+'destroyed';
-    if(!this.listeners[ppd]){
-      var doitagain = function(){
-        console.log('Nothing to follow at',ps,'going again');
-        this.destroyListener(ppd);
-        delete this.followingpaths[ps];
-        if(this.unfollowpaths[ps]){
-          return;
-        }
-        this.follow(JSON.parse(ps));
-      };
-      this.createListener(ppd, doitagain, target.el.destroyed);
-    }
+    //console.log('follow',this.followingpaths);
+    coll.followForUser(path,this);
   };
   u.clearConsumingExtension = function(){
     if(this.sessions){
@@ -646,6 +455,35 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     this.clearConsumingExtension();
   };
 };
+
+function ReplicatingConsumingCollection(el,path,name){
+  ConsumingCollection.call(this,el,path,name);
+};
+ReplicatingConsumingCollection.prototype = new ConsumingCollection();
+ReplicatingConsumingCollection.prototype.add = function(user){
+  var path = this.path;
+  this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
+    if(!item){return;}
+    item = JSON.parse(item);
+    //console.log('parsed incoming item',item);
+    item[0] = typeof item[0] === 'string' ? JSON.parse(item[0]) : item[0];
+    item[0] = JSON.stringify(path.concat(item[0]));
+    item = JSON.stringify(item);
+    //console.log(user.username,'got',item);
+    user.push(item);
+  },'__persistmycb');
+  this.el.send('rpc','doUserFollow',user.username,user.realmname);
+  ConsumingCollection.prototype.add.call(this,user);
+};
+ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
+  //console.log('ReplicatingConsumingCollection',path,user.username,startindex);
+  var args = ['rpc','doUserFollow',user.username,user.realmname];
+  for(var i = startindex; i<path.length; i++){
+    args.push(path[i]);
+  }
+  this.el.send.apply(this.el,args);
+};
+
 
   /*
 function follow(dataMaster){
