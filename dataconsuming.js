@@ -294,6 +294,18 @@ ConsumingCollection.prototype.destroy = function(){
     delete this[i];
   }
 };
+ConsumingCollection.prototype.describe = function(u,cb){
+  for(var i in this.scalars){
+    var s = this.scalars[i];
+    u.contains(s.el.access_level()) ? cb(s.value) : cb(s.public_value);
+  }
+  for(var i in this.collections){
+    var c = this.collections[i];
+    if(u.contains(c.el.access_level())){
+      cb(c.describer);
+    }
+  }
+};
 ConsumingCollection.prototype.target = function(name,user){
   return this.collections[name] || this.scalars[name];
 };
@@ -459,6 +471,15 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     //console.log('follow',this.followingpaths);
     coll.followForUser(path,this);
   };
+  u.describe = function(cb){
+    for(var i in this.followingpaths){
+      var f = u.followingpaths[i];
+      if(f===1){
+        continue;
+      }
+      f.describe(u,cb);
+    }
+  };
   u.clearConsumingExtension = function(){
     if(this.sessions){
       for(var i in this.sessions){
@@ -505,6 +526,10 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   },'__persistmycb');
   this.el.send('rpc','doUserFollow',user.username,user.realmname);
   ConsumingCollection.prototype.add.call(this,user);
+};
+ReplicatingConsumingCollection.prototype.describe = function(u,cb){
+  console.log('Remote Describe');
+  this.el.send('rpc','doUserDescribe',u.username,u.realmname,cb,'__persistmycb');
 };
 ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
   //console.log('ReplicatingConsumingCollection',path,user.username,startindex);
