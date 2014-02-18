@@ -307,6 +307,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
         target.followForUser(path,user,startindex+1);
       }else{
         //console.log('adding',user.username,'to',target);
+        user.followingpaths[JSON.stringify(path)] = target;
         target.add(user);
       }
     }else{
