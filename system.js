@@ -1,10 +1,11 @@
-var os = require('os');
+var os = require('os'),
+  Timeout = require('herstimeout');
 
 var errors = {
 };
 
 function init(){
-  this.data.commit('system init',[
+  this.data.commit('system_init',[
     ['set',['memoryusage'],[0,undefined,'system']],
     ['set',['memoryavailable'],[0,undefined,'system']]
   ]);
@@ -30,7 +31,9 @@ function init(){
       }
       if(actions.length){
         //console.log('commiting memoryusagechanged',now);
-        setTimeout(function(){data.commit('memoryusagechanged',actions);},1);
+        console.log('timeout utilization',Timeout.utilization());
+        console.log('dcp',data.instanceCounts());
+        data.commit('system_metrics_changed',actions);
       }
     };
   })(this.data));

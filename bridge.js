@@ -37,14 +37,11 @@ Bridge.prototype.destroy = function(){
 function Data_Scalar(listener,scalar,cb,valueconstraint){
   if(!(listener&&scalar&&typeof cb === 'function')){return;}
   Bridge.call(this,listener,scalar);
-  this.value = scalar.value();
-  this.createListener('__scalarchanged',function(el){
-    var v = el.value();
-    if(v===this.value){return;}
-    this.value = v;
-    cb.call(this,v);
+  this.createListener('__scalarchanged',function(el,changedmap){
+    if(!changedmap.private){return;}
+    cb.call(this,el.value());
   },scalar.changed);
-  cb.call(this,this.value);
+  cb.call(this,scalar.value());
 };
 Data_Scalar.prototype = new Bridge();
 Data_Scalar.prototype.constructor = Data_Scalar;

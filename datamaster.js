@@ -8,6 +8,7 @@ var ReplicatorCommunication = require('./replicatorcommunication');
 var HookCollection = require('./hookcollection');
 var UserBase = require('./userbase');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
+var __ScalarCount=0, __CollectionCount = 0;
 
 function throw_if_invalid_scalar(val) {
   var tov = typeof val;
@@ -43,6 +44,7 @@ function nullconversion(a){
 }
 
 function Scalar(res_val,pub_val, access_lvl) {
+  __ScalarCount++;
 
   var public_value = nullconversion(pub_val);
   var restricted_value = nullconversion(res_val);
@@ -56,7 +58,21 @@ function Scalar(res_val,pub_val, access_lvl) {
     pa = nullconversion(pa);
     al = nullconversion(al);
     throw_if_any_invalid(ra,pa,al);
-    if(equals(ra,restricted_value)&&equals(pa,public_value)&&equals(al,access_level)){
+    var changedmap = {};
+    var changed = false;
+    if(!equals(ra,restricted_value)){
+      changed = true;
+      changedmap.private = 1;
+    }
+    if(!equals(pa,public_value)){
+      changed = true;
+      changedmap.public = 1;
+    }
+    if(!equals(al,access_level)){
+      changed = true;
+      changedmap.key = 1;
+    }
+    if(!changed){
       return;
     }
     //console.trace();
@@ -65,7 +81,7 @@ function Scalar(res_val,pub_val, access_lvl) {
     public_value = pa;
     access_level = al;
     //console.log(this.changed.counter);
-    this.changed.fire(this);
+    this.changed.fire(this,changedmap);
   }
 
   set_from_vals.call(this,res_val, pub_val, access_lvl);
@@ -99,6 +115,7 @@ function Scalar(res_val,pub_val, access_lvl) {
     access_level = undefined;
     this.changed.destruct();
     this.destroyed.destruct();
+    __ScalarCount--;
   }
 };
 Scalar.prototype.type = function(){
@@ -115,6 +132,7 @@ function onChildTxn(name,onntxn,txnc,txnb,txne){
 };
 
 function Collection(a_l){
+  __CollectionCount++;
   var access_level = a_l;
   this.access_level = function(){
     return access_level;
@@ -192,6 +210,7 @@ function Collection(a_l){
     for(var i in this){
       delete this[i];
     }
+    __CollectionCount--;
   };
 
   this.element = function(path,startindex,endindex){
@@ -264,6 +283,7 @@ function Collection(a_l){
         return;
       }
       t.__commitunderway = true;
+      //console.log('txnBegins',txnalias);
       t.txnBegins.fire(txnalias);
       for (var i in txnprimitives) {
         var it = txnprimitives[i];
@@ -274,6 +294,7 @@ function Collection(a_l){
         }
       }
       t.txnEnds.fire(txnalias);
+      //console.log('txnEnds',txnalias);
       txnc.inc();
       //console.log(txnalias,'firing on self',txnc.toString());
       t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
@@ -296,6 +317,10 @@ Collection.prototype.commit = function(txnalias,txnprimitives){
 
 Collection.prototype.type = function(){
   return 'Collection';
+};
+
+Collection.prototype.instanceCounts = function(){
+  return {scalars:__ScalarCount, collections: __CollectionCount};
 };
 
 Collection.prototype.pathToElement = function(name,path){
@@ -396,6 +421,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
   if(!target){
     console.trace();
     console.log(path,path.slice(0,-1),'gives no element');
+    throw 'no element'
     return;
   }
   var e = target.element(path,path.length-1,path.length-1);
@@ -406,6 +432,7 @@ Collection.prototype.perform_set = function(path,param,txnc){
       if(e.type()==='Scalar'){
         return e.alter(param[0],param[1],param[2],path);
       }else{
+        console.trace();
         throw "Cannot set scalar on "+path.join('/')+'/'+name+" that is of type "+e.type();
       }
     }
@@ -903,7 +930,7 @@ Collection.prototype.processInput = function(sender,input){
     if(methodname==='invoke'){
       var username = args[2],realmname= args[3],roles=args[4];
       if(!(username&&realmname)){
-        console.log('invalid user',username,realmname);
+        console.log('invalid user',username,realmname,'for',args[0]);
         typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
         return;
       }
@@ -911,7 +938,7 @@ Collection.prototype.processInput = function(sender,input){
     }else if(methodname==='setFollower'){
       var username = args[0],realmname= args[1],roles=args[2];
       if(!(username&&realmname)){
-        console.log('invalid user',username,realmname);
+        console.log('invalid user',username,realmname,'for',args[0]);
         typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
         return;
       }
@@ -960,7 +987,7 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
 };
 
 Collection.prototype.doUserFollow = function(username,realmname){
-  console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
+  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
   if(u){
     u.follow(Array.prototype.slice.call(arguments,2));
