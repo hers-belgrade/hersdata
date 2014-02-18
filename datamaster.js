@@ -986,6 +986,13 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
   return u;
 };
 
+Collection.prototype.doUserDescribe = function(username,realmname,cb){
+  var u = UserBase.findUser(username,realmname);
+  if(u){
+    u.describe(cb);
+  }
+};
+
 Collection.prototype.doUserFollow = function(username,realmname){
   //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
