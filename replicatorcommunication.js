@@ -84,6 +84,7 @@ ReplicatorCommunication.prototype.exec = function(){
     var drp = JSON.parse(dr);
     //console.log('ql >',this.execQueue.length);
     if(drp){
+			console.log('executing',drp);
       var es = now();
       this.data.processInput(this,drp);
       ReplicatorCommunication.execTime += (now()-es);
@@ -98,7 +99,7 @@ ReplicatorCommunication.prototype.exec = function(){
   this.maybeExec();
 };
 ReplicatorCommunication.prototype.maybeExec = function(){
-  if(this.execQueue.length){
+  if(this.execQueue && this.execQueue.length){
     Timeout.set(function(t){
       t.exec();
     },0,this);
