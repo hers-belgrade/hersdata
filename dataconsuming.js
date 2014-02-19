@@ -471,6 +471,8 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     //console.log('follow',this.followingpaths);
     coll.followForUser(path,this);
   };
+  u.unfollow = function(path){
+  };
   u.describe = function(cb){
     for(var i in this.followingpaths){
       var f = u.followingpaths[i];
@@ -512,24 +514,33 @@ function ReplicatingConsumingCollection(el,path,name,parnt){
   ConsumingCollection.call(this,el,path,name,parnt);
 };
 ReplicatingConsumingCollection.prototype = new ConsumingCollection();
+ReplicatingConsumingCollection.repackRemoteItem = function(path,item){
+  if(!item){return;}
+  item = JSON.parse(item);
+  //console.log('parsed incoming item',item);
+  item[0] = typeof item[0] === 'string' ? JSON.parse(item[0]) : item[0];
+  item[0] = JSON.stringify(path.concat(item[0]));
+  return JSON.stringify(item);
+};
 ReplicatingConsumingCollection.prototype.add = function(user){
   var path = this.path;
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
-    if(!item){return;}
-    item = JSON.parse(item);
-    //console.log('parsed incoming item',item);
-    item[0] = typeof item[0] === 'string' ? JSON.parse(item[0]) : item[0];
-    item[0] = JSON.stringify(path.concat(item[0]));
-    item = JSON.stringify(item);
-    //console.log(user.username,'got',item);
-    user.push(item);
+    item = ReplicatingConsumingCollection.repackRemoteItem(path,item);
+    if(item){
+      user.push(item);
+    }
   },'__persistmycb');
   this.el.send('rpc','doUserFollow',user.username,user.realmname);
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
-  console.log('Remote Describe');
-  this.el.send('rpc','doUserDescribe',u.username,u.realmname,cb,'__persistmycb');
+  var path = this.path;
+  this.el.send('rpc','doUserDescribe',u.username,u.realmname,function(item){
+    item = ReplicatingConsumingCollection.repackRemoteItem(path,item);
+    if(item){
+      cb(item);
+    }
+  },'__persistmycb');
 };
 ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
   //console.log('ReplicatingConsumingCollection',path,user.username,startindex);
