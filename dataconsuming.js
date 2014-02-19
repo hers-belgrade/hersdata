@@ -268,6 +268,7 @@ ConsumingCollection.prototype.notifyDestroy = function(){
 };
 ConsumingCollection.prototype.destroy = function(){
   if(!this.subscribers){return;}
+	var sp = JSON.stringify(this.path);
   if(this.parnt){
     if(this.parnt.waiters){
       for(var i in this.waiters){
@@ -277,10 +278,16 @@ ConsumingCollection.prototype.destroy = function(){
       }
       for(var i in this.observers){
         var o = this.observers[i];
+				if(o.followingpaths[sp]===this){ //how come it's not?
+					o.followingpaths[sp] = 1;
+				}
         this.parnt.waiters.push({waitingpath:[this.name],user:o});
       }
       for(var i in this.subscribers){
         var s = this.subscribers[i];
+				if(s.followingpaths[sp]===this){ //how come it's not?
+					s.followingpaths[sp] = 1;
+				}
         this.parnt.waiters.push({waitingpath:[this.name],user:s});
       }
     }
@@ -383,6 +390,10 @@ ConsumingCollection.prototype.add = function(u){
   if(u.fullname in this.locations){
     return;
   }
+	var sp = JSON.stringify(this.path);
+	if(u.followingpaths[sp] === 1){
+		u.followingpaths[sp] = this;
+	}
   if(u.contains(this.el.access_level())){
     this.locations[u.fullname] = 1;
     addToArray(this.subscribers,u);
