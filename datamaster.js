@@ -878,7 +878,6 @@ Collection.prototype.processInput = function(sender,input){
         if(dodcp){
           this.cloneFromRemote(internal[2]);
         }
-        this.newReplica.fire(sender);
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
         sender.send({internal:['initDCPreplica',ret]});
@@ -887,6 +886,7 @@ Collection.prototype.processInput = function(sender,input){
             sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
           });
         }
+        this.newReplica.fire(sender);
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
