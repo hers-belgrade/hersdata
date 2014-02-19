@@ -19,7 +19,7 @@ ReplicatorCommunication.prototype.send = function(obj){
   var objstr = JSON.stringify(obj);
   if(!objstr){return;}
   var objlen = new Buffer(4);
-	var strbuf = new Buffer(objstr, 'utf8');
+  var strbuf = new Buffer(objstr, 'utf8');
   objlen.writeUInt32LE(strbuf.length,0);
   try{
     this.socket.write(objlen);
@@ -78,13 +78,13 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   ReplicatorCommunication.rcvingTime += (now()-_rcvstart);
 };
 ReplicatorCommunication.prototype.exec = function(){
+  if(!this.execQueue){return;}
   try{
     var dr = this.execQueue.shift();
     if(!dr){return;}
     var drp = JSON.parse(dr);
     //console.log('ql >',this.execQueue.length);
     if(drp){
-			console.log('executing',drp);
       var es = now();
       this.data.processInput(this,drp);
       ReplicatorCommunication.execTime += (now()-es);
