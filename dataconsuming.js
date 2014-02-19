@@ -263,7 +263,7 @@ function ConsumingCollection(el,path,name,parnt){
 ConsumingCollection.prototype = new ConsumingEntity();
 ConsumingCollection.prototype.notifyDestroy = function(){
   for(var i in this.subscribers){
-    this.subscribers.push(this.deleter);
+    this.subscribers[i].push(this.deleter);
   }
 };
 ConsumingCollection.prototype.destroy = function(){
