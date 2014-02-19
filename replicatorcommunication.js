@@ -29,6 +29,7 @@ ReplicatorCommunication.prototype.send = function(obj){
     //socket closed...
   }
   ReplicatorCommunication.sendingTime += (now() - start);
+  ReplicatorCommunication.sentBytes += (4+strbuf.length);
 };
 ReplicatorCommunication.prototype.listenTo = function(socket){
   var t = this;
@@ -44,6 +45,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   //console.log('data',data.length,'long, reading from',i);
   for(; (this.bytesToRead<0)&&(i<data.length)&&(this.lenBufread<4); i++,this.lenBufread++){
     this.lenBuf[this.lenBufread] = data[i];
+    ReplicatorCommunication.rcvBytes++;
     //console.log(this.lenBuf);
   }
   if(this.bytesToRead<0){
@@ -52,6 +54,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
       return;
     }
     this.bytesToRead = this.lenBuf.readUInt32LE(0);
+    ReplicatorCommunication.rcvBytes+=4;
   }
   //console.log('should read',this.bytesToRead,'bytes');
   var canread = (data.length-i);
@@ -106,17 +109,23 @@ ReplicatorCommunication.prototype.maybeExec = function(){
   }
 };
 ReplicatorCommunication.metrics = function(){
-  var _n = now(), elaps = _n-__start,st=ReplicatorCommunication.sendingTime,rt=ReplicatorCommunication.rcvingTime,et=ReplicatorCommunication.execTime;
+  var _n = now(), elaps = _n-__start,
+    st=ReplicatorCommunication.sendingTime,rt=ReplicatorCommunication.rcvingTime,et=ReplicatorCommunication.execTime,
+    rb=ReplicatorCommunication.rcvBytes,sb=ReplicatorCommunication.sentBytes;
   __start = _n;
   ReplicatorCommunication.sendingTime=0;
   ReplicatorCommunication.rcvingTime=0;
   ReplicatorCommunication.execTime=0;
-  return {bufferedInput:ReplicatorCommunication.input,rcvingUtilization:~~(rt*100/elaps),sendingUtilization:~~(st*100/elaps),execUtilization:~~(et*100/elaps)};
+  ReplicatorCommunication.rcvBytes=0;
+  ReplicatorCommunication.sentBytes=0;
+  return {bufferedInput:ReplicatorCommunication.input,utilization:{rx:~~(rt*100/elaps),tx:~~(st*100/elaps),exec:~~(et*100/elaps)},traffic:{tx:sb,rx:rb}};
 };
 ReplicatorCommunication.input = 0;
 ReplicatorCommunication.rcvingTime = 0;
 ReplicatorCommunication.sendingTime = 0;
 ReplicatorCommunication.execTime = 0;
+ReplicatorCommunication.rcvBytes = 0;
+ReplicatorCommunication.sentBytes = 0;
 
 
 module.exports = ReplicatorCommunication;
