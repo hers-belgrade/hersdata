@@ -1,5 +1,6 @@
 var os = require('os'),
-  Timeout = require('herstimeout');
+  Timeout = require('herstimeout'),
+  ReplicatorCommunication = require('./replicatorcommunication');
 
 var errors = {
 };
@@ -31,7 +32,8 @@ function init(){
       }
       if(actions.length){
         //console.log('commiting memoryusagechanged',now);
-        console.log('timeout utilization',Timeout.utilization());
+        console.log('timeout metrics',Timeout.metrics());
+        console.log('network metrics',ReplicatorCommunication.metrics());
         console.log('dcp',data.instanceCounts());
         data.commit('system_metrics_changed',actions);
       }
