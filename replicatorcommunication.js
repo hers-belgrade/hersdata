@@ -23,6 +23,7 @@ ReplicatorCommunication.prototype.createUnzip = function(){
   this.unzip = zlib.createGunzip();
   var t = this;
   this.unzip.on('data',function(chunk){
+    console.log('got data');
     t.dataRead+=chunk.toString('utf8');
   });
   this.unzip.on('end',function(){
@@ -204,8 +205,16 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     this.lenBufread=0;
     this.unzip.end();
   }else{
-    delete this.currentData;
-    this.dataCursor=0;
+    console.log('at',i,'data is',data.length,'long, now what?');
+    if(i===data.length){
+      delete this.currentData;
+      this.dataCursor=0;
+      if(this.incomingData.length){
+        this.processData(this.incomingData.shift());
+      }
+    }else{
+      this.processData(data,i);
+    }
   }
   ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
 };
