@@ -171,6 +171,8 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   if(this.bytesToRead<0){
     if(this.lenBufread!==4){
       ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
+      delete this.currentData;
+      this.dataCursor=0;
       return;
     }
     this.bytesToRead = this.lenBuf.readUInt32LE(0);
