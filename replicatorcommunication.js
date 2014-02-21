@@ -1,4 +1,5 @@
-var Timeout = require('herstimeout');
+var Timeout = require('herstimeout'),
+  zlib = require('zlib');
 
 var __start = Timeout.now();
 var __id = 0;
@@ -13,6 +14,19 @@ function ReplicatorCommunication(data){
   this.execQueue = [];
   this.sendingQueue = [];
   this.sending = false;
+  this.unzip = zlib.createGunzip();
+  var t = this;
+  var incomingdata='';
+  this.unzip.on('data',function(chunk){
+    incomingdata+=chunk;
+  });
+  this.unzip.on('end',function(){
+    console.log('incoming',incomingdata);
+    var eq = JSON.parse(incomingdata);
+    Array.prototype.push.apply(t.execQueue,eq);
+    console.log(t.execQueue);
+    t.maybeExec();
+  });
 };
 ReplicatorCommunication.prototype._internalSend = function(buf){
   if(!this.socket){return;}
@@ -126,13 +140,15 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   if(canread>this.bytesToRead){
     canread=this.bytesToRead;
   }
-  this.dataRead+=data.toString('utf8',i,i+canread);
+  //this.dataRead+=data.toString('utf8',i,i+canread);
+  this.unzip.write(data.slice(i,i+canread));
   this.bytesToRead-=canread;
   i+=canread;
   if(this.bytesToRead===0){
     this.bytesToRead=-1;
     this.lenBufread=0;
     if(this.socket){
+      this.unzip.end();
       this.execQueue.push(this.dataRead);
       ReplicatorCommunication.input+=this.dataRead.length;
       this.dataRead = '';
@@ -148,19 +164,19 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
 ReplicatorCommunication.prototype.exec = function(){
   if(!this.execQueue){return;}
   try{
-    var dr = this.execQueue.shift();
-    if(!dr){return;}
-    var drp = JSON.parse(dr);
+    var drp = this.execQueue.shift();
+    //if(!dr){return;}
+    //var drp = JSON.parse(dr);
     //console.log('ql >',this.execQueue.length);
     if(drp){
       var es = Timeout.now();
       this.data.processInput(this,drp);
-      ReplicatorCommunication.execTime += (Timeout.now()-es);
-      ReplicatorCommunication.input-=dr.length;
+      //ReplicatorCommunication.execTime += (Timeout.now()-es);
+      //ReplicatorCommunication.input-=dr.length;
     }
   }catch(e){
     //console.log('ERROR processing input', util.inspect(drp,false,null,false));
-    console.log(dr);
+    console.log(drp);
     console.log(e.stack);
     console.log(e);
   }
