@@ -1,4 +1,5 @@
-var Timeout = require('herstimeout');
+var Timeout = require('herstimeout'),
+  zlib = require('zlib');
 
 var __start = Timeout.now();
 var __id = 0;
@@ -13,6 +14,25 @@ function ReplicatorCommunication(data){
   this.execQueue = [];
   this.sendingQueue = [];
   this.sending = false;
+  this.zip = zlib.createGzip({
+    level:9
+  });
+  this.sendingBuffs = [];
+  var t = this;
+  this.zip.on('data',function(chunk){
+    t.sendingBuffs.push(chunk);
+  });
+  this.zip.on('end',function(){
+    var tl = 0;
+    for (var i in t.sendingBuffs){
+      tl+=t.sendingBuffs[i].length;
+    }
+    var lb = new Buffer(4);
+    lb.writeUInt32LE(tl,0);
+    t.sendingBuffs.unshift(lb);
+    if(!t.socket){process.exit(0);}
+    t.socket.write(t.sendingBuffs.shift());
+  });
 };
 ReplicatorCommunication.prototype._internalSend = function(buf){
   if(!this.socket){return;}
@@ -26,6 +46,12 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   }
   this.sending = true;
   this.start = Timeout.now();
+  var sqb = new Buffer(JSON.stringify(this.sendingQueue),'utf8');
+  this.sendingQueue = [];
+  var bufs = [];
+  this.zip.write(sqb);
+  this.zip.end();
+  return;
   try{
     //console.log(this.__id,'sending buffer',buf.toString());
     var sq = this.sendingQueue;
@@ -57,7 +83,7 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
 };
 ReplicatorCommunication.prototype.send = function(obj){
   if(!(this.socket)){return;}
-  this.sendingQueue.push(JSON.stringify(obj));
+  this.sendingQueue.push(obj);
   this._internalSend();
   return;
   var objstr = JSON.stringify(obj);
@@ -99,7 +125,11 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
     ReplicatorCommunication.output -= t.sendingLength;
     //console.log(t.sendingLength/elaps);
     //console.log(t.__id,'drain',t.sendingBuffer.length);
-    t.sending = false;
+    if(!t.sendingBuffs.length){
+      t.sending = false;
+    }else{
+      t.socket.write(t.sendingBuffs.shift());
+    }
     t._internalSend();
   });
 };
