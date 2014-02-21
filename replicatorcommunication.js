@@ -15,9 +15,26 @@ function ReplicatorCommunication(data){
   this.sendingQueue = [];
   this.sending = false;
   this.sendingBuffs = [];
+  this.createUnzip();
+  this.dataCursor = 0;
+  this.incomingData = [];
+};
+ReplicatorCommunication.prototype.createUnzip = function(){
   this.unzip = zlib.createGunzip();
+  var t = this;
   this.unzip.on('data',function(chunk){
-    this.dataRead+=chunk;
+    t.dataRead+=chunk.toString('utf8');
+  });
+  this.unzip.on('end',function(){
+    if(t.dataRead){
+      var eq = JSON.parse(t.dataRead);
+      t.dataRead = '';
+      Array.prototype.push.apply(t.execQueue,eq);
+      console.log(t.execQueue);
+      t.maybeExec();
+    }
+    t.createUnzip();
+    t.processData(t.currentData,t.dataCursor);
   });
 };
 ReplicatorCommunication.prototype._internalSend = function(buf){
@@ -140,6 +157,11 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}
   var _rcvstart = Timeout.now();
   var i=(offset||0);
+  if(i!==this.dataCursor){
+    this.incomingData.push(data);
+    return;
+  }
+  this.currentData = data;
   //console.log('data',data.length,'long, reading from',i);
   for(; (this.bytesToRead<0)&&(i<data.length)&&(this.lenBufread<4); i++,this.lenBufread++){
     this.lenBuf[this.lenBufread] = data[i];
@@ -166,22 +188,8 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   if(this.bytesToRead===0){
     this.bytesToRead=-1;
     this.lenBufread=0;
-    if(this.socket){
-      var eq = JSON.parse(this.dataRead);
-      this.dataRead = '';
-      Array.prototype.push.apply(t.execQueue,eq);
-      console.log(t.execQueue);
-      t.maybeExec();
-      return;
-      this.execQueue.push(this.dataRead);
-      ReplicatorCommunication.input+=this.dataRead.length;
-      this.dataRead = '';
-      //console.log('ql <',this.execQueue.length);
-      this.maybeExec();
-      ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
-      this.processData(data,i);
-      return;
-    }
+    this.dataCursor = i;
+    this.unzip.end();
   }
   ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
 };
