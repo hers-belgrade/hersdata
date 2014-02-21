@@ -36,6 +36,11 @@ ReplicatorCommunication.prototype.createUnzip = function(){
     t.createUnzip();
     t.processData(t.currentData,t.dataCursor);
   });
+  this.unzip.on('error',function(){
+    console.log('unzip error',arguments);
+    process.exit(0);
+  });
+  console.log('new unzip created');
 };
 ReplicatorCommunication.prototype._internalSend = function(buf){
   if(!this.socket){return;}
@@ -157,7 +162,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}
   var _rcvstart = Timeout.now();
   var i=(offset||0);
-  if(i!==this.dataCursor){
+  if((this.currentData && data!==this.currentData) || (i!==this.dataCursor)){
     console.log(i,'<>',this.dataCursor);
     this.incomingData.push(data);
     return;
