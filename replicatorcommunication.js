@@ -173,6 +173,9 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
       ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
       delete this.currentData;
       this.dataCursor=0;
+      if(this.incomingData.length){
+        this.processData(this.incomingData.shift());
+      }
       return;
     }
     this.bytesToRead = this.lenBuf.readUInt32LE(0);
