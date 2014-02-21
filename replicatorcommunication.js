@@ -164,7 +164,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   var _rcvstart = Timeout.now();
   var i=(offset||0);
   if((this.currentData && data!==this.currentData) || (i!==this.dataCursor)){
-    console.log(i,'<>',this.dataCursor);
+    //console.log(i,'<>',this.dataCursor);
     this.incomingData.push(data);
     return;
   }
