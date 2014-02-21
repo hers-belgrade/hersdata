@@ -14,7 +14,7 @@ function init(){
     var data = _d;
     var lastChange;
     return function(){
-      var now = (new Date()).getTime();
+      var now = Timeout.now();
       if(lastChange&&(now-lastChange<10000)){
         return;
       }

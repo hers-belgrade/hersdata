@@ -138,7 +138,7 @@ function Collection(a_l){
     return access_level;
   };
   var data = {};
-  this.functionalities = {};
+  //this.functionalities = {};
 
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
@@ -518,7 +518,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
   if(!u){
     return exit('NO_USER',[username,realmname],'No user '+username+'@'+realmname+' found');
   }
-  var f = this.functionalities[functionalityname];
+  var f = this.functionalities && this.functionalities[functionalityname];
   if(f){
     var key = f.key;
     if((typeof key !== 'undefined')&&(!u.contains(key))){
@@ -691,6 +691,9 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   };
 
   if ('function' === typeof(ret.init)) { ret.init(); }
+  if(!this.functionalities){
+    this.functionalities = {};
+  }
   this.functionalities[fqnname] = {f:ret,key:key};
   return ret;
 };
@@ -740,7 +743,7 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
 };
 
 Collection.prototype.openReplication = function(port){
-  if(!this.functionalities.system){
+  if(!(this.functionalities && this.functionalities.system)){
     this.attach('./system',{});
   }
   var t = this;
@@ -781,7 +784,7 @@ Collection.prototype.killAllProcesses = function () {
 
 Collection.prototype.startHTTP = function(port,root,name){
   name = name || 'local';
-  if(!this.functionalities.system){
+  if(!(this.functionalities && this.functionalities.system)){
     this.attach('./system',{});
   }
   var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);

@@ -1,5 +1,6 @@
 var Listener = require('./listener'),
-    Waiter = (require('./bridge')).Data_CollectionElementWaiter;
+    Waiter = (require('./bridge')).Data_CollectionElementWaiter,
+    Timeout = require('herstimeout');
 
 function removeFromArray(ar,el){
   if(!ar){return;}
@@ -485,13 +486,18 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   u.unfollow = function(path){
   };
   u.describe = function(cb){
+    console.log('describe begin');
     for(var i in this.followingpaths){
       var f = u.followingpaths[i];
+      console.log(i);
       if(f===1){
+        console.log('no');
         continue;
       }
       f.describe(u,cb);
+      console.log('ok');
     }
+    console.log('describe end');
   };
   u.clearConsumingExtension = function(){
     if(this.sessions){

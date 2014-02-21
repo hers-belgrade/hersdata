@@ -1,7 +1,8 @@
 var KeyRing = require('./keyring'),
   Follower = require('./follower'),
   util = require('util'),
-  BigCounter = require('./BigCounter');
+  BigCounter = require('./BigCounter'),
+  Timeout = require('herstimeout');
 
 scalarValue = function(keyring,scalar){
   return keyring.contains(scalar.access_level()) ? scalar.value() : scalar.public_value();
@@ -229,16 +230,12 @@ SessionFollower.prototype.dump = function(){
   return ret;
 };
 
-function _now(){
-  return (new Date()).getTime();
-}
-
 var userSessions = {};
 var userSessionCounter = new BigCounter();
-var lastCheck = _now();
+var lastCheck = Timeout.now();
 
 function checkAndClear(){
-  var now = _now();
+  var now = Timeout.now();
   if(now - lastCheck < 15000){
     return;
   }
@@ -261,7 +258,7 @@ function checkAndClear(){
 
 function UserSession(datadump,destroycb,debug){
   this.debug = debug;
-  this.lastAccess = _now();
+  this.lastAccess = Timeout.now();
   userSessionCounter.inc();
   userSessions[userSessionCounter.toString()] = this;
   this.queue = [['init',datadump]];
@@ -284,7 +281,7 @@ UserSession.prototype.add = function(txnalias,txns){
   }
 };
 UserSession.prototype.retrieveQueue = function(){
-  this.lastAccess = _now();
+  this.lastAccess = Timeout.now();
   return this.queue.splice(0);
 };
 UserSession.prototype.dumpQueue = function(cb,justpeek){

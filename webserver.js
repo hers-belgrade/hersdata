@@ -2,6 +2,7 @@ var Connect = require ('connect');
 var Url = require('url');
 var Path = require('path');
 var WebCollectionReplica = require('./WebCollectionReplica');
+var Timeout = require('herstimeout');
 
 function stripLeadingSlash(strng){
   if(strng.length&&strng[0]==='/'){
@@ -155,10 +156,10 @@ WebServer.prototype.connectionCountChanged = function(delta){
   this.connectionCount+=delta;
   var lccu = this.lastCCupdate;
   if(!lccu){
-    lccu = (new Date()).getTime();
+    lccu = Timeout.now();
     this.lastCCupdate = lccu;
   }
-  var now = (new Date()).getTime();
+  var now = Timeout.now();
   if(now-lccu<10000){
     return;
   }
