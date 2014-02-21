@@ -158,6 +158,7 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   var _rcvstart = Timeout.now();
   var i=(offset||0);
   if(i!==this.dataCursor){
+    console.log(i,'<>',this.dataCursor);
     this.incomingData.push(data);
     return;
   }
@@ -180,6 +181,8 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     }
     this.bytesToRead = this.lenBuf.readUInt32LE(0);
     ReplicatorCommunication.rcvBytes+=4;
+  }else{
+    console.log('still',this.bytesToRead);
   }
   //console.log('should read',this.bytesToRead,'bytes');
   var canread = (data.length-i);
@@ -190,11 +193,14 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
   this.unzip.write(data.slice(i,i+canread));
   this.bytesToRead-=canread;
   i+=canread;
+  this.dataCursor = i;
   if(this.bytesToRead===0){
     this.bytesToRead=-1;
     this.lenBufread=0;
-    this.dataCursor = i;
     this.unzip.end();
+  }else{
+    delete this.currentData;
+    this.dataCursor=0;
   }
   ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
 };
