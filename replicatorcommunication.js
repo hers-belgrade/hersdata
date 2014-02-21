@@ -23,28 +23,14 @@ function ReplicatorCommunication(data){
     t.sendingBuffs.push(chunk);
   });
   this.zip.on('end',function(){
-    var tl = 0;
-    for (var i in t.sendingBuffs){
-      tl+=t.sendingBuffs[i].length;
-    }
-    var lb = new Buffer(4);
-    lb.writeUInt32LE(tl,0);
-    t.sendingBuffs.unshift(lb);
-    if(!t.socket){process.exit(0);}
-    t.socket.write(t.sendingBuffs.shift());
   });
   this.unzip = zlib.createGunzip();
   var t = this;
-  var incomingdata='';
   this.unzip.on('data',function(chunk){
-    incomingdata+=chunk;
+    this.dataRead+=chunk;
   });
   this.unzip.on('end',function(){
     console.log('incoming',incomingdata);
-    var eq = JSON.parse(incomingdata);
-    Array.prototype.push.apply(t.execQueue,eq);
-    console.log(t.execQueue);
-    t.maybeExec();
   });
 };
 ReplicatorCommunication.prototype._internalSend = function(buf){
@@ -63,7 +49,15 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   this.sendingQueue = [];
   var bufs = [];
   this.zip.write(sqb);
-  this.zip.end();
+  var tl = 0;
+  for (var i in this.sendingBuffs){
+    tl+=this.sendingBuffs[i].length;
+  }
+  var lb = new Buffer(4);
+  lb.writeUInt32LE(tl,0);
+  this.sendingBuffs.unshift(lb);
+  if(!this.socket){process.exit(0);}
+  this.socket.write(this.sendingBuffs.shift());
   return;
   try{
     //console.log(this.__id,'sending buffer',buf.toString());
@@ -177,7 +171,12 @@ ReplicatorCommunication.prototype.processData = function(data,offset){
     this.bytesToRead=-1;
     this.lenBufread=0;
     if(this.socket){
-      this.unzip.end();
+      var eq = JSON.parse(this.dataRead);
+      this.dataRead = '';
+      Array.prototype.push.apply(t.execQueue,eq);
+      console.log(t.execQueue);
+      t.maybeExec();
+      return;
       this.execQueue.push(this.dataRead);
       ReplicatorCommunication.input+=this.dataRead.length;
       this.dataRead = '';
