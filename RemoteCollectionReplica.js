@@ -1,6 +1,7 @@
 var CollectionReplica = require('./CollectionReplica');
 var net = require('net');
 var replicator_communication = require('./replicatorcommunication');
+var Timeout = require('herstimeout');
 
 function QueueProcessor(){
   var q = [],job;
@@ -46,22 +47,27 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
 RemoteCollectionReplica.prototype.go = function(cb){
+  this.status = 'initialized';
+  cb(this.status);
   var t = this;
   net.createConnection(this.url.port,this.url.address,function(){
-    cb && cb('connected');
+    t.status = 'connected';
+    cb && cb(t.status);
     t.communication.listenTo(this);
     var _cb = cb;
     this.on('close',function(){
       _cb && _cb('disconnected');
       t.commands.clear();
-      var _t = t;
-      setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);
+      Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(e){
-    var _t = t,_cb = cb;
-    cb && cb('disconnected');
-    setTimeout(function(){_cb && _cb('reconnecting');_t.go(_cb);},1000);
+    if(t.status === 'connected'){
+      t.status === 'disconnected';
+      cb && cb(t.status);
+    };
+    //console.log('socket error',arguments);
+    Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
   });
 };
 RemoteCollectionReplica.prototype.destroy = function(){
