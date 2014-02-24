@@ -20,7 +20,6 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
 RemoteCollectionReplica.prototype.go = function(cb){
-  this.status = 'initialized';
   cb && cb(this.status);
   var t = this;
   net.createConnection(this.url.port,this.url.address,function(){
