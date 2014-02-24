@@ -85,7 +85,6 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   zip.end();
 };
 ReplicatorCommunication.prototype.send = function(obj){
-  if(!(this.socket)){return;}
   this.sendingQueue.push(obj);
   this._internalSend();
 };
@@ -116,6 +115,7 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
       t._internalSend();
     },t);
   });
+  this._internalSend();
 };
 ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}

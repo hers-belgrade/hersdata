@@ -59,15 +59,21 @@ CollectionReplica.prototype.go = function(){
   this.send('internal','need_init',this.replicaToken,this.dump());
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
-  //Collection.prototype.commit.call(this,txnalias,txnprimitives);
-  this.send('rpc','_commit',txnalias,txnprimitives);
+  if(this.replicaToken.skipdcp){
+    Collection.prototype.commit.call(this,txnalias,txnprimitives);
+  }else{
+    this.send('rpc','_commit',txnalias,txnprimitives);
+  }
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  var t = this;
-  if(path.join){
-    path = path.join('/');
+  if(this.replicaToken.skipdcp){
+    Collection.prototype.invoke.call(this,path,paramobj,username,realmname,roles,cb);
+  }else{
+    if(path.join){
+      path = path.join('/');
+    }
+    this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
   }
-  this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 CollectionReplica.prototype.handleUserDestruction = function(u){
   Collection.prototype.handleUserDestruction.call(this,u);
