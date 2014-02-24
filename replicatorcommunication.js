@@ -64,10 +64,11 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   });
   var t = this;
   zip.on('data',function(chunk){
-    t.sendingBuffs.push(chunk);
+    t.sendingBuffs && t.sendingBuffs.push(chunk);
   });
   zip.on('end',function(){
     Timeout.next(function(t){
+      if(!t.sendingBuffs){return;}
       var tl = 0;
       for (var i in t.sendingBuffs){
         tl+=t.sendingBuffs[i].length;
@@ -104,6 +105,9 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
     //console.log(t.sendingLength/elaps);
     //console.log(t.__id,'drain',t.sendingBuffer.length);
     Timeout.next(function(t){
+      if(!t.sendingBuffs){
+        return;
+      }
       if(!t.sendingBuffs.length){
         t.sending = false;
       }else{

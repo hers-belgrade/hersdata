@@ -288,16 +288,10 @@ ConsumingCollection.prototype.destroy = function(){
       }
       for(var i in this.observers){
         var o = this.observers[i];
-				if(o.followingpaths[sp]===this){ //how come it's not?
-					o.followingpaths[sp] = 1;
-				}
         this.parnt.waiters.push({waitingpath:[this.name],user:o});
       }
       for(var i in this.subscribers){
         var s = this.subscribers[i];
-				if(s.followingpaths[sp]===this){ //how come it's not?
-					s.followingpaths[sp] = 1;
-				}
         this.parnt.waiters.push({waitingpath:[this.name],user:s});
       }
     }
@@ -312,15 +306,21 @@ ConsumingCollection.prototype.destroy = function(){
   }
 };
 ConsumingCollection.prototype.describe = function(u,cb){
+  if(!(u.fullname in this.locations)){
+    for(var i in this.collections){
+      this.collections[i].describe(u,cb);
+    }
+    return;
+  }
+  if(u.contains(this.el.access_level())){
+    cb(this.describer);
+  }
   for(var i in this.scalars){
     var s = this.scalars[i];
     u.contains(s.el.access_level()) ? cb(s.value) : cb(s.public_value);
   }
   for(var i in this.collections){
-    var c = this.collections[i];
-    if(u.contains(c.el.access_level())){
-      cb(c.describer);
-    }
+    this.collections[i].describe(u,cb);
   }
 };
 ConsumingCollection.prototype.target = function(name,user){
@@ -328,21 +328,21 @@ ConsumingCollection.prototype.target = function(name,user){
 };
 ConsumingCollection.prototype.followForUser = function(path,user,startindex){
   startindex = startindex||0;
-  //console.log(path,user.username,startindex);
+  //console.log(path,user.username,path.length,startindex);
   if(path.length>startindex){
     var target = this.target(path[startindex],user);
     if(target){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
       }else{
-        //console.log('adding',user.username,'to',target);
-        user.followingpaths[JSON.stringify(path)] = target;
+        //console.log('adding',user.username,'to',target.name);
         target.add(user);
       }
     }else{
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
     }
   }else{
+    //console.log(this.name,'adding',user.username,'myself');
     this.add(user);
   }
 };
@@ -411,9 +411,6 @@ ConsumingCollection.prototype.add = function(u){
     return;
   }
 	var sp = JSON.stringify(this.path);
-	if(u.followingpaths[sp] === 1){
-		u.followingpaths[sp] = this;
-	}
   if(u.contains(this.el.access_level())){
     this.locations[u.fullname] = 1;
     addToArray(this.subscribers,u);
@@ -486,36 +483,18 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     return;
   }
   u.sessions = {};
-  u.followingpaths = {};
-  u.unfollowpaths = {};
   u.follow = function(path){
     //console.log('follow',path);
     if(!(path)){
       return;
     }
-    var ps = JSON.stringify(path);
-    if(this.followingpaths[ps]){
-      console.log('already following',path);
-      return;
-    }
-    this.followingpaths[ps] = 1;
-    //console.log('follow',this.followingpaths);
     coll.followForUser(path,this);
   };
   u.unfollow = function(path){
   };
   u.describe = function(cb){
     //console.log('describe begin');
-    for(var i in this.followingpaths){
-      var f = u.followingpaths[i];
-      //console.log(i);
-      if(f===1){
-        //console.log('no');
-        continue;
-      }
-      f.describe(u,cb);
-      //console.log('ok');
-    }
+    coll.describe(u,cb);
     //console.log('describe end');
   };
   u.clearConsumingExtension = function(){
@@ -525,18 +504,6 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
         delete this.sessions[i];
       }
       delete this.sessions;
-    }
-    if(this.followingpaths){
-      for(var i in this.followingpaths){
-        delete this.followingpaths[i];
-      }
-      delete this.followingpaths;
-    }
-    if(this.unfollowpaths){
-      for(var i in this.unfollowpaths){
-        delete this.unfollowpaths[i];
-      }
-      delete this.unfollowpaths;
     }
   };
   u.destroy = function(){
