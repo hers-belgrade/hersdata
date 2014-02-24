@@ -985,7 +985,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  //console.log('setFollower',username,realmname,roles);
+  console.log('setFollower',username,realmname,roles);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }

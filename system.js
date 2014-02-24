@@ -10,9 +10,26 @@ function doMetrics(data){
   console.log('timeout metrics',m);
   var nm = ReplicatorCommunication.metrics();
   console.log('network metrics',nm);
-  var actions = [];
   var mu = data.element(['memoryusage']).value();
   var mmu = Math.floor(process.memoryUsage().rss/1024/1024);
+  var actions = [];
+  if(m.utilization){
+    actions.push(['set',['CPU'],[m.utilization,undefined,'dcp']]);
+  }
+  if(m.delay){
+    actions.push(['set',['exec_delay'],[m.delay,undefined,'dcp']]);
+  }
+  if(m.queue && m.queue.current){
+    actions.push(['set',['exec_queue'],[m.queue.current,undefined,'dcp']]);
+  }
+  if(nm.traffic){
+    if(nm.traffic.rx){
+      actions.push(['set',['network_in'],[nm.traffic.rx,undefined,'dcp']]);
+    }
+    if(nm.traffic.tx){
+      actions.push(['set',['network_out'],[nm.traffic.tx,undefined,'dcp']]);
+    }
+  };
   console.log('memory usage',mmu);
   if(mu!==mmu){
     actions.push(['set',['memoryusage'],[mmu,undefined,'system']]);
