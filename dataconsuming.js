@@ -118,8 +118,14 @@ ConsumingScalar.prototype.setValues = function(){
   this.setPublicValue();
   this.setPrivateValue();
 };
+ConsumingScalar.prototype.userDebug = function(u){
+  if(u.username==='milojko' && this.name==='name'){
+    console.log.apply(console,Array.prototype.slice.call(arguments,1));
+  }
+};
 ConsumingScalar.prototype.add = function(u){
   if(u.contains(this.el.access_level())){
+    //this.userDebug(u,'becomes a subscriber');
     if(addToArray(this.subscribers,u)){
       this.locations[u.fullname]=1;
       if(typeof this.value !== 'undefined'){
@@ -128,6 +134,7 @@ ConsumingScalar.prototype.add = function(u){
     }
   }else{
     if(addToArray(this.observers,u)){
+      //this.userDebug(u,'becomes an observer');
       this.locations[u.fullname]=2;
       if(typeof this.public_value !== 'undefined'){
         u.push(this.public_value);
@@ -139,6 +146,7 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
   if(u.contains(key)){
     if(this.locations[u.fullname]===2){
       this.locations[u.fullname] = 1;
+      this.userDebug(u,'becomes a subscriber');
       removeFromArray(this.observers,u);
       addToArray(this.subscribers,u);
       u.push(this.value);
@@ -149,6 +157,7 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
     }
   }else{
     if(this.locations[u.fullname]===1){
+      this.userDebug(u,'becomes an observer');
       this.locations[u.fullname] = 2;
       removeFromArray(this.subscribers,u);
       addToArray(this.observers,u);
@@ -333,6 +342,8 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
     }else{
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
     }
+  }else{
+    this.add(user);
   }
 };
 ConsumingCollection.prototype.reportTo = function(u){
@@ -340,6 +351,14 @@ ConsumingCollection.prototype.reportTo = function(u){
     var c = this.collections[i];
     if(u.contains(c.el.access_level())){
       u.push(c.describer);
+    }
+  }
+  for(var i in this.scalars){
+    var s = this.scalars[i];
+    if(u.contains(s.el.access_level())){
+      u.push(s.value);
+    }else{
+      u.push(s.public_value);
     }
   }
 };
@@ -415,7 +434,7 @@ ConsumingCollection.prototype.add = function(u){
         this.locations[u.fullname]=1;
         removeFromArray(this.pretendents,u);
         addToArray(this.subscribers,u);
-        console.log(this.path.join('.'),':',u.username,'is a subscriber now');
+        //console.log(this.path.join('.'),':',u.username,'is a subscriber now');
         this.reportTo(u);
         for(var i in this.scalars){
           this.scalars[i].add(u);
@@ -437,7 +456,7 @@ ConsumingCollection.prototype.add = function(u){
       if(this.locations[u.fullname]===1){
         this.locations[u.fullname]=2;
         this.unreportTo(u);
-        console.log(this.path.join('.'),':',u.username,'is a pretendent now');
+        //console.log(this.path.join('.'),':',u.username,'is a pretendent now');
         removeFromArray(this.subscribers,u);
         addToArray(this.pretendents,u);
         for(var i in this.scalars){
@@ -486,18 +505,18 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   u.unfollow = function(path){
   };
   u.describe = function(cb){
-    console.log('describe begin');
+    //console.log('describe begin');
     for(var i in this.followingpaths){
       var f = u.followingpaths[i];
-      console.log(i);
+      //console.log(i);
       if(f===1){
-        console.log('no');
+        //console.log('no');
         continue;
       }
       f.describe(u,cb);
-      console.log('ok');
+      //console.log('ok');
     }
-    console.log('describe end');
+    //console.log('describe end');
   };
   u.clearConsumingExtension = function(){
     if(this.sessions){
@@ -567,24 +586,5 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   }
   this.el.send.apply(this.el,args);
 };
-
-
-  /*
-function follow(dataMaster){
-  var cc = new ConsumingCollection(dataMaster,[]);
-  cc.createListener('elNewUser',function(u){
-    upgradeUserToConsumer(u,this);
-  },hersdata.UserBase.newUser);
-  dataMaster.txnEnds.attach(function(txnalias){
-    for(var i in dataMaster.realms){
-      var r = dataMaster.realms[i];
-      for(var j in r){
-        var u = r[j];
-        u.dump(txnalias);
-      }
-    }
-  });
-}
-  */
 
 module.exports = ConsumingCollection;

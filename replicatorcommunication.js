@@ -85,7 +85,6 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   zip.end();
 };
 ReplicatorCommunication.prototype.send = function(obj){
-  if(!(this.socket)){return;}
   this.sendingQueue.push(obj);
   this._internalSend();
 };
@@ -108,7 +107,7 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
       if(!t.sendingBuffs.length){
         t.sending = false;
       }else{
-        t.start = now;
+        t.start = this.now;
         var b = t.sendingBuffs.shift();
         t.sendingLength = b.length;
         t.socket.write(b);
@@ -116,6 +115,7 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
       t._internalSend();
     },t);
   });
+  this._internalSend();
 };
 ReplicatorCommunication.prototype.processData = function(data,offset){
   if(!this.socket){return;}
