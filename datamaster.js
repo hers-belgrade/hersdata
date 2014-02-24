@@ -115,6 +115,9 @@ function Scalar(res_val,pub_val, access_lvl) {
     access_level = undefined;
     this.changed.destruct();
     this.destroyed.destruct();
+    for(var i in this){
+      delete this[i];
+    }
     __ScalarCount--;
   }
 };
@@ -206,7 +209,6 @@ function Collection(a_l){
       console.log('__DESTROY__ing',i);
       this.functionalities[i].f.__DESTROY__();
     }
-    delete this.functionalities;
     for(var i in this){
       delete this[i];
     }
@@ -726,7 +728,9 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
   }
   console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
   delete this.replicatingClients[replicatorname];
-  this.onNewTransaction.detach(rc.listener);
+  if(rc.listener){
+    this.onNewTransaction.detach(rc.listener);
+  }
   rc.socket && rc.socket.destroy();
   for(var i in rc){
     delete rc[i];
@@ -888,6 +892,10 @@ Collection.prototype.processInput = function(sender,input){
           sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
             sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
           });
+          if(typeof sender.listener !== 'number'){
+            console.log('no return from attach');
+            process.exit(0);
+          }
         }
         this.newReplica.fire(sender);
         break;
@@ -977,7 +985,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  //console.log('setFollower',username,realmname,roles);
+  console.log('setFollower',username,realmname,roles);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }

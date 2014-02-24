@@ -7,100 +7,61 @@ HookCollection.prototype.empty = function(){
 	}
   return true;
 };
-HookCollection.prototype._inc = function(){
-  this.counter++;
-  if(this.counter>10000000){
-    this.counter=1;
-  }
-};
-HookCollection.prototype.inc = function(){
-  if(!this.collection){
-    this.collection = {};
-    this.counter = 0;
-  }
-	this._inc();
-	while(this.counter in this.collection){
-		this._inc();
-	}
-};
-HookCollection.prototype.isEmpty = function(){
-  if(!this.collection){
-    return true;
-  }
-  for(var i in this.collection){
-    return false;
-  }
-  return true;
-};
 HookCollection.prototype.attach = function(cb){
   if(typeof cb === 'function'){
-		this.inc();
-    this.collection[this.counter]=cb;
-    //console.log('attached',cb,'to',this.counter);
-		return this.counter;
+    if(!this.cbs){
+      this.cbs = [cb];
+      return 0;
+    }
+    var cursor = 0;
+    while(true){
+      if(cursor===this.cbs.length){
+        this.cbs.push(cb);
+        return cursor;
+      }
+      if(!this.cbs[cursor]){
+        this.cbs[cursor] = cb;
+        return cursor;
+      }
+      cursor++;
+    }
   }else{
     console.log(cb.toString(),'is not a function');
   }
 };
 HookCollection.prototype.detach = function(i){
-  if(!this.collection){
+  if(!this.cbs){
     console.trace();
     console.log('no listeners when',i,'should be detached');
     process.exit(0);
     return;
   }
-	delete this.collection[i];
-  if(this.isEmpty()){
-    delete this.counter;
-    delete this.collection;
+  if(!this.cbs[i]){
+    console.trace();
+    console.log('cannot detach a detached callback');
   }
+  this.cbs[i] = null;
 };
 HookCollection.prototype.fire = function(){
-  var c = this.collection;
+  var cbs = this.cbs;
   var fordel=[];
-  var pa = Array.prototype.slice.call(arguments);
   //console.log('firing on',c);
-  for(var i in c){
+  for(var i in cbs){
     try{
-      var fqn = c[i];
-      //console.log('calling',fqn,'on',i,'with',pa);
-      fqn.apply(null,pa);
+      var fqn = cbs[i];
+      if(fqn){
+        fqn.apply(null,arguments);
+      }
     }
     catch(e){
+      cbs[i] = null;
       console.log(e);
       console.log(e.stack);
-      fordel.unshift(i);
     }
-  }
-  var fdl = fordel.length;
-  for(var i=0; i<fdl; i++){
-		delete c[fordel[i]];
   }
 };
-/* controversial
-HookCollection.prototype.fireAndForget = function(){
-  var c = this.collection;
-  var pa = Array.prototype.slice.call(arguments);
-  for(var i in c){
-    try{
-      c[i].apply(null,pa);
-    }
-    catch(e){
-      console.log(e);
-      console.log(e.stack);
-    }
-  }
-	this.collection = {};
-}
-*/
 HookCollection.prototype.destruct = function(){
-  if(this.collection){
-    for(var i in this.collection){
-      delete this.collection[i];
-    }
-    delete this.collection;
-    delete this.counter;
-  }
+  delete this.cbs;
 }
 
 module.exports = HookCollection;

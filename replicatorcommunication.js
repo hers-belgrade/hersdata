@@ -107,7 +107,7 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
       if(!t.sendingBuffs.length){
         t.sending = false;
       }else{
-        t.start = now;
+        t.start = this.now;
         var b = t.sendingBuffs.shift();
         t.sendingLength = b.length;
         t.socket.write(b);
