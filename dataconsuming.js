@@ -191,7 +191,7 @@ function ConsumingCollection(el,path,name,parnt){
   }
   this.locations = {};
   this.parnt = parnt;
-  this.describer = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]);
+  this.describer = typeof name !== 'undefined' ? JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]) : null;
   this.deleter = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name])]);
   this.el = el;
   this.path = path;
@@ -320,7 +320,7 @@ ConsumingCollection.prototype.describe = function(u,cb){
     u.contains(s.el.access_level()) ? cb(s.value) : cb(s.public_value);
   }
   for(var i in this.collections){
-    this.collections[i].describe(u,cb);
+    Timeout.next(function(c,u,cb){c.describe(u,cb)},this.collections[i],u,cb);
   }
 };
 ConsumingCollection.prototype.target = function(name,user){
@@ -331,6 +331,9 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
   //console.log(path,user.username,path.length,startindex);
   if(path.length>startindex){
     var target = this.target(path[startindex],user);
+    if(path[startindex]==0){
+      console.log('TARGET FOR ZERO FOUND');
+    }
     if(target){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
@@ -485,7 +488,12 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   u.sessions = {};
   u.follow = function(path){
     //console.log('follow',path);
-    if(!(path)){
+    for(var i in path){
+      if(path[i]=='players'){
+        console.log('looking for some players',path);
+      }
+    }
+    if(typeof path === undefined){
       return;
     }
     coll.followForUser(path,this);

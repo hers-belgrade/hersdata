@@ -23,6 +23,9 @@ ReplicatorCommunication.prototype.createUnzip = function(){
   this.unzip = zlib.createGunzip();
   var t = this;
   this.unzip.on('data',function(chunk){
+    if(typeof t.dataRead === 'undefined'){
+      return;
+    }
     //console.log('got data');
     t.dataRead+=chunk.toString('utf8');
   });
@@ -59,6 +62,7 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
   this.start = Timeout.now();
   var sqb = new Buffer(JSON.stringify(this.sendingQueue),'utf8');
   this.sendingQueue = [];
+  this.originalSize = sqb.length;
   var zip = zlib.createGzip({
     level:9
   });
@@ -79,13 +83,16 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
       if(!t.socket){process.exit(0);}
       var b = t.sendingBuffs.shift();
       t.sendingLength = b.length;
-      t.socket.write(b);
+      if(t.socket.writeable){
+        t.socket.write(b);
+      }
     },t);
   });
   zip.write(sqb);
   zip.end();
 };
 ReplicatorCommunication.prototype.send = function(obj){
+  if(!this.sendingQueue){return;}
   this.sendingQueue.push(obj);
   this._internalSend();
 };
@@ -93,6 +100,9 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
   var t = this;
   this.socket = socket;
   this.socket.setNoDelay(true);
+  socket.on('error',function(){
+    delete t.socket;
+  });
   socket.on('data',function(data){
     //console.log(t.__id,'data');
     Timeout.next(function(t){t.processData(data);},t);
@@ -114,7 +124,9 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
         t.start = this.now;
         var b = t.sendingBuffs.shift();
         t.sendingLength = b.length;
-        t.socket.write(b);
+        if(t.socket.writeable){
+          t.socket.write(b);
+        }
       }
       t._internalSend();
     },t);
