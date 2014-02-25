@@ -83,7 +83,7 @@ ReplicatorCommunication.prototype._internalSend = function(buf){
       if(!t.socket){process.exit(0);}
       var b = t.sendingBuffs.shift();
       t.sendingLength = b.length;
-      if(t.socket.writeable){
+      if(t.socket.writable){
         t.socket.write(b);
       }
     },t);
@@ -124,7 +124,7 @@ ReplicatorCommunication.prototype.listenTo = function(socket){
         t.start = this.now;
         var b = t.sendingBuffs.shift();
         t.sendingLength = b.length;
-        if(t.socket.writeable){
+        if(t.socket.writable){
           t.socket.write(b);
         }
       }

@@ -28,12 +28,14 @@ RemoteCollectionReplica.prototype.go = function(cb){
     t.communication.listenTo(this);
     var _cb = cb;
     this.on('close',function(){
+      console.log('socket closed');
       t.status = 'disconnected';
       _cb && _cb(t.status);
       Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(e){
+    console.log('socket error on',t.url.address,':',t.url.port,e);
     if(t.status === 'connected'){
       t.status = 'disconnected';
       cb && cb(t.status);
