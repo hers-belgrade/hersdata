@@ -35,7 +35,7 @@ RemoteCollectionReplica.prototype.go = function(cb){
     });
     CollectionReplica.prototype.go.call(t);
   }).on('error',function(e){
-    console.log('socket error on',t.url.address,':',t.url.port,e);
+    //console.log('socket error on',t.url.address,':',t.url.port,e);
     if(t.status === 'connected'){
       t.status = 'disconnected';
       cb && cb(t.status);
