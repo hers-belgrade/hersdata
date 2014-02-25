@@ -66,14 +66,10 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   }
 };
 CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  if(this.replicaToken.skipdcp){
-    Collection.prototype.invoke.call(this,path,paramobj,username,realmname,roles,cb);
-  }else{
-    if(path.join){
-      path = path.join('/');
-    }
-    this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
+  if(path.join){
+    path = path.join('/');
   }
+  this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
 };
 CollectionReplica.prototype.handleUserDestruction = function(u){
   Collection.prototype.handleUserDestruction.call(this,u);
