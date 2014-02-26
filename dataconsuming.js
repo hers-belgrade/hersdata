@@ -329,11 +329,12 @@ ConsumingCollection.prototype.target = function(name,user){
 ConsumingCollection.prototype.followForUser = function(path,user,startindex){
   startindex = startindex||0;
   //console.log(path,user.username,path.length,startindex);
+  if(typeof path === 'undefined'){
+    console.trace();
+    process.exit(0);
+  }
   if(path.length>startindex){
     var target = this.target(path[startindex],user);
-    if(path[startindex]==0){
-      console.log('TARGET FOR ZERO FOUND');
-    }
     if(target){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
@@ -487,8 +488,10 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    //console.log('follow',path);
-    path = path.path;
+    console.log('follow',path);
+    if(path.path){
+      path = path.path;
+    }
     if(typeof path === undefined){
       cb('NOK');
       return;
