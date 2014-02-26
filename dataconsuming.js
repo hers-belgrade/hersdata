@@ -488,11 +488,6 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   u.sessions = {};
   u.follow = function(path){
     //console.log('follow',path);
-    for(var i in path){
-      if(path[i]=='players'){
-        console.log('looking for some players',path);
-      }
-    }
     if(typeof path === undefined){
       return;
     }
