@@ -176,7 +176,7 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
     case 'object':
       if(fn instanceof Array){
         if(path.length===1){
-          var t = this, map = {}, handled=[], shouldhandle=fn.length;
+          var t = this, map = {}, oldmap = {}, handled=[], shouldhandle=fn.length, sendold=true;
           for(var i in fn){
             var _en = fn[i];
             var w = new Data_CollectionElementWaiter(this,collection,[_en],function(){
@@ -185,6 +185,11 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
                 _n = this.name;
               }else{
                 _n = _en;
+              }
+              if(typeof map[_n] === 'undefined'){
+                sendold=false;
+              }else{
+                oldmap[_n] = map[_n];
               }
               map[_n] = val;
               if(handled.indexOf(_n)<0){
@@ -197,6 +202,9 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
               if(handled.length===shouldhandle){
                 var args = Array.prototype.slice.call(arguments,0,arguments.length-1);
                 args.push(map);
+                if(sendold){
+                  args.push(oldmap);
+                }
                 cb.apply(t,args);
               }
             });
