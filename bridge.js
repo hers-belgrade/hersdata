@@ -176,7 +176,7 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
     case 'object':
       if(fn instanceof Array){
         if(path.length===1){
-          var t = this, map = {}, oldmap = {}, handled=[], shouldhandle=fn.length, sendold=true;
+          var t = this, map = {}, oldmap = {}, handled=[], shouldhandle=fn.length, handledold=[];
           for(var i in fn){
             var _en = fn[i];
             var w = new Data_CollectionElementWaiter(this,collection,[_en],function(){
@@ -186,10 +186,16 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
               }else{
                 _n = _en;
               }
-              if(typeof map[_n] === 'undefined'){
-                sendold=false;
-              }else{
+              if(typeof map[_n] !== 'undefined'){
+                if(handledold.indexOf(_n)<0){
+                  handledold.push(_n);
+                }
                 oldmap[_n] = map[_n];
+              }else{
+                var ion = handledold.indexOf(_n);
+                if(ion){
+                  handledold.splice(ion,1);
+                }
               }
               map[_n] = val;
               if(handled.indexOf(_n)<0){
@@ -202,9 +208,10 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
               if(handled.length===shouldhandle){
                 var args = Array.prototype.slice.call(arguments,0,arguments.length-1);
                 args.push(map);
-                if(sendold){
+                if(handledold.length===shouldhandle){
                   args.push(oldmap);
                 }
+                //console.log('cb-ing with',args);
                 cb.apply(t,args);
               }
             });
