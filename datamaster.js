@@ -981,7 +981,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
     el.waitFor(querypath,cb,waiter,startindex+1);
     return;
   }
-  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
+  return new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){

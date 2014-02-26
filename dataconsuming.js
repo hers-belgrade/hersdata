@@ -486,14 +486,18 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     return;
   }
   u.sessions = {};
-  u.follow = function(path){
+  u.follow = function(path,cb){
     //console.log('follow',path);
+    path = path.path;
     if(typeof path === undefined){
+      cb('NOK');
       return;
     }
     coll.followForUser(path,this);
+    cb && cb('OK',path);
   };
-  u.unfollow = function(path){
+  u.unfollow = function(path,cb){
+    cb && cb('OK',path);
   };
   u.describe = function(cb){
     //console.log('describe begin');
