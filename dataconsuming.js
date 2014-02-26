@@ -488,7 +488,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    console.log('follow',path);
+    //console.log('follow',path);
     if(path.path){
       path = path.path;
     }
