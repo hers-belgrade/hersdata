@@ -550,7 +550,9 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
+  console.log('describe',u.username);
   if(!(u.fullname in this.locations)){
+    console.log('not mine');
     return;
   }
   if(u.fullname in this.locations){
