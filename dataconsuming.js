@@ -517,6 +517,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
 
 function ReplicatingConsumingCollection(el,path,name,parnt){
   ConsumingCollection.call(this,el,path,name,parnt);
+  this.name = name;
 };
 ReplicatingConsumingCollection.prototype = new ConsumingCollection();
 ReplicatingConsumingCollection.prototype.repackRemoteItem = function(item){
