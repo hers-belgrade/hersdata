@@ -522,6 +522,7 @@ ReplicatingConsumingCollection.prototype = new ConsumingCollection();
 ReplicatingConsumingCollection.prototype.repackRemoteItem = function(item){
   if(!item){return;}
   if(item==='DISCARD_THIS'){
+    console.log('DISCARD_THIS ? :(');
     this.destroy();
     return;
   }

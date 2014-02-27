@@ -988,6 +988,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   var w =  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
   w.destroyed.attach(function(){
     cb('DISCARD_THIS');
+    console.log('Waiter dead');
   });
   return w;
 };
@@ -1016,6 +1017,7 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
     u.describe(cb);
   }else{
     cb('DISCARD_THIS');
+    console.log('no user to describe to');
   }
 };
 
