@@ -199,7 +199,7 @@ function ConsumingCollection(el,path,name,parnt){
   this.locations = {};
   this.parnt = parnt;
   this.describer = typeof name !== 'undefined' ? JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]) : null;
-  this.deleter = JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name])]);
+  this.deleter = JSON.stringify([path.slice(0,-1),JSON.stringify([name])]);
   this.el = el;
   this.path = path;
   if(el.replicaToken && el.replicaToken.skipdcp){return;}
@@ -210,9 +210,8 @@ function ConsumingCollection(el,path,name,parnt){
   this.waiters = [];
   this.name = name;
   var t = this;
-  console.log(this);
   new Waiter(el,el,['*'],function(name,el){
-    if(!t.scalars){ return; }
+    if(!t.scalars){ this.destroy(); return; }
     var ent, target;
     switch(el.type()){
       case 'Scalar':
