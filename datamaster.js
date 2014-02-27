@@ -981,17 +981,27 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
     el.waitFor(querypath,cb,waiter,startindex+1);
     return;
   }
-  return new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
+  var w =  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
+  w.destroyed.attach(function(){
+    cb('DISCARD_THIS');
+  });
+  return w;
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
+  console.log('setFollower',username);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }
-  var u = UserBase.setUser(username,realmname,roles);
+  u = UserBase.setUser(username,realmname,roles);
   if(u){
-    this.consumer.upgradeUserToConsumer(u);
-    u.push = cb;
+    if(!u.clearConsumingExtension){
+      this.consumer.upgradeUserToConsumer(u);
+      u.push = cb;
+    }
+  }else{
+    cb('DISCARD_THIS');
+    console.log(u.username,'could not be set for following');
   }
   return u;
 };
@@ -1000,13 +1010,18 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
   var u = UserBase.findUser(username,realmname);
   if(u){
     u.describe(cb);
+  }else{
+    cb('DISCARD_THIS');
   }
 };
 
-Collection.prototype.doUserFollow = function(username,realmname,cb){
+Collection.prototype.doUserFollow = function(username,realmname,path){
   //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
   if(u){
+    if(!u.follow){
+      return;
+    }
     u.follow(Array.prototype.slice.call(arguments,2));
   }
 };
