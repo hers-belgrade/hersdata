@@ -191,11 +191,11 @@ function Collection(a_l){
   };
 
   this.destroy = function(){
-    this.destroyed.fire();
     for(var i in data){
       this.remove(i);
       //data[i].destroy();
     }
+    this.destroyed.fire();
     data = null;
     this.onNewTransaction.destruct();
     this.accessLevelChanged.destruct();
@@ -994,7 +994,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  console.log('setFollower',username,this.consumer);
+  //console.log('setFollower',username,this.consumer);
   if(!this.consumer){
     var dc = require('./dataconsuming');
     console.log(dc);
@@ -1004,7 +1004,10 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
   if(u){
     if(!u.clearConsumingExtension){
       this.consumer.upgradeUserToConsumer(u);
-      u.push = cb;
+      u.push = function (item) {
+				console.log(item);
+			 	cb.apply(this, arguments);
+			}
       /*
       u.push = username==='saban' ? function(item){
         console.log('<== ',item);
