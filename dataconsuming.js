@@ -550,7 +550,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
-  if(!u.fullname in this.locations){
+  if(!(u.fullname in this.locations)){
     return;
   }
   if(u.fullname in this.locations){
