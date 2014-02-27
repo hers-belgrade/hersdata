@@ -1017,7 +1017,7 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
     u.describe(cb);
   }else{
     cb('DISCARD_THIS');
-    console.log('no user to describe to');
+    console.log(username,realmname,'not found to describe to');
   }
 };
 
