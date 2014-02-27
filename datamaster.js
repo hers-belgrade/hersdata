@@ -994,10 +994,8 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  //console.log('setFollower',username,this.consumer);
+  //console.log('setFollower',username);
   if(!this.consumer){
-    var dc = require('./dataconsuming');
-    console.log(dc);
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }
   u = UserBase.setUser(username,realmname,roles);
