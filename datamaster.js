@@ -988,6 +988,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   var w =  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
   w.destroyed.attach(function(){
     cb('DISCARD_THIS');
+    console.trace();
     console.log('Waiter dead');
   });
   return w;
