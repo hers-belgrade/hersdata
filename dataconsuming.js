@@ -528,11 +528,11 @@ ReplicatingConsumingCollection.prototype.repackRemoteItem = function(item){
     return;
   }
   item = JSON.parse(item);
-  console.log('parsed incoming item',item);
+  //console.log('parsed incoming item',item);
   item[0] = typeof item[0] === 'string' ? JSON.parse(item[0]) : item[0];
   item[0] = JSON.stringify(this.path.concat(item[0]));
   var ret = JSON.stringify(item);
-  console.log('repacked item',ret);
+  //console.log('repacked item',ret);
   return ret;
 };
 ReplicatingConsumingCollection.prototype.add = function(user){

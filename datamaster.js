@@ -1002,10 +1002,13 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
   if(u){
     if(!u.clearConsumingExtension){
       this.consumer.upgradeUserToConsumer(u);
+      u.push = cb;
+      /*
       u.push = username==='saban' ? function(item){
         console.log('<== ',item);
         cb(item);
       } : cb;
+      */
     }
   }else{
     cb('DISCARD_THIS');
