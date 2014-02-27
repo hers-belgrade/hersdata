@@ -191,6 +191,7 @@ ConsumingScalar.prototype.remove = function(u){
   delete this.locations[u.fullname];
 };
 function ConsumingCollection(el,path,name,parnt){
+  console.log('new');
   ConsumingEntity.call(this,el,path,name);
   if(!el){
     return;
