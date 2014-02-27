@@ -968,6 +968,10 @@ Collection.prototype.processInput = function(sender,input){
         if(!(this.persist && this.persist[cbref])){
           delete this.cbs[cbref];
         }
+        if(commandresult==='DISCARD_THIS'){
+          delete this.cbs[cbref];
+          delete this.persist[cbref];
+        }
       }
     }
   }

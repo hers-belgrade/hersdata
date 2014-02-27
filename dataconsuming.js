@@ -543,6 +543,10 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   var path = this.path;
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     //console.log('followed item',item);
+    if(item==='DISCARD_SELF'){
+      console.log('should discard self');
+      return;
+    }
     item = ReplicatingConsumingCollection.repackRemoteItem(path,item);
     //console.log('repacked item',item);
     if(item){
