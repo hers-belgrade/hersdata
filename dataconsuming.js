@@ -208,7 +208,9 @@ function ConsumingCollection(el,path,name,parnt){
   this.waiters = [];
   this.name = name;
   var t = this;
+  console.log('created',this);
   this.createListener('el_new_el',function(name,el){
+    console.log(name,el);
     if(!t.scalars){ return; }
     var ent, target;
     switch(el.type()){
