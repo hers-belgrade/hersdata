@@ -519,7 +519,7 @@ function ReplicatingConsumingCollection(el,path,name,parnt){
   ConsumingCollection.call(this,el,path,name,parnt);
 };
 ReplicatingConsumingCollection.prototype = new ConsumingCollection();
-ReplicatingConsumingCollection.prototype.repackRemoteItem = function(path,item){
+ReplicatingConsumingCollection.prototype.repackRemoteItem = function(item){
   if(!item){return;}
   if(item==='DISCARD_THIS'){
     this.destroy();
@@ -528,7 +528,7 @@ ReplicatingConsumingCollection.prototype.repackRemoteItem = function(path,item){
   item = JSON.parse(item);
   //console.log('parsed incoming item',item);
   item[0] = typeof item[0] === 'string' ? JSON.parse(item[0]) : item[0];
-  item[0] = JSON.stringify(path.concat(item[0]));
+  item[0] = JSON.stringify(this.path.concat(item[0]));
   var ret = JSON.stringify(item);
 };
 ReplicatingConsumingCollection.prototype.add = function(user){
@@ -536,10 +536,10 @@ ReplicatingConsumingCollection.prototype.add = function(user){
     return;
   }
   this.locations[user.fullname] = user;
-  var path = this.path;
+  var t = this;
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     //console.log('followed item',item);
-    item = this.repackRemoteItem(path,item);
+    item = t.repackRemoteItem(item);
     //console.log('repacked item',item);
     if(item){
       user.push(item);
@@ -552,10 +552,10 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
   if(u.fullname in this.locations){
     cb(this.describer);
   }
-  var path = this.path;
+  var t = this;
   this.el.send('rpc','doUserDescribe',u.username,u.realmname,function(item){
     //console.log('described item',item);
-    item = this.repackRemoteItem(path,item);
+    item = t.repackRemoteItem(item);
     //console.log('repacked item',item);
     if(item){
       cb(item);
