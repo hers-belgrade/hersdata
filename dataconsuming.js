@@ -1,4 +1,5 @@
 var Listener = require('./listener'),
+    Waiter = require('./bridge').Data_CollectionElementWaiter,
     Timeout = require('herstimeout');
 
 function removeFromArray(ar,el){
@@ -208,8 +209,7 @@ function ConsumingCollection(el,path,name,parnt){
   this.waiters = [];
   this.name = name;
   var t = this;
-  console.log('craeted this');
-  this.createListener('el_new_el',function(name,el){
+  new Waiter(['*'],function(name,el){
     if(!t.scalars){ return; }
     var ent, target;
     switch(el.type()){
@@ -259,7 +259,7 @@ function ConsumingCollection(el,path,name,parnt){
     if(target && ent){
       target[name] = ent;
     }
-  },el.newElement);
+  });
   this.createListener('elKeyChanged',function(){
     var key = el.access_level();
     for(var i in this.subscribers){
