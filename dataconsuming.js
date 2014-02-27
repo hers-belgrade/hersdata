@@ -533,6 +533,7 @@ ReplicatingConsumingCollection.prototype.repackRemoteItem = function(item){
   var ret = JSON.stringify(item);
 };
 ReplicatingConsumingCollection.prototype.add = function(user){
+  console.log(this.name,'add',u.username);
   if(user.fullname in this.locations){
     return;
   }
@@ -550,7 +551,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
-  console.log('describe',u.username);
+  console.log(this.name,'describe',u.username);
   if(!(u.fullname in this.locations)){
     console.log('not mine');
     return;
@@ -570,6 +571,9 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
 };
 ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
   //console.log('ReplicatingConsumingCollection',path,user.username,startindex);
+  if(!(user.fullname in this.locations)){
+    this.add(user);
+  }
   var args = ['rpc','doUserFollow',user.username,user.realmname];
   for(var i = startindex; i<path.length; i++){
     args.push(path[i]);
