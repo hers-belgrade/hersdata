@@ -211,7 +211,7 @@ function ConsumingCollection(el,path,name,parnt){
   this.name = name;
   var t = this;
   console.log(this);
-  new Waiter(['*'],function(name,el){
+  new Waiter(el,el,['*'],function(name,el){
     if(!t.scalars){ return; }
     var ent, target;
     switch(el.type()){
