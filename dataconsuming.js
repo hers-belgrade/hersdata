@@ -519,7 +519,7 @@ function ReplicatingConsumingCollection(el,path,name,parnt){
   ConsumingCollection.call(this,el,path,name,parnt);
 };
 ReplicatingConsumingCollection.prototype = new ConsumingCollection();
-ReplicatingConsumingCollection.repackRemoteItem = function(path,item){
+ReplicatingConsumingCollection.prototype.repackRemoteItem = function(path,item){
   if(!item){return;}
   if(item==='DISCARD_THIS'){
     this.destroy();
@@ -539,7 +539,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   var path = this.path;
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     //console.log('followed item',item);
-    item = ReplicatingConsumingCollection.repackRemoteItem(path,item);
+    item = this.repackRemoteItem(path,item);
     //console.log('repacked item',item);
     if(item){
       user.push(item);
@@ -555,7 +555,7 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
   var path = this.path;
   this.el.send('rpc','doUserDescribe',u.username,u.realmname,function(item){
     //console.log('described item',item);
-    item = ReplicatingConsumingCollection.repackRemoteItem(path,item);
+    item = this.repackRemoteItem(path,item);
     //console.log('repacked item',item);
     if(item){
       cb(item);
