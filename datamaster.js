@@ -1022,7 +1022,7 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
 };
 
 Collection.prototype.doUserFollow = function(username,realmname,path){
-  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
+  console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
   if(u){
     if(!u.follow){
