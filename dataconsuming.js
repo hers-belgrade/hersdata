@@ -278,7 +278,7 @@ function ConsumingCollection(el,path,name,parnt){
 ConsumingCollection.prototype = new ConsumingEntity();
 ConsumingCollection.prototype.notifyDestroy = function(){
   for(var i in this.subscribers){
-    this.subscribers[i].push(this.deleter);
+    this.say(this.subscribers[i],this.deleter);
   }
 };
 ConsumingCollection.prototype.destroy = function(){
@@ -480,7 +480,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    console.log('follow',path);
+    //console.log('follow',path);
     if(path.path){
       path = path.path;
     }
@@ -543,10 +543,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   this.locations[user.fullname] = user;
   var t = this;
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
-    item = t.repackRemoteItem(item);
-    if(item){
-      user.push(item);
-    }
+    t.say(user,t.repackRemoteItem(item));
   },'__persistmycb');
   this.el.send('rpc','doUserFollow',user.username,user.realmname);
   ConsumingCollection.prototype.add.call(this,user);

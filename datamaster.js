@@ -994,7 +994,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
 };
 
 Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  console.log('setFollower',username);
+  //console.log('setFollower',username);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
   }
@@ -1028,7 +1028,7 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
 };
 
 Collection.prototype.doUserFollow = function(username,realmname,path){
-  console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
+  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
   if(u){
     if(!u.follow){
