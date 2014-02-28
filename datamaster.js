@@ -982,13 +982,13 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   startindex = startindex||0;
   var el = this.element([querypath[startindex]]);
   if(el && el.type() === 'Collection'){
-    el.waitFor(querypath,cb,waiter,startindex+1);
-    return;
+    return el.waitFor(querypath,cb,waiter,startindex+1);
   }
-  var w =  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
+  var targetpath = startindex ? querypath.splice(startindex) : querypath;
+  var w =  new Waiter(waiter,this,targetpath,cb);
   w.destroyed.attach(function(){
     cb('DISCARD_THIS');
-    console.log('Waiter dead',waiter.dataDebug ? waiter.dataDebug() : waiter);
+    console.log('Waiter dead',targetpath);
   });
   return w;
 };
