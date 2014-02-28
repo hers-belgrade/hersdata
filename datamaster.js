@@ -176,7 +176,6 @@ function Collection(a_l){
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
-      console.log('dcp remove',name);
       data[name].destroy();
       delete data[name];
     }
@@ -989,8 +988,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   var w =  new Waiter(waiter,this,startindex ? querypath.splice(startindex) : querypath,cb);
   w.destroyed.attach(function(){
     cb('DISCARD_THIS');
-    console.trace();
-    console.log('Waiter dead');
+    console.log('Waiter dead',waiter.dataDebug ? waiter.dataDebug() : waiter);
   });
   return w;
 };
