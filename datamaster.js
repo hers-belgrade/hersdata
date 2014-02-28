@@ -176,6 +176,7 @@ function Collection(a_l){
 
   this.remove = function(name){
     if(typeof data[name] !== 'undefined'){
+      console.log('dcp remove',name);
       data[name].destroy();
       delete data[name];
     }
