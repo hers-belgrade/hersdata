@@ -127,7 +127,7 @@ ConsumingScalar.prototype.setValues = function(){
   this.setPrivateValue();
 };
 ConsumingScalar.prototype.userDebug = function(u){
-  if(u.username==='milojko' && this.name==='name'){
+  if(u.username==='saban'){
     console.log.apply(console,Array.prototype.slice.call(arguments,1));
   }
 };
@@ -183,12 +183,16 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
 };
 ConsumingScalar.prototype.remove = function(u){
   var fn = u.fullname;
-  if(this.locations[u.fullname]===2){
+  this.userDebug(u,'in removal location on',this.name,'is',this.locations[u.fullname]);
+  if(this.locations[u.fullname]===1){
+    this.userDebug(u,'removed from subscribers of',this.name);
     removeFromArray(this.subscribers,u);
   }else{
+    this.userDebug(u,'removed from observers of',this.name);
     removeFromArray(this.observers,u);
   }
   delete this.locations[u.fullname];
+  this.userDebug(u,'finally, subscribers',this.subscribers);
 };
 function ConsumingCollection(el,path,name,parnt){
   ConsumingEntity.call(this,el,path,name);
@@ -197,7 +201,7 @@ function ConsumingCollection(el,path,name,parnt){
   }
   this.locations = {};
   this.parnt = parnt;
-  this.describer = typeof name !== 'undefined' ? JSON.stringify([JSON.stringify(path.slice(0,-1)),JSON.stringify([name,null])]) : null;
+  this.describer = typeof name !== 'undefined' ? JSON.stringify([path.slice(0,-1),JSON.stringify([name,null])]) : null;
   this.deleter = JSON.stringify([path.slice(0,-1),JSON.stringify([name])]);
   this.el = el;
   this.path = path;
@@ -340,9 +344,9 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
   }
   if(path.length>startindex){
     var targetname = path[startindex],skipadd;
-    if(typeof targetname !== 'string'){
-      targetname = targetname[0];
+    if(typeof targetname === 'object' && targetname instanceof Array){
       skipadd = targetname[1];
+      targetname = targetname[0];
     }
     var target = this.target(targetname,user);
     if(target){
@@ -464,6 +468,7 @@ ConsumingCollection.prototype.add = function(u){
         removeFromArray(this.subscribers,u);
         addToArray(this.pretendents,u);
         for(var i in this.scalars){
+          console.log(i,'should remove',u.username);
           this.scalars[i].remove(u);
         }
       }
@@ -505,9 +510,11 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     cb && cb('OK',path);
   };
   u.describe = function(cb){
-    //console.log('describe begin');
-    coll.describe(u,cb);
-    //console.log('describe end');
+    //coll.describe(u,cb);
+    coll.describe(u,function(item){
+      console.log(item);
+      cb.call(this,arguments);
+    });
   };
   u.clearConsumingExtension = function(){
     if(this.sessions){
