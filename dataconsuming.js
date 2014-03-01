@@ -510,11 +510,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     cb && cb('OK',path);
   };
   u.describe = function(cb){
-    //coll.describe(u,cb);
-    coll.describe(u,function(item){
-      console.log(item);
-      cb.call(this,arguments);
-    });
+    coll.describe(u,cb);
   };
   u.clearConsumingExtension = function(){
     if(this.sessions){
