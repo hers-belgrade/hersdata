@@ -154,7 +154,7 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
   if(u.contains(key)){
     if(this.locations[u.fullname]===2){
       this.locations[u.fullname] = 1;
-      this.userDebug(u,'becomes a subscriber');
+      //this.userDebug(u,'becomes a subscriber');
       removeFromArray(this.observers,u);
       addToArray(this.subscribers,u);
       this.say(u,this.value);
@@ -165,7 +165,7 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
     }
   }else{
     if(this.locations[u.fullname]===1){
-      this.userDebug(u,'becomes an observer');
+      //this.userDebug(u,'becomes an observer');
       this.locations[u.fullname] = 2;
       removeFromArray(this.subscribers,u);
       addToArray(this.observers,u);
@@ -183,16 +183,16 @@ ConsumingScalar.prototype.check = function(u,key,changedmap){
 };
 ConsumingScalar.prototype.remove = function(u){
   var fn = u.fullname;
-  this.userDebug(u,'in removal location on',this.name,'is',this.locations[u.fullname]);
+  //this.userDebug(u,'in removal location on',this.name,'is',this.locations[u.fullname]);
   if(this.locations[u.fullname]===1){
-    this.userDebug(u,'removed from subscribers of',this.name);
+    //this.userDebug(u,'removed from subscribers of',this.name);
     removeFromArray(this.subscribers,u);
   }else{
-    this.userDebug(u,'removed from observers of',this.name);
+    //this.userDebug(u,'removed from observers of',this.name);
     removeFromArray(this.observers,u);
   }
   delete this.locations[u.fullname];
-  this.userDebug(u,'finally, subscribers',this.subscribers);
+  //this.userDebug(u,'finally, subscribers',this.subscribers);
 };
 function ConsumingCollection(el,path,name,parnt){
   ConsumingEntity.call(this,el,path,name);
@@ -353,7 +353,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
       }else{
-        console.log('adding',user.username,'to',target.name);
+        //console.log('adding',user.username,'to',target.name);
         if(!skipadd){
           target.add(user);
         }
@@ -362,7 +362,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
     }
   }else{
-    console.log(this.name,'adding',user.username,'myself');
+    //console.log(this.name,'adding',user.username,'myself');
     this.add(user);
   }
 };
