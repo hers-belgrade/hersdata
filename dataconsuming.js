@@ -311,11 +311,15 @@ ConsumingCollection.prototype.destroy = function(){
 };
 ConsumingCollection.prototype.describe = function(u,cb){
   if(!(u.fullname in this.locations)){
+    return;
+  }
+  if(u.fullname in this.throughput){
     for(var i in this.collections){
       this.collections[i].describe(u,cb);
     }
     return;
   }
+  cb(this.describer);
   for(var i in this.scalars){
     var s = this.scalars[i];
     u.contains(s.el.access_level()) ? cb(s.value) : cb(s.public_value);
@@ -335,13 +339,20 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
     process.exit(0);
   }
   if(path.length>startindex){
-    var target = this.target(path[startindex],user);
+    var targetname = path[startindex],skipadd;
+    if(typeof targetname !== 'string'){
+      targetname = targetname[0];
+      skipadd = targetname[1];
+    }
+    var target = this.target(targetname,user);
     if(target){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
       }else{
         //console.log('adding',user.username,'to',target.name);
-        target.add(user);
+        if(!skipadd){
+          target.add(user);
+        }
       }
     }else{
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
@@ -480,7 +491,6 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    //console.log('follow',path);
     if(path.path){
       path = path.path;
     }
