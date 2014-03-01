@@ -1003,7 +1003,7 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
     if(!u.clearConsumingExtension){
       this.consumer.upgradeUserToConsumer(u);
       u.push = username==='saban' ? function(item){
-        console.log('<== ',item);
+        //console.log('<== ',item);
 			 	cb.apply(this, arguments);
       } : cb;
     }
@@ -1015,6 +1015,7 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
 };
 
 Collection.prototype.doUserDescribe = function(username,realmname,cb){
+  console.log('doUserDescribe',username);
   var u = UserBase.findUser(username,realmname);
   if(u){
     u.describe(cb);
