@@ -310,13 +310,13 @@ ConsumingCollection.prototype.destroy = function(){
   }
 };
 ConsumingCollection.prototype.describe = function(u,cb){
-  if(!(u.fullname in this.locations)){
-    return;
-  }
-  if(u.fullname in this.throughput){
+  if(!this.parnt || (this.throughput && u.fullname in this.throughput)){
     for(var i in this.collections){
       this.collections[i].describe(u,cb);
     }
+    return;
+  }
+  if(!(u.fullname in this.locations)){
     return;
   }
   cb(this.describer);
@@ -349,7 +349,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
       if(path.length>startindex+1){
         target.followForUser(path,user,startindex+1);
       }else{
-        //console.log('adding',user.username,'to',target.name);
+        console.log('adding',user.username,'to',target.name);
         if(!skipadd){
           target.add(user);
         }
@@ -358,7 +358,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
     }
   }else{
-    //console.log(this.name,'adding',user.username,'myself');
+    console.log(this.name,'adding',user.username,'myself');
     this.add(user);
   }
 };
