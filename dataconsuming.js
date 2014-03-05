@@ -571,7 +571,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     t.say(user,t.repackRemoteItem(item));
   },'__persistmycb');
-  this.el.send('rpc','doUserFollow',user.username,user.realmname);
+  //this.el.send('rpc','doUserFollow',user.username,user.realmname);
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
@@ -592,7 +592,7 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
   },'__persistmycb');
 };
 ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
-  //console.log('ReplicatingConsumingCollection',path,user.username,startindex);
+  //console.log('replica follows',path,user.username,startindex);
   if(!(user.fullname in this.locations)){
     this.add(user);
   }
