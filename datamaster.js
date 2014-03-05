@@ -572,7 +572,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   }
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){return;if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
     return function(errorkey){
       if(!errorkey){
         ecb(0,'ok');

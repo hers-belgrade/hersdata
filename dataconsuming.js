@@ -314,7 +314,7 @@ ConsumingCollection.prototype.destroy = function(){
   }
 };
 ConsumingCollection.prototype.describe = function(u,cb){
-  if(!this.parnt || (this.throughput && u.fullname in this.throughput)){
+  if(!this.parnt || (this.throughput && this.throughput.indexOf(u)>=0)){
     for(var i in this.collections){
       this.collections[i].describe(u,cb);
     }
@@ -356,6 +356,8 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
         //console.log('adding',user.username,'to',target.name);
         if(!skipadd){
           target.add(user);
+        }else{
+          target.addThru(user);
         }
       }
     }else{
@@ -414,6 +416,16 @@ ConsumingCollection.prototype.remove = function(user){
     removeFromArray(this.observers,user);
   }
   delete this.locations[u.fullname];
+};
+ConsumingCollection.prototype.addThru = function(u){
+  if(u.fullname in this.locations){
+    return;
+  }
+  if(!this.throughput){
+    this.throughput = [u];
+  }else{
+    addToArray(this.throughput,u);
+  }
 };
 ConsumingCollection.prototype.add = function(u){
   if(!this.subscribers){
@@ -496,6 +508,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
+    console.log('follow',path);
     if(path.path){
       path = path.path;
     }
