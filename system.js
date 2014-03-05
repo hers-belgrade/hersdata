@@ -14,18 +14,18 @@ function doMetrics(data){
   var mmu = Math.floor(process.memoryUsage().rss/1024/1024);
   var actions = [];
   actions.push(['set',['CPU'],[m.utilization||0,undefined,'dcp']]);
-  actions.push(['set',['exec_delay'],[((~~(m.delay*100)/100)||0)+'ms',undefined,'dcp']]);
+  actions.push(['set',['exec_delay'],[((~~(m.delay*100)/100)||0),undefined,'dcp']]);
   actions.push(['set',['exec_queue'],[m.queue && m.queue.current ? m.queue.current : 0,undefined,'dcp']]);
-  actions.push(['set',['network_in'],[(nm.traffic&&nm.traffic.rx ? nm.traffic.rx : 0)+'bytes',undefined,'dcp']]);
-  actions.push(['set',['network_out'],[(nm.traffic&&nm.traffic.tx ? nm.traffic.tx : 0)+'bytes',undefined,'dcp']]);
+  actions.push(['set',['network_in'],[(nm.traffic&&nm.traffic.rx ? nm.traffic.rx : 0),undefined,'dcp']]);
+  actions.push(['set',['network_out'],[(nm.traffic&&nm.traffic.tx ? nm.traffic.tx : 0),undefined,'dcp']]);
   //console.log('memory usage',mmu);
   if(mu!==mmu){
-    actions.push(['set',['memoryusage'],[mmu+'MB',undefined,'system']]);
+    actions.push(['set',['memoryusage'],[mmu,undefined,'system']]);
   }
   var ma = data.element(['memoryavailable']).value();
   var mma = Math.floor(os.freemem()/1024/1024);
   if(ma!==mma){
-    actions.push(['set',['memoryavailable'],[mma+'MB',undefined,'system']]);
+    actions.push(['set',['memoryavailable'],[mma,undefined,'system']]);
   }
   var ic = data.instanceCounts();
   //console.log('commiting memoryusagechanged',now);
