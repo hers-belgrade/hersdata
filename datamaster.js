@@ -845,6 +845,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
+    console.log('==========>', internal);
     var remotecounter = internal.shift();
     switch(internal[0]){
       case 'need_init':
@@ -884,7 +885,7 @@ Collection.prototype.processInput = function(sender,input){
           console.log('but it is a duplicate');
           //now what??
           //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
-          sender.send({internal:'give_up'});
+          sender.send({internal:[0,'give_up']});
           sender.socket.destroy();
           return;
         }
@@ -895,10 +896,10 @@ Collection.prototype.processInput = function(sender,input){
         }
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
-        sender.send({internal:['initDCPreplica',ret]});
+        sender.send({internal:[0,'initDCPreplica',ret]});
         if(dodcp){
           sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-            sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
+            sender.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
           });
           if(typeof sender.listener !== 'number'){
             console.log('no return from attach');
@@ -952,6 +953,7 @@ Collection.prototype.processInput = function(sender,input){
       args[args.length-1] = function(){
         var args = Array.prototype.slice.call(arguments);
         args.unshift(fnref);
+        args.unshift(0);
         //console.log('sending commandresult',args);
         sender.send({commandresult:args});
       };

@@ -53,7 +53,7 @@ CollectionReplica.prototype.prepareCallParams = function(ca,persist){
     }
   }
   this.counter.inc();
-  ca.unshift(this.counter);
+  ca.unshift(this.counter.toString());
   return ca;
 };
 CollectionReplica.prototype.go = function(){
