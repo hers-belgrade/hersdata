@@ -808,7 +808,7 @@ Collection.prototype.startHTTP = function(port,root,name){
     t.processInput(this,input);
   });
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
+    cp.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
   });
   process.on('uncaughtException',function(e){
 		//console.log('===========', cp);
@@ -857,7 +857,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:['setKey',user.username,user.realmname,key]});
+              replicator.send({internal:[0,'setKey',user.username,user.realmname,key]});
             }
             catch(e){
               delete user.replicator;
@@ -867,7 +867,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:['removeKey',user.username,user.realmname,key]});
+              replicator.send({internal:[0,'removeKey',user.username,user.realmname,key]});
             }
             catch(e){
               delete user.replicator;
