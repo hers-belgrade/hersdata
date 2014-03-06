@@ -845,7 +845,6 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
-    console.log('==========>', internal);
     var remotecounter = internal.shift();
     switch(internal[0]){
       case 'need_init':

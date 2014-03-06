@@ -57,7 +57,7 @@ CollectionReplica.prototype.prepareCallParams = function(ca,persist){
   return ca;
 };
 CollectionReplica.prototype.go = function(){
-  console.log(this,'should go');
+  //console.log(this,'should go');
   this.send('internal','need_init',this.replicaToken,this.dump());
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
