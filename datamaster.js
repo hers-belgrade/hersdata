@@ -976,7 +976,7 @@ Collection.prototype.processInput = function(sender,input){
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
     var ret = method.apply(this,args);
-    if ('function' === typeof(ret.destroy)) {
+    if (ret && ('function' === typeof(ret.destroy))) {
       if (!sender.destroyables) sender.destroyables = {};
       sender.destroyables[remotecounter] = ret;
     }
