@@ -953,7 +953,6 @@ Collection.prototype.processInput = function(sender,input){
       args[args.length-1] = function(){
         var args = Array.prototype.slice.call(arguments);
         args.unshift(fnref);
-        args.unshift(0);
         //console.log('sending commandresult',args);
         sender.send({commandresult:args});
       };
