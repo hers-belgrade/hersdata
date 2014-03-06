@@ -726,6 +726,13 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
     console.log('no replicatingClient named',replicatorname,'to close');//'in',this.replicatingClients);
     return;
   }
+
+  if (rc.destroyables) {
+    for (var i in rc.destroyables) {
+      rc.destroyables[i] && rc.destroyables[i].destroy();
+    }
+  }
+
   console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
   delete this.replicatingClients[replicatorname];
   if(rc.listener){
@@ -838,6 +845,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
+    var remotecounter = internal.shift();
     switch(internal[0]){
       case 'need_init':
         //console.log('remote replica announcing as',internal[1],internal[2]);
@@ -916,10 +924,20 @@ Collection.prototype.processInput = function(sender,input){
       case 'give_up':
         this.destroy(); 
         break;
+      case 'remoteDestroy':{
+        var dest = sender.destroyables && sender.destroyables[internal[1]];
+        if (dest) {
+          delete sender.destroyables[internal[1]];
+          dest.destroy();
+        }
+        break;
+      }
     }
   }
   var rpc = input.rpc;
   if(rpc){
+    var remotecounter = rpc.shift();
+
     var methodname = rpc[0];
     var method = this[methodname];
     if(typeof method !=='function'){
@@ -955,7 +973,11 @@ Collection.prototype.processInput = function(sender,input){
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
-    method.apply(this,args);
+    var ret = method.apply(this,args);
+    if ('function' === typeof(ret.destroy)) {
+      if (!sender.destroyables) sender.destroyables = {};
+      sender.destroyables[remotecounter] = ret;
+    }
   }
   var commandresult = input.commandresult;
   if(commandresult){
