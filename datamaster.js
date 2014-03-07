@@ -572,7 +572,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   }
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
+    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){return;if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
     return function(errorkey){
       if(!errorkey){
         ecb(0,'ok');
@@ -730,6 +730,13 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
     console.log('no replicatingClient named',replicatorname,'to close');//'in',this.replicatingClients);
     return;
   }
+
+  if (rc.destroyables) {
+    for (var i in rc.destroyables) {
+      rc.destroyables[i] && rc.destroyables[i].destroy();
+    }
+  }
+
   console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
   delete this.replicatingClients[replicatorname];
   if(rc.listener){
@@ -805,7 +812,7 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
     t.processInput(this,input);
   });
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    cp.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
+    cp.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
   });
   process.on('uncaughtException',function(e){
 		//console.log('===========', cp);
@@ -842,6 +849,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
+    var remotecounter = internal.shift();
     switch(internal[0]){
       case 'need_init':
         console.log('remote replica announcing as',internal[1],internal[2]);
@@ -852,7 +860,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:['setKey',user.username,user.realmname,key]});
+              replicator.send({internal:[0,'setKey',user.username,user.realmname,key]});
             }
             catch(e){
               delete user.replicator;
@@ -862,7 +870,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:['removeKey',user.username,user.realmname,key]});
+              replicator.send({internal:[0,'removeKey',user.username,user.realmname,key]});
             }
             catch(e){
               delete user.replicator;
@@ -881,7 +889,7 @@ Collection.prototype.processInput = function(sender,input){
           }
           //now what??
           //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
-          sender.send({internal:'give_up'});
+          sender.send({internal:[0,'give_up']});
           sender.socket && sender.socket.destroy();
           return;
         }
@@ -892,10 +900,10 @@ Collection.prototype.processInput = function(sender,input){
         }
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
-        sender.send({internal:['initDCPreplica',ret]});
+        sender.send({internal:[0,'initDCPreplica',ret]});
         if(dodcp){
           sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-            sender.send({rpc:['_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
+            sender.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
           });
           if(typeof sender.listener !== 'number'){
             console.log('no return from attach');
@@ -921,10 +929,20 @@ Collection.prototype.processInput = function(sender,input){
       case 'give_up':
         this.destroy(); 
         break;
+      case 'remoteDestroy':{
+        var dest = sender.destroyables && sender.destroyables[internal[1]];
+        if (dest) {
+          delete sender.destroyables[internal[1]];
+          dest.destroy();
+        }
+        break;
+      }
     }
   }
   var rpc = input.rpc;
   if(rpc){
+    var remotecounter = rpc.shift();
+
     var methodname = rpc[0];
     var method = this[methodname];
     if(typeof method !=='function'){
@@ -960,7 +978,11 @@ Collection.prototype.processInput = function(sender,input){
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
-    method.apply(this,args);
+    var ret = method.apply(this,args);
+    if (ret && ('function' === typeof(ret.destroy))) {
+      if (!sender.destroyables) sender.destroyables = {};
+      sender.destroyables[remotecounter] = ret;
+    }
   }
   var commandresult = input.commandresult;
   if(commandresult){

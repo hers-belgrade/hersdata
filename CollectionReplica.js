@@ -52,6 +52,8 @@ CollectionReplica.prototype.prepareCallParams = function(ca,persist){
       ca.push(cb);
     }
   }
+  this.counter.inc();
+  ca.unshift(this.counter.toString());
   return ca;
 };
 CollectionReplica.prototype.go = function(){
@@ -77,8 +79,14 @@ CollectionReplica.prototype.handleUserDestruction = function(u){
 };
 CollectionReplica.prototype.waitFor = function(querypath,cb,waiter,startindex){
   startindex = startindex||0;
+  var ret = {
+  }
   this.send('rpc','waitFor',querypath.splice(startindex),function(){
-    cb.apply(null,arguments);//null is for now, gotta find ways to destroy listening on the other side
+    cb.apply(ret,arguments);
   },'__persistmycb');
+  var self = this;
+  var c = this.counter.toString();
+  ret.destroy = function () { self.send('internal', 'remoteDestroy', c); }
+  return ret;
 };
 module.exports = CollectionReplica;
