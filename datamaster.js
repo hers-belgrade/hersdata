@@ -716,7 +716,11 @@ Collection.prototype.createRemoteReplica = function(localname,name,realmname,url
     console.trace();
     throw "createRemoteReplica expects 4 params now";
   }
-  this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url,skipdcp));
+  if(url==='local'){
+    this.add(localname,new (require('./ChildProcessCollectionReplica'))(realmname,skipdcp));
+  }else{
+    this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url,skipdcp));
+  }
 };
 
 Collection.prototype.closeReplicatingClient = function(replicatorname){
@@ -786,12 +790,12 @@ Collection.prototype.killAllProcesses = function () {
   }
 };
 
-Collection.prototype.startHTTP = function(port,root,name){
+Collection.prototype.startHTTP = function(port,root,name,modulename){
   name = name || 'local';
   if(!(this.functionalities && this.functionalities.system)){
     this.attach('./system',{});
   }
-  var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name]);
+  var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name,modulename]);
   if (!this.processes) this.processes = [];
   this.processes.push (cp);
 
@@ -840,7 +844,7 @@ Collection.prototype.processInput = function(sender,input){
   if(internal){
     switch(internal[0]){
       case 'need_init':
-        //console.log('remote replica announcing as',internal[1],internal[2]);
+        console.log('remote replica announcing as',internal[1],internal[2]);
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
@@ -871,13 +875,14 @@ Collection.prototype.processInput = function(sender,input){
         }
         sender.replicaToken = srt;
         if(this.replicatingClients[sender.replicaToken.name]){
-          //console.log('but it is a duplicate of',this.replicatingClients[sender.replicaToken.name]);
-          //console.log('but it is a duplicate on',this.dataDebug());
-          console.log('but it is a duplicate');
+          console.log('but it is a duplicate, I already have');
+          for(var i in this.replicatingClients){
+            console.log(i);
+          }
           //now what??
           //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
           sender.send({internal:'give_up'});
-          sender.socket.destroy();
+          sender.socket && sender.socket.destroy();
           return;
         }
         this.replicatingClients[sender.replicaToken.name] = sender;

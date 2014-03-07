@@ -1,151 +1,23 @@
 var Connect = require ('connect');
 var Url = require('url');
 var Path = require('path');
-var WebCollectionReplica = require('./WebCollectionReplica');
+var Collection = require('./datamaster').Collection;
 var Timeout = require('herstimeout');
+var http = require('http');
 
-function stripLeadingSlash(strng){
-  if(strng.length&&strng[0]==='/'){
-    return strng.slice(1);
-  }else{
-    return strng;
-  }
-};
 
-function RequestHandler(functionality,request,response,urlpath,data){
-  this.functionality = functionality;
-  this.response = response;
-  this.peekqueue = false;
-  var t = this;
-  functionality.findUser(data,function(errcode,errparams,errmessage){
-    if(errcode==='OK'){
-      t.user = errparams[0];
-      t.session = errparams[1];
-      var uo = {user:errparams[0],session:errparams[1]};
-      var _func = functionality;
-      request.on('close', function () {_func.deleteUserSession(uo)});
-      t.process(urlpath,data);
-    }else{
-      this.responseobj = {errorcode:errcode,errorparams:errparams,errormessage:errmess};
-      t.report_end();
-    }
-  });
-};
-RequestHandler.prototype.report_error = function(message){
-  var res = this.response;
-  if(res.writable){
-    res.writeHead(503,{'Content-Type':'text/plain'});
-    res.write(message);
-  }
-  res.end();
-};
-RequestHandler.prototype.report_end = function(){
-  var res = this.response;
-  if(!this.responseobj.username){
-		/// don't bother me, I know I am unknown user ...
-    //console.trace();
-    //console.log(this.responseobj);
-  }
-  var message = new Buffer(JSON.stringify(this.responseobj),'utf8');
-  if(res.writable){
-    var header = {'Content-Type':'text/plain;charset=utf-8'};
-    if (message) header['Content-Length']= message.length;
-    res.writeHead(200,header);
-    res.write(message.toString('utf8'));
-  }
-  res.end();
-};
-RequestHandler.prototype.process = function(urlpath,data){
-  this.responseobj = {results:[]};
-  urlpath = stripLeadingSlash(urlpath);
-  //console.log(urlpath,data);
-  switch(urlpath){
-    case 'executeDCP':
-      var commands=[];
-      var dcmds = data.commands;
-      try{
-        //console.log('data commands are',typeof dcmds,dcmds);
-        commands = JSON.parse(dcmds);
-      }
-      catch(e){
-        console.log('error JSON parsing',e,dcmds,typeof dcmds);
-        this.errorcode='JSON';
-        this.errorparams = [dcmds];
-        this.report_end();
-        return;
-      }
-      this.commandsdone = 0;
-      if(commands.length%2){
-        console.log('odd number of execute params');
-        throw ('odd execute');
-      }
-      this.commandstodo = commands.length/2;
-      for(var i =0; i< this.commandstodo; i++){
-        var command = commands[i*2],params = commands[i*2+1];
-        //console.log('command',command,'#',i,'of',this.commandstodo);
-        this.execute(command,params,(function(index,t){
-          var _i = index,_t=t;
-          return function(errcode,errparams,errmessage){
-            _t.responseobj.results[_i] = [errcode,errparams,errmessage];
-            _t.commandsdone++;
-            //console.log(_t.commandsdone,'commands done out of',_t.commandstodo);
-            if(_t.commandsdone===_t.commandstodo){
-              //console.log('finalizing');
-              _t.finalize();
-            }
-          };
-        })(i,this));
-      }
-      break;
-    default:
-      this.execute(urlpath,data,(function(t){var _t = t; return function(){_t.finalize();}})(this));
-      break;
-  }
-};
-RequestHandler.prototype.execute = function(command,paramobj,cb){
-  if(!(command&&command.length)||command==='_'){
-    cb();
-    return;
-  }
-  this.peekqueue=true;
-  switch(stripLeadingSlash(command)){
-    case 'follow':
-      this.user.follow(paramobj.path.slice());
-      cb('OK',paramobj.path);
-    break;
-    case 'init':
-    break;
-    default:
-      this.user.invoke(command,paramobj,cb);
-    break;
-  }
-};
-RequestHandler.prototype.finalize = function(){
-  //console.log('finalizing with peek',this.peekqueue);
-  var t = this;
-  this.functionality.dumpUserSession({user:this.user,session:this.session},function(errcode,errparams,errmess){
-    if(errcode==='OK'){
-      t.responseobj.username = t.user.username;
-      t.responseobj.roles = t.user.roles;
-      t.responseobj.session = errparams[0][0];
-      t.responseobj.data = errparams[0][1];
-    }else{
-      console.log('Ooops',errcode);
-      t.responseobj = {errorcode:errcode,errorparams:errparams,errormessage:errmess};
-    }
-    t.report_end();
-    for(var i in t){
-      delete t[i];
-    }
-  },this.peekqueue);
-};
-
-function WebServer (root, realm, pam) {
-  this.data = new WebCollectionReplica(realm);
-  this.sessionfunctionality = this.data.functionalities.sessionuserfunctionality.f;
+function WebServer (root, realm, usermodule) {
+  //this.data = new WebCollectionReplica(realm,true);
+  this.data = new Collection();
+  this.data.commit('init',[
+    ['set',['nodes'],'dcp']
+  ]);
+  this.data.element(['nodes']).createRemoteReplica('master',undefined,realm,'local',true);
+  this.data.attach('./sessionuserfunctionality',{realmName:realm});
+  this.data.attach(usermodule);
+  this.data.element(['nodes','master']).go();
 	this.root = root;
   this.realm = realm;
-	this.pam = pam;
 }
 
 WebServer.prototype.error_log = function (s) {
@@ -169,6 +41,40 @@ WebServer.prototype.connectionCountChanged = function(delta){
   ]);
 };
 
+
+function startSocketIO(server){
+  var io = require('socket.io').listen(server, { log: false });
+  console.log('socket.io listening');
+  io.set('authorization', function(handshakeData, callback){
+    var username = handshakeData.query.username;
+    var sess = handshakeData.query[dataMaster.fingerprint];
+    console.log('sock.io incoming',username,sess);
+    if(username && sess){
+      var u = UserBase.findUser(username,dataMaster.realmName);
+      if(!u){
+        callback(null,false);
+      }else{
+        handshakeData.username = username;
+        handshakeData.session = sess;
+        callback(null,true);
+      }
+    }else{
+      callback(null,false);
+    }
+  });
+  io.sockets.on('connection',function(sock){
+    var username = sock.handshake.username,
+      session = sock.handshake.session,
+      u = UserBase.findUser(username,dataMaster.realmName);
+    //console.log(username,'sockio connected',session,'session',u.sessions);
+    u.makeSession(session);
+    u.sessions[session].setSocketIO(sock);
+    sock.on('!',function(data){
+      executeOnUser(u,session,data,sock);
+    });
+  });
+};
+
 WebServer.prototype.start = function (port) {
 	port = port || 80;
 	var self = this;
@@ -176,27 +82,38 @@ WebServer.prototype.start = function (port) {
   this.data.commit('web_server_starting',[
     ['set',['connectioncount'],[this.connectionCount,undefined,'system']]
   ]);
-	var map_resolver = function (req, res, next) {
+	var dcp_handler = function (req, res, next) {
+		if (req.method != 'GET' /*&& req.method != 'POST'*/) { next(); return;} //that POST is fishy...
 		var url = req.url;
     var purl = Url.parse(url,true);
     var urlpath = decodeURI(purl.pathname); //"including the leading slash if present" so we'll remove it if present...
-		if (!urlpath.length) { next(); return; }
-		if (urlpath==='/') { next(); return; }
-		if (urlpath.indexOf('.') > -1) { next(); return; }
-		if (req.method != 'GET' && req.method != 'POST') { next(); return;}
-		var data = ((req.method == 'GET') ? req.query : req.body) || {};
+    if (urlpath.charAt(0)==='/'){urlpath = urlpath.substring(1);}
+    if(urlpath==='_'){
+      urlpath = 'dumpData';
+    }else if(urlpath==='!'){
+      urlpath = 'executeOnUser';
+    }else{
+      next();
+      return;
+    }
+		//var data = ((req.method == 'GET') ? purl.query : req.body) || {};
     res.connection.setTimeout(0);
-    req.connection.setTimeout(0);
-    new RequestHandler(self.sessionfunctionality,req,res,urlpath,data);
+    self.data.functionalities.sessionuserfunctionality.f[urlpath](purl.query,function(errcb,errparams,errmessage){
+      if(errcb==='OK'){
+        res.write(JSON.stringify(errparams[0]));
+      }else{
+        res.write(JSON.stringify({errorcode:errcb,errorparams:errparams,errormessage:errmessage}));
+      }
+      res.end();
+    });
 	};
 
-	var srv = Connect.createServer (
-			Connect.query(),
-			Connect.bodyParser(),
-			map_resolver,
-			Connect.static(Path.resolve(this.root), {maxAge:0})
-	).listen(port);
-  //console.log(srv);
+  var app = Connect()
+    .use(dcp_handler)
+    .use(Connect.static(Path.resolve(this.root), {maxAge:0}));
+
+	var srv = http.createServer(app);
+  startSocketIO(srv);
   srv.on('connection',function(connection){
     self.connectionCountChanged(1);
     var _self = self;
@@ -204,17 +121,17 @@ WebServer.prototype.start = function (port) {
       _self.connectionCountChanged(-1);
     });
   });
+  srv.listen(port);
 };
 
 //module.exports = WebServer;
 
-var serv = new WebServer(process.argv[3],process.argv[4]);
+var serv = new WebServer(process.argv[3],process.argv[4],process.argv[5]);
 serv.start(process.argv[2]);
 
-console.log(process.argv);
+//console.log(process.argv);
 process.on ('message', function (m) {
 	if ('die_right_now' === m) {
-		console.log("Yes, masta', will die right now ....");
 		setTimeout(function () {process.exit(0);}, 0);
 	}
 });

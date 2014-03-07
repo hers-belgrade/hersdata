@@ -1,6 +1,6 @@
 var CollectionReplica = require('./CollectionReplica');
 
-function ChildProcessCollectionReplica(realm){
+function ChildProcessCollectionReplica(realm,skipdcp){
   if(!realm){return;}
   CollectionReplica.call(this,realm,realm,function(obj){
     try{
@@ -9,14 +9,13 @@ function ChildProcessCollectionReplica(realm){
       console.log('could not send',obj);
       console.log(e);
     }
-  });
+  },skipdcp);
   process.on('message',(function(_t){
     var t = _t;
     return function(m){
       t.processInput(process,m);
     };
   })(this));
-  this.go();
 }
 ChildProcessCollectionReplica.prototype = new CollectionReplica();
 ChildProcessCollectionReplica.prototype.constructor = ChildProcessCollectionReplica;
