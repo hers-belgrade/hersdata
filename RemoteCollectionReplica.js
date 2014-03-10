@@ -1,6 +1,6 @@
 var CollectionReplica = require('./CollectionReplica');
 var net = require('net');
-var replicator_communication = require('./replicatorcommunication');
+var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var Timeout = require('herstimeout');
 
 function RemoteCollectionReplica(name,realmname,url,skipdcp){
@@ -10,7 +10,7 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
   }
   console.log('new RemoteCollectionReplica',name,realmname,url);
   this.url = url;
-  this.communication = new replicator_communication(this);
+  this.communication = new ReplicatorSocketCommunication(this);
   CollectionReplica.call(this,name,realmname,skipdcp);
   this.status = 'initialized';
 };

@@ -1,4 +1,4 @@
-var ReplicatorCommunication = require('ReplicatorCommunication'),
+var ReplicatorCommunication = require('./ReplicatorCommunication'),
   zlib = require('zlib');
 
 function ReplicatorSocketCommunication(data){

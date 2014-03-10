@@ -4,7 +4,7 @@ var Path = require('path');
 var net = require('net');
 var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
-var ReplicatorCommunication = require('./replicatorcommunication');
+var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var HookCollection = require('./hookcollection');
 var UserBase = require('./userbase');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
@@ -776,7 +776,7 @@ Collection.prototype.openReplication = function(port){
   this.replicatingOnPorts.push(port);
   var server = net.createServer(function(c){
     var collection = t;
-    var rc = new ReplicatorCommunication(t);
+    var rc = new ReplicatorSocketCommunication(t);
     rc.listenTo(c);
     function finalize(){
       c.removeAllListeners();
