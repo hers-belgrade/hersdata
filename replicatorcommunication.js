@@ -1,221 +1,142 @@
 var Timeout = require('herstimeout'),
-  zlib = require('zlib');
+  BigCounter = require('./BigCounter'),
+  Listener = require('./listener');
 
 var __start = Timeout.now();
 var __id = 0;
+
 function ReplicatorCommunication(data){
+  Listener.call(this);
+  if(!data){return;}
   __id++;
+  this.counter = new BigCounter();
+  this.cbs = {};
   this.__id = __id;
-  this.lenBuf = new Buffer(4);
-  this.lenBufread = 0;
-  this.bytesToRead = -1;
-  this.dataRead = '';
   this.data = data;
-  this.execQueue = [];
-  this.sendingQueue = [];
-  this.sending = false;
-  this.sendingBuffs = [];
-  this.createUnzip();
-  this.dataCursor = 0;
-  this.incomingData = [];
-};
-ReplicatorCommunication.prototype.createUnzip = function(){
-  this.unzip = zlib.createGunzip();
-  var t = this;
-  this.unzip.on('data',function(chunk){
-    if(typeof t.dataRead === 'undefined'){
-      return;
+}
+for(var i in Listener.prototype){
+  ReplicatorCommunication.prototype[i] = Listener.prototype[i];
+}
+ReplicatorCommunication.prototype.destroy = function(){
+  if (this.destroyables) {
+    for (var i in this.destroyables) {
+      this.destroyables[i] && this.destroyables[i].destroy();
     }
-    //console.log('got data');
-    t.dataRead+=chunk.toString('utf8');
-  });
-  this.unzip.on('end',function(){
-    Timeout.next(function(t){
-      if(t.dataRead){
-        var eq = JSON.parse(t.dataRead);
-        t.dataRead = '';
-        Array.prototype.push.apply(t.execQueue,eq);
-        //console.log(t.execQueue);
-        t.maybeExec();
-      }
-      t.createUnzip();
-      t.processData(t.currentData,t.dataCursor);
-    },t);
-  });
-  this.unzip.on('error',function(){
-    console.log('unzip error',arguments);
-    process.exit(0);
-  });
-  //console.log('new unzip created');
-};
-ReplicatorCommunication.prototype._internalSend = function(buf){
-  if(!this.socket){return;}
-  if(!this.sendingQueue.length){
-    //console.log(this.__id,'got out because there is nothing to send');
-    return;
   }
-  if(this.sending){
-    //console.log(this.__id,'got out because I am already sending');
-    return;
+  Listener.prototype.destroy.call(this);
+  for(var i in rc){
+    delete rc[i];
   }
-  this.sending = true;
-  this.start = Timeout.now();
-  var sqb = new Buffer(JSON.stringify(this.sendingQueue),'utf8');
-  this.sendingQueue = [];
-  this.originalSize = sqb.length;
-  var zip = zlib.createGzip({
-    level:9
-  });
-  var t = this;
-  zip.on('data',function(chunk){
-    t.sendingBuffs && t.sendingBuffs.push(chunk);
-  });
-  zip.on('end',function(){
-    Timeout.next(function(t){
-      if(!t.sendingBuffs){return;}
-      var tl = 0;
-      for (var i in t.sendingBuffs){
-        tl+=t.sendingBuffs[i].length;
-      }
-      var lb = new Buffer(4);
-      lb.writeUInt32LE(tl,0);
-      t.sendingBuffs.unshift(lb);
-      if(!t.socket){process.exit(0);}
-      var b = t.sendingBuffs.shift();
-      t.sendingLength = b.length;
-      if(t.socket.writable){
-        t.socket.write(b);
-      }
-    },t);
-  });
-  zip.write(sqb);
-  zip.end();
 };
-ReplicatorCommunication.prototype.send = function(obj){
-  if(!this.sendingQueue){return;}
-  this.sendingQueue.push(obj);
-  this._internalSend();
+ReplicatorCommunication.prototype.send = function(code){
+  this.counter.inc();
+  var cnt = this.counter.toString();
+  var sendobj = {counter:cnt};
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
+  this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.listenTo = function(socket){
-  var t = this;
-  this.socket = socket;
-  this.socket.setNoDelay(true);
-  socket.on('error',function(){
-    delete t.socket;
-  });
-  socket.on('data',function(data){
-    //console.log(t.__id,'data');
-    Timeout.next(function(t){t.processData(data);},t);
-  });
-  socket.on('drain',function(){
-    var now = Timeout.now(), elaps = now - t.start;
-    ReplicatorCommunication.sendingTime += elaps;
-    ReplicatorCommunication.sentBytes += t.sendingLength;
-    ReplicatorCommunication.output -= t.sendingLength;
-    //console.log(t.sendingLength/elaps);
-    //console.log(t.__id,'drain',t.sendingBuffer.length);
-    Timeout.next(function(t){
-      if(!t.sendingBuffs){
-        return;
+ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
+  if(ca[ca.length-1]==='__persistmycb'){
+    ca.pop();
+    return this.prepareCallParams(ca,true);
+  }
+  for(var i in ca){
+    cb = ca[i];
+    var tocb = typeof cb;
+    if(tocb === 'function'){
+      this.counter.inc();
+      var cts = this.counter.toString();
+      var cs = '#FunctionRef:'+cts;
+      this.cbs[cts] = cb;
+      if(persist){
+        if(!this.persist){
+          this.persist = {};
+        }
+        this.persist[cts] = 1;
       }
-      if(!t.sendingBuffs.length){
-        t.sending = false;
-      }else{
-        t.start = this.now;
-        var b = t.sendingBuffs.shift();
-        t.sendingLength = b.length;
-        if(t.socket.writable){
-          t.socket.write(b);
+      ca[i] = cs;
+    }
+  }
+  return ca;
+};
+ReplicatorCommunication.prototype.execute = function(commandresult){
+  if(commandresult.length){
+    cbref = commandresult.splice(0,1)[0];
+    var cb = this.cbs[cbref];
+    //console.log('cb for',cbref,'is',cb);
+    if(typeof cb === 'function'){
+      cb.apply(null,commandresult);
+      if(!(this.persist && this.persist[cbref])){
+        delete this.cbs[cbref];
+      }
+      if(commandresult==='DISCARD_THIS'){
+        delete this.cbs[cbref];
+        delete this.persist[cbref];
+      }
+      if(commandresult==='DISCARD_GROUP'){
+        var cbrefs = arguments[1];
+        if(!cbrefs){return;}
+        cbrefs = cbrefs.split(',');
+        for(var i in cbrefs){
+          delete this.cbs[cbrefs[i]];
         }
       }
-      t._internalSend();
-    },t);
-  });
-  this._internalSend();
+    }
+  }
 };
-ReplicatorCommunication.prototype.processData = function(data,offset){
-  if(!this.socket){return;}
-  var _rcvstart = Timeout.now();
-  var i=(offset||0);
-  if((this.currentData && data!==this.currentData) || (i!==this.dataCursor)){
-    //console.log(i,'<>',this.dataCursor);
-    this.incomingData.push(data);
-    return;
-  }
-  this.currentData = data;
-  //console.log('data',data.length,'long, reading from',i);
-  for(; (this.bytesToRead<0)&&(i<data.length)&&(this.lenBufread<4); i++,this.lenBufread++){
-    this.lenBuf[this.lenBufread] = data[i];
-    ReplicatorCommunication.rcvBytes++;
-    //console.log(this.lenBuf);
-  }
-  if(this.bytesToRead<0){
-    if(this.lenBufread!==4){
-      ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
-      delete this.currentData;
-      this.dataCursor=0;
-      if(this.incomingData.length){
-        this.processData(this.incomingData.shift());
+ReplicatorCommunication.prototype.parseAndSubstituteCBs = function(params){
+  //console.log('should parse and subst',params);
+  var ret = '';
+  for(var i in params){
+    var p = params[i];
+    if(typeof p === 'string' && p.indexOf('#FunctionRef:')===0){
+      var fnref = p.slice(13),t = this;
+      //console.log('#FunctionRef',fnref);
+      if(ret){
+        ret += ',';
       }
-      return;
+      ret += fnref;
+      params[i] = function(){
+        var args = Array.prototype.slice.call(arguments);
+        args.unshift(fnref);
+        //console.log('sending commandresult',args);
+        args.unshift('commandresult');
+        t.send.apply(t,args);
+      };
     }
-    this.bytesToRead = this.lenBuf.readUInt32LE(0);
-    ReplicatorCommunication.rcvBytes+=4;
-  }else{
-    //console.log('still',this.bytesToRead);
   }
-  //console.log('should read',this.bytesToRead,'bytes');
-  var canread = (data.length-i);
-  if(canread>this.bytesToRead){
-    canread=this.bytesToRead;
-  }
-  //this.dataRead+=data.toString('utf8',i,i+canread);
-  this.unzip.write(data.slice(i,i+canread));
-  this.bytesToRead-=canread;
-  i+=canread;
-  this.dataCursor = i;
-  if(this.bytesToRead===0){
-    this.bytesToRead=-1;
-    this.lenBufread=0;
-    this.unzip.end();
-  }else{
-    //console.log('at',i,'data is',data.length,'long, now what?');
-    if(i===data.length){
-      delete this.currentData;
-      this.dataCursor=0;
-      if(this.incomingData.length){
-        this.processData(this.incomingData.shift());
+  return ret;
+};
+ReplicatorCommunication.prototype.handOver = function(input){
+  var counter = input.counter;
+  var cbrefs = '';
+  delete input.counter;
+  for(var i in input){
+    var _cbrefs = this.parseAndSubstituteCBs(input[i]);
+    if(_cbrefs){
+      if(cbrefs){
+        cbrefs += ',';
       }
-    }else{
-      this.processData(data,i);
+      cbrefs += _cbrefs;
     }
   }
-  ReplicatorCommunication.rcvingTime += (Timeout.now()-_rcvstart);
-};
-ReplicatorCommunication.prototype.exec = function(){
-  if(!this.execQueue){return;}
-  try{
-    var drp = this.execQueue.shift();
-    //if(!dr){return;}
-    //var drp = JSON.parse(dr);
-    //console.log('ql >',this.execQueue.length);
-    if(drp){
-      var es = Timeout.now();
-      this.data.processInput(this,drp);
-      //ReplicatorCommunication.execTime += (Timeout.now()-es);
-      //ReplicatorCommunication.input-=dr.length;
-    }
-  }catch(e){
-    //console.log('ERROR processing input', util.inspect(drp,false,null,false));
-    console.log(drp);
-    console.log(e.stack);
-    console.log(e);
+  var commandresult = input.commandresult;
+  if(commandresult){
+    this.execute(commandresult);
   }
-  this.maybeExec();
-};
-ReplicatorCommunication.prototype.maybeExec = function(){
-  if(this.execQueue && this.execQueue.length){
-    Timeout.next(function(t){t.exec();},this);
+  var ret = this.data.processInput(this,input);
+  if (ret && ('function' === typeof(ret.destroy))) {
+    if (!this.destroyables) this.destroyables = {};
+    this.destroyables[counter] = ret;
+    if(ret.destroyed){
+      this.createListener(counter+'destroyed',function(){
+        this.destroyListener(counter+'destroyed');
+        delete this.destroyables[counter];
+        if(cbrefs){
+          this.send('commandresult','DISCARD_GROUP',cbrefs);
+        }
+      },ret.destroyed);
+    }
   }
 };
 ReplicatorCommunication.metrics = function(){
@@ -237,6 +158,5 @@ ReplicatorCommunication.sendingTime = 0;
 ReplicatorCommunication.execTime = 0;
 ReplicatorCommunication.rcvBytes = 0;
 ReplicatorCommunication.sentBytes = 0;
-
 
 module.exports = ReplicatorCommunication;

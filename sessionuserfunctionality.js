@@ -84,10 +84,50 @@ function executeOneOnUser(user,command,params,cb){
   user.invoke(this,command,params,cb); //this is data
 }
 
+function executeOnUser(user,session,commands,statuscb){
+  var sessionobj = {};
+  sessionobj[this.self.fingerprint]=session;
+  var ret = {username:user.username,roles:user.roles,session:sessionobj};
+  var cmdlen = commands.length;
+  var cmdstodo = cmdlen/2;
+  var cmdsdone = 0;
+  for (var i=0; i<cmdstodo; i++){
+    var cmd = commands[i*2];
+    var po = commands[i*2+1];
+    if(cmd.charAt(0)==='/'){
+      cmd = cmd.slice(1);
+    }
+    var fp = this.self.fingerprint;
+    executeOneOnUser.call(this.data,user,cmd,po,(function(index){
+      var _i = index, _scb = statuscb;
+      return function(errcode,errparams,errmessage){
+        if(!ret.results){
+          ret.results=[];
+        }
+        ret.results[_i] = [errcode,errparams,errmessage];
+        cmdsdone++;
+        if(cmdsdone===cmdstodo){
+          var s = user.sessions[session];
+          if(!s){
+            console.log('NO_SESSION',session);
+            _scb('NO_SESSION',session);
+            return;
+          }
+          var so = {};
+          so[fp] = session;
+          ret.data=s ? s.retrieveQueue() : [];
+          _scb('OK',ret);
+        }
+      };
+    })(i));
+  }
+};
+executeOnUser.params = ['user','session','commands'];
 
-function executeOnUser(/*user,session,commands,res*/paramobj,statuscb){
+function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
   var session = paramobj[this.self.fingerprint];
   if(!session){
+    console.log('no session in',paramobj);
     statuscb('NO_SESSION','');
     return;
   }
@@ -111,44 +151,11 @@ function executeOnUser(/*user,session,commands,res*/paramobj,statuscb){
     statuscb('NO_USER');
     return;
   }
-  var sessionobj = {};
-  console.log('executeOnUser',paramobj);
-  sessionobj[this.self.fingerprint]=session;
-  var ret = {username:paramobj.name,roles:paramobj.roles,session:sessionobj};
-  var cmdlen = commands.length;
-  var cmdstodo = cmdlen/2;
-  var cmdsdone = 0;
-  for (var i=0; i<cmdstodo; i++){
-    var cmd = commands[i*2];
-    var po = commands[i*2+1];
-    if(cmd.charAt(0)==='/'){
-      cmd = cmd.slice(1);
-    }
-    var fp = this.self.fingerprint;
-    executeOneOnUser.call(this.data,user,cmd,po,(function(index){
-      var _i = index, _scb = statuscb;
-      return function(errcode,errparams,errmessage){
-        if(!ret.results){
-          ret.results=[];
-        }
-        ret.results[_i] = [errcode,errparams,errmessage];
-        cmdsdone++;
-        if(cmdsdone===cmdstodo){
-          var s = user.sessions[session];
-          if(!s){
-            _scb('NO_SESSION',session);
-            return;
-          }
-          var so = {};
-          so[fp] = session;
-          ret.data=s ? s.retrieveQueue() : [];
-          _scb('OK',ret);
-        }
-      };
-    })(i));
-  }
+  this.self.executeOnUser({user:user,session:session,commands:commands},function(ecb,ep,em){
+    statuscb(ecb,ep[0],em);
+  });
 };
-executeOnUser.params='originalobj';
+produceAndExecute.params='originalobj';
 
 function registerUserProductionCallback(cb,statuscb){
   if(this.self.userProductionCallbacks.indexOf(cb)<0){
@@ -181,6 +188,7 @@ module.exports = {
   init:init,
   dumpData: dumpData,
   executeOnUser: executeOnUser,
+  produceAndExecute: produceAndExecute,
   registerUserProductionCallback:registerUserProductionCallback
 };
 

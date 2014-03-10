@@ -536,6 +536,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
       return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
     }
   }else{
+    console.trace();
     console.log(functionalityname,'is not a functionalityname while processing',path);
     return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
   }
@@ -543,6 +544,7 @@ Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb
 
 Collection.prototype.attach = function(functionalityname, config, key, environment){
   var self = this;
+  if(!key){key=undefined;}
   var ret = config||{};
   var m;
   var fqnname;
@@ -613,17 +615,32 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       //console.log('NO environment, use defaults');
       env = m.requirements;
     }
-    for (var j in m.requirements) {
-      (function (_j) {
-        var _e = env;
-        if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
-        //console.log('setting requirement '+j+' to '+functionalityname);
-        my_mod[_j] = function () {
-          return _e[_j].apply(SELF(), arguments);
-        };
-      })(j);
+    switch(typeof env){
+      case 'function':
+        for (var j in m.requirements) {
+          (function (_j) {
+            var _e = env;
+            my_mod[_j] = function () {
+              var args = Array.prototype.slice.call(arguments);
+              args.unshift(_j);
+              return _e.apply(SELF(), args);
+            };
+          })(j);
+        }
+        break;
+      case 'object':
+        for (var j in m.requirements) {
+          (function (_j) {
+            var _e = env;
+            if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
+            //console.log('setting requirement '+j+' to '+functionalityname);
+            my_mod[_j] = function () {
+              return _e[_j].apply(SELF(), arguments);
+            };
+          })(j);
+        }
+        break;
     }
-    //console.log('Reqirement successfully set on: '+functionalityname);
   }
 
   for(var i in m){
@@ -731,21 +748,9 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
     return;
   }
 
-  if (rc.destroyables) {
-    for (var i in rc.destroyables) {
-      rc.destroyables[i] && rc.destroyables[i].destroy();
-    }
-  }
-
   console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
+  rc.destroy();
   delete this.replicatingClients[replicatorname];
-  if(rc.listener){
-    this.onNewTransaction.detach(rc.listener);
-  }
-  rc.socket && rc.socket.destroy();
-  for(var i in rc){
-    delete rc[i];
-  }
   rc = null;
   var rcc = 0;
   for(var i in this.replicatingClients){
@@ -802,25 +807,15 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
   if(!(this.functionalities && this.functionalities.system)){
     this.attach('./system',{});
   }
-  var cp = child_process.fork(__dirname+'/webserver.js',[port,root,name,modulename]);
+  var cp = new (require('./ReplicatorChildProcessCommunication').Parent)(this);
+  cp.listenTo(child_process.fork(__dirname+'/webserver.js',[port,root,name,modulename]));
   if (!this.processes) this.processes = [];
   this.processes.push (cp);
-
-  var t = this;
-  cp.on('message',function(input){
-    //console.log('Web server says',input);
-    t.processInput(this,input);
-  });
+  /*
   this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
     cp.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
   });
-  process.on('uncaughtException',function(e){
-		//console.log('===========', cp);
-    console.log(e.stack);
-    console.log(e);
-		//no need to disconnect dead process
-    //cp.disconnect();
-  });
+  */
 };
 
 Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
@@ -849,7 +844,6 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
-    var remotecounter = internal.shift();
     switch(internal[0]){
       case 'need_init':
         console.log('remote replica announcing as',internal[1],internal[2]);
@@ -860,7 +854,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:[0,'setKey',user.username,user.realmname,key]});
+              replicator.send('internal','setKey',user.username,user.realmname,key);
             }
             catch(e){
               delete user.replicator;
@@ -870,7 +864,7 @@ Collection.prototype.processInput = function(sender,input){
         this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
           if(user.replicator){
             try{
-              replicator.send({internal:[0,'removeKey',user.username,user.realmname,key]});
+              replicator.send('internal','removeKey',user.username,user.realmname,key);
             }
             catch(e){
               delete user.replicator;
@@ -889,7 +883,7 @@ Collection.prototype.processInput = function(sender,input){
           }
           //now what??
           //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
-          sender.send({internal:[0,'give_up']});
+          sender.send('internal','give_up');
           sender.socket && sender.socket.destroy();
           return;
         }
@@ -900,11 +894,11 @@ Collection.prototype.processInput = function(sender,input){
         }
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
-        sender.send({internal:[0,'initDCPreplica',ret]});
+        sender.send('internal','initDCPreplica',ret);
         if(dodcp){
-          sender.listener = this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-            sender.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
-          });
+          sender.createListener('dataTxn',function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
+            sender.send('rpc','_commit',txnalias,txnprimitives,txnid,chldcollectionpath);
+          },this.onNewTransaction);
           if(typeof sender.listener !== 'number'){
             console.log('no return from attach');
             process.exit(0);
@@ -939,10 +933,20 @@ Collection.prototype.processInput = function(sender,input){
       }
     }
   }
+  var targetrpc = input.targetrpc;
+  if(targetrpc){
+    var path = targetrpc.shift();
+    if(!path){return;}
+    var targetel = this.element(path);
+    if(targetel){
+      input.rpc = input.targetrpc;
+      delete input.targetrpc;
+      return targetel.processInput(sender,input);
+    }
+    return;
+  }
   var rpc = input.rpc;
   if(rpc){
-    var remotecounter = rpc.shift();
-
     var methodname = rpc[0];
     var method = this[methodname];
     if(typeof method !=='function'){
@@ -950,17 +954,6 @@ Collection.prototype.processInput = function(sender,input){
       return;
     }
     var args = rpc.slice(1);
-    var lastparam = rpc[rpc.length-1];
-    if(typeof lastparam === 'string' && lastparam.indexOf('#FunctionRef:')===0){
-      var fnref = lastparam.slice(13);
-      //console.log('#FunctionRef',fnref);
-      args[args.length-1] = function(){
-        var args = Array.prototype.slice.call(arguments);
-        args.unshift(fnref);
-        //console.log('sending commandresult',args);
-        sender.send({commandresult:args});
-      };
-    }
     if(methodname==='invoke'){
       var username = args[2],realmname= args[3],roles=args[4];
       if(!(username&&realmname)){
@@ -978,29 +971,7 @@ Collection.prototype.processInput = function(sender,input){
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
-    var ret = method.apply(this,args);
-    if (ret && ('function' === typeof(ret.destroy))) {
-      if (!sender.destroyables) sender.destroyables = {};
-      sender.destroyables[remotecounter] = ret;
-    }
-  }
-  var commandresult = input.commandresult;
-  if(commandresult){
-    if(commandresult.length){
-      cbref = commandresult.splice(0,1)[0];
-      var cb = this.cbs[cbref];
-      //console.log('cb for',cbref,'is',cb);
-      if(typeof cb === 'function'){
-        cb.apply(null,commandresult);
-        if(!(this.persist && this.persist[cbref])){
-          delete this.cbs[cbref];
-        }
-        if(commandresult==='DISCARD_THIS'){
-          delete this.cbs[cbref];
-          delete this.persist[cbref];
-        }
-      }
-    }
+    return method.apply(this,args);
   }
 };
 

@@ -1,17 +1,8 @@
 var Collection = require('./datamaster').Collection;
-var BigCounter = require('./BigCounter');
 
-function CollectionReplica(name,realmname,sendcb,skipdcp){
-  if(!(name&&sendcb)){return;}
-  this.counter = new BigCounter();
+function CollectionReplica(name,realmname,skipdcp){
+  if(!name){return;}
   this.replicaToken = {name:name,realmname:realmname,skipdcp:skipdcp};
-  this.cbs = {};
-  this.send = function(code){
-    var params = this.prepareCallParams(Array.prototype.slice.call(arguments,1));
-    var sendobj = {};
-    sendobj[code]=params;
-    sendcb(sendobj);
-  };
   var t = this;
   function going_down(){
     if(t.downnotified){
@@ -29,32 +20,8 @@ function CollectionReplica(name,realmname,sendcb,skipdcp){
 };
 CollectionReplica.prototype = new Collection();
 CollectionReplica.prototype.constructor = CollectionReplica;
-CollectionReplica.prototype.prepareCallParams = function(ca,persist){
-  var cb = ca.pop();
-  if(cb==='__persistmycb'){
-    return this.prepareCallParams(ca,true);
-  }
-  var tocb = typeof cb;
-  if(tocb === 'function'){
-    this.counter.inc();
-    var cts = this.counter.toString();
-    var cs = '#FunctionRef:'+cts;
-    this.cbs[cts] = cb;
-    if(persist){
-      if(!this.persist){
-        this.persist = {};
-      }
-      this.persist[cts] = 1;
-    }
-    ca.push(cs);
-  }else{
-    if(tocb !== 'undefined'){
-      ca.push(cb);
-    }
-  }
-  this.counter.inc();
-  ca.unshift(this.counter.toString());
-  return ca;
+CollectionReplica.prototype.send = function(){
+  this.communication.send.apply(this.communication,arguments);
 };
 CollectionReplica.prototype.go = function(){
   //console.log(this,'should go');
@@ -85,7 +52,7 @@ CollectionReplica.prototype.waitFor = function(querypath,cb,waiter,startindex){
     cb.apply(ret,arguments);
   },'__persistmycb');
   var self = this;
-  var c = this.counter.toString();
+  var c = this.communication.counter.toString();
   ret.destroy = function () { self.send('internal', 'remoteDestroy', c); }
   return ret;
 };

@@ -1,21 +1,10 @@
 var CollectionReplica = require('./CollectionReplica');
+var ReplicatorChildProcessCommunication = require('./ReplicatorChildProcessCommunication').Child;
 
 function ChildProcessCollectionReplica(realm,skipdcp){
   if(!realm){return;}
-  CollectionReplica.call(this,realm,realm,function(obj){
-    try{
-      process.send(obj);
-    }catch(e){
-      console.log('could not send',obj);
-      console.log(e);
-    }
-  },skipdcp);
-  process.on('message',(function(_t){
-    var t = _t;
-    return function(m){
-      t.processInput(process,m);
-    };
-  })(this));
+  this.communication = new ReplicatorChildProcessCommunication(this);
+  CollectionReplica.call(this,realm,realm,skipdcp);
 }
 ChildProcessCollectionReplica.prototype = new CollectionReplica();
 ChildProcessCollectionReplica.prototype.constructor = ChildProcessCollectionReplica;

@@ -1,6 +1,6 @@
 var os = require('os'),
   Timeout = require('herstimeout'),
-  ReplicatorCommunication = require('./replicatorcommunication');
+  ReplicatorCommunication = require('./ReplicatorCommunication');
 
 var errors = {
 };

@@ -10,12 +10,9 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
   }
   console.log('new RemoteCollectionReplica',name,realmname,url);
   this.url = url;
-  var communication = new replicator_communication(this);
-  CollectionReplica.call(this,name,realmname,function(obj){
-    communication.send(obj);
-  },skipdcp);
+  this.communication = new replicator_communication(this);
+  CollectionReplica.call(this,name,realmname,skipdcp);
   this.status = 'initialized';
-  this.communication = communication;
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;

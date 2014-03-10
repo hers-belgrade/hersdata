@@ -29,7 +29,8 @@ function ConsumingEntity(){
 };
 ConsumingEntity.prototype = new Listener();
 ConsumingEntity.prototype.say = function(u,item){
-  if(typeof item !== 'undefined'){
+  //if(typeof item !== 'undefined'){
+  if(item){
     u.push(item);
   }else{
     console.trace();
@@ -336,6 +337,9 @@ ConsumingCollection.prototype.target = function(name,user){
   return this.collections[name] || this.scalars[name];
 };
 ConsumingCollection.prototype.followForUser = function(path,user,startindex){
+  if(!(user.contains(this.el.access_level()))){
+    return 'ACCESS_FORBIDDEN';
+  }
   startindex = startindex||0;
   //console.log(path,user.username,path.length,startindex);
   if(typeof path === 'undefined'){
@@ -351,29 +355,36 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
     var target = this.target(targetname,user);
     if(target){
       if(path.length>startindex+1){
-        target.followForUser(path,user,startindex+1);
+        return target.followForUser(path,user,startindex+1);
       }else{
         //console.log('adding',user.username,'to',target.name);
         if(!skipadd){
           target.add(user);
+          return 'OK';
         }else{
           target.addThru(user);
+          return 'OK';
         }
       }
     }else{
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
+      return 'LATER';
     }
   }else{
     //console.log(this.name,'adding',user.username,'myself');
     this.add(user);
+    return 'OK';
   }
 };
-ConsumingCollection.prototype.reportTo = function(u){
+ConsumingCollection.prototype.onUserAdded = function(u){
   for(var i in this.collections){
     var c = this.collections[i];
     if(u.contains(c.el.access_level())){
       this.say(u,c.describer);
     }
+  }
+  for(var i in this.scalars){
+    this.scalars[i].add(u);
   }
 };
 ConsumingCollection.prototype.unreportTo = function(u){
@@ -390,10 +401,7 @@ ConsumingCollection.prototype.handleUser = function(u,criterion){
       this.locations[u.fullname]=1;
       removeFromArray(this.pretendents,u);
       addToArray(this.subscribers,u);
-      this.reportTo(u);
-      for(var i in this.scalars){
-        this.scalars[i].add(u);
-      }
+      this.onUserAdded(u);
     }
   }else{
     if(this.locations[u.fullname]===1){
@@ -437,11 +445,9 @@ ConsumingCollection.prototype.add = function(u){
   if(u.contains(this.el.access_level())){
     this.locations[u.fullname] = 1;
     addToArray(this.subscribers,u);
-    this.reportTo(u);
-    for(var i in this.scalars){
-      this.scalars[i].add(u);
-    }
+    this.onUserAdded(u);
   }else{
+    console.log(this.name,u.username,'-> pretendents');
     this.locations[u.fullname] = 2;
     addToArray(this.pretendents,u);
   }
@@ -455,10 +461,7 @@ ConsumingCollection.prototype.add = function(u){
         removeFromArray(this.pretendents,u);
         addToArray(this.subscribers,u);
         //console.log(this.path.join('.'),':',u.username,'is a subscriber now');
-        this.reportTo(u);
-        for(var i in this.scalars){
-          this.scalars[i].add(u);
-        }
+        this.onUserAdded(u);
       }
     }else{
       if(this.locations[u.fullname]===1){
@@ -513,11 +516,11 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
       path = path.path;
     }
     if(typeof path === undefined){
-      cb('NOK');
+      cb('NO_PATH');
       return;
     }
-    coll.followForUser(path,this);
-    cb && cb('OK',path);
+    var ret = coll.followForUser(path,this);
+    cb && cb(ret,path);
   };
   u.unfollow = function(path,cb){
     cb && cb('OK',path);
@@ -601,6 +604,7 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
     args.push(path[i]);
   }
   this.el.send.apply(this.el,args);
+  return 'OK';
 };
 
 module.exports = ConsumingCollection;

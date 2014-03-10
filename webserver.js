@@ -2,6 +2,7 @@ var Connect = require ('connect');
 var Url = require('url');
 var Path = require('path');
 var Collection = require('./datamaster').Collection;
+var UserBase = require('./userbase');
 var Timeout = require('herstimeout');
 var http = require('http');
 
@@ -9,13 +10,8 @@ var http = require('http');
 function WebServer (root, realm, usermodule) {
   //this.data = new WebCollectionReplica(realm,true);
   this.data = new Collection();
-  this.data.commit('init',[
-    ['set',['nodes'],'dcp']
-  ]);
-  this.data.element(['nodes']).createRemoteReplica('master',undefined,realm,'local',true);
   this.data.attach('./sessionuserfunctionality',{realmName:realm});
-  this.data.attach(usermodule);
-  this.data.element(['nodes','master']).go();
+  this.data.attach(usermodule,{realmName:realm});
 	this.root = root;
   this.realm = realm;
 }
@@ -42,15 +38,17 @@ WebServer.prototype.connectionCountChanged = function(delta){
 };
 
 
-function startSocketIO(server){
+WebServer.prototype.startSocketIO = function(server){
   var io = require('socket.io').listen(server, { log: false });
-  console.log('socket.io listening');
+  //console.log('socket.io listening');
+  var t = this;
   io.set('authorization', function(handshakeData, callback){
+    //console.log('authorization',handshakeData);
     var username = handshakeData.query.username;
-    var sess = handshakeData.query[dataMaster.fingerprint];
-    console.log('sock.io incoming',username,sess);
+    var sess = handshakeData.query[t.data.functionalities.sessionuserfunctionality.f.fingerprint];
+    //console.log('sock.io incoming',username,sess);
     if(username && sess){
-      var u = UserBase.findUser(username,dataMaster.realmName);
+      var u = UserBase.findUser(username,t.realm);
       if(!u){
         callback(null,false);
       }else{
@@ -65,12 +63,20 @@ function startSocketIO(server){
   io.sockets.on('connection',function(sock){
     var username = sock.handshake.username,
       session = sock.handshake.session,
-      u = UserBase.findUser(username,dataMaster.realmName);
+      u = UserBase.findUser(username,t.realm);
     //console.log(username,'sockio connected',session,'session',u.sessions);
     u.makeSession(session);
     u.sessions[session].setSocketIO(sock);
     sock.on('!',function(data){
-      executeOnUser(u,session,data,sock);
+      data.user = u;
+      var _s = this;
+      t.data.functionalities.sessionuserfunctionality.f.executeOnUser({user:u,session:session,commands:data},function(errcb,errparams,errmessage){
+        if(errcb==='OK'){
+          _s.emit('=',errparams[0]);
+        }else{
+          _s.emit('=',{errorcode:errcb,errorparams:errparams,errormessage:errmessage});
+        }
+      });
     });
   });
 };
@@ -91,7 +97,7 @@ WebServer.prototype.start = function (port) {
     if(urlpath==='_'){
       urlpath = 'dumpData';
     }else if(urlpath==='!'){
-      urlpath = 'executeOnUser';
+      urlpath = 'produceAndExecute';
     }else{
       next();
       return;
@@ -113,7 +119,7 @@ WebServer.prototype.start = function (port) {
     .use(Connect.static(Path.resolve(this.root), {maxAge:0}));
 
 	var srv = http.createServer(app);
-  startSocketIO(srv);
+  this.startSocketIO(srv);
   srv.on('connection',function(connection){
     self.connectionCountChanged(1);
     var _self = self;
