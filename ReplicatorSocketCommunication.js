@@ -221,3 +221,4 @@ ReplicatorSocketCommunication.prototype.maybeExec = function(){
   }
 };
 
+module.exports = ReplicatorSocketCommunication;
