@@ -1,4 +1,5 @@
 var ReplicatorCommunication = require('./ReplicatorCommunication'),
+  Timeout = require('herstimeout'),
   zlib = require('zlib');
 
 function ReplicatorSocketCommunication(data){
