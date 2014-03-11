@@ -507,9 +507,9 @@ Collection.prototype.run = function(path,paramobj,cb,user){
       return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
     }
   }else{
-    console.trace();
+    //console.trace();
     console.log(functionalityname,'is not a functionalityname while processing',path);
-    console.log(this.dataDebug());
+    //console.log(this.dataDebug());
     return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
   }
 };
