@@ -137,8 +137,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var u = UserBase.setUser(input.user.username,input.user.realmname,input.user.roles);
     delete input.user;
     for(var i in input){
-      input[i].push(u);
+      var method = u[i];
+      if(method){
+        method.apply(u,input[i]);
+      }
     }
+    return;
   }
   var ret = this.data.processInput(this,input);
   if (ret && ('function' === typeof(ret.destroy))) {

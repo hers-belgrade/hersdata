@@ -480,7 +480,13 @@ Collection.prototype.perform_remove = function (path) {
 };
 
 Collection.prototype.run = function(path,paramobj,cb,user){
-  console.log('run',path);
+  function exit(code,params,message){
+    if(cb){
+      cb(code,params,message);
+    }else{
+      console.log('invoke exited with',code,'for',path,paramobj);
+    }
+  }
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
