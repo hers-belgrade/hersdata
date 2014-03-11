@@ -39,7 +39,7 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     var targetpath = path.splice(0,1);
     var ttarget = data.element(targetpath);
     if(!ttarget){
-      target.run(path,paramobj,cb,user);
+      target.run(path,paramobj,cb,this);
       return;
     }
   }
