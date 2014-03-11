@@ -41,7 +41,7 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
       target.run(path,paramobj,cb,this);
       return;
     }
-    target.shift();
+    path.shift();
   }
   target.run(path,paramobj,cb,this);
 };

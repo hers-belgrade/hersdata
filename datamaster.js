@@ -501,7 +501,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
     var m = f[methodname];
     if(typeof m === 'function'){
       //console.log('invoking',path,paramobj,username,realmname,roles);
-      //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
+      console.log('invoking',methodname,'for',username,'@',realmname,cb); 
       m(paramobj,cb,user);
     }else{
       return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
