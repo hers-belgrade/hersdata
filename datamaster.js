@@ -484,7 +484,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
+	if (methodname.charAt(0) === '_' && username.charAt(0)!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
   var f = this.functionalities && this.functionalities[functionalityname];
   if(f){
     var key = f.key;
@@ -795,7 +795,8 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     }
     if(docreatereplicator){
       var tkn = remotedump.token;
-      this.replicatingUser = UserBase.setUser('*',tkn.name,'dcp,system,'+tkn.name);
+      console.log('cloned from remote',tkn);
+      this.replicatingUser = UserBase.setUser(tkn.name,tkn.realmname,'dcp,system,'+tkn.name);
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
