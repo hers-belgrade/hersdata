@@ -1,6 +1,7 @@
 var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
-  Listener = require('./listener');
+  Listener = require('./listener'),
+  UserBase = require('./userbase');
 
 var __start = Timeout.now();
 var __id = 0;
@@ -129,7 +130,15 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   var commandresult = input.commandresult;
   if(commandresult){
+    delete input.commandresult;
     this.execute(commandresult);
+  }
+  if(input.user){
+    var u = UserBase.setUser(input.user.username,input.user.realmname,input.user.roles);
+    delete input.user;
+    for(var i in input){
+      input[i].push(u);
+    }
   }
   var ret = this.data.processInput(this,input);
   if (ret && ('function' === typeof(ret.destroy))) {

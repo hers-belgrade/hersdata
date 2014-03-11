@@ -37,10 +37,7 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
     this.send('rpc','_commit',txnalias,txnprimitives);
   }
 };
-CollectionReplica.prototype.run = function(user,path,paramobj,cb) {
-  if(path.join){
-    path = path.join('/');
-  }
+CollectionReplica.prototype.run = function(path,paramobj,cb,user) {
   this.usersend(user,'rpc','run',path,paramobj,cb);
 };
 CollectionReplica.prototype.handleUserDestruction = function(u){
