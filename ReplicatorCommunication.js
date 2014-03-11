@@ -71,7 +71,7 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
     cbref = commandresult.splice(0,1)[0];
     var cb = this.cbs[cbref];
-    //console.log('cb for',cbref,'is',cb);
+    console.log('cb for',cbref,'is',cb);
     if(typeof cb === 'function'){
       cb.apply(null,commandresult);
       if(!(this.persist && this.persist[cbref])){
