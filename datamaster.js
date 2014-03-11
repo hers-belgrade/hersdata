@@ -826,27 +826,6 @@ Collection.prototype.processInput = function(sender,input){
         if(!this.replicatingClients){
           this.replicatingClients = {};
         }
-        var t = this;
-        this.userBaseKeySet = UserBase.keySet.attach(function(user,key){
-          if(user.replicator){
-            try{
-              replicator.send('internal','setKey',user.username,user.realmname,key);
-            }
-            catch(e){
-              delete user.replicator;
-            }
-          }
-        });
-        this.userBaseKeyRemoved = UserBase.keyRemoved.attach(function(user,key){
-          if(user.replicator){
-            try{
-              replicator.send('internal','removeKey',user.username,user.realmname,key);
-            }
-            catch(e){
-              delete user.replicator;
-            }
-          }
-        });
         var srt = internal[1];
         if(!(srt && typeof srt === 'object')){
           sender.socket.destroy();
