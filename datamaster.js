@@ -479,68 +479,6 @@ Collection.prototype.perform_remove = function (path) {
   }
 };
 
-Collection.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
-  function exit(code,params,message){
-    if(cb){
-      cb(code,params,message);
-    }else{
-      console.log('invoke exited with',code,'for',path,paramobj);
-    }
-  }
-  if(typeof path === 'string'){
-    if(!path){return exit('NO_FUNCTIONALITY');}
-    if(path.charAt(0)==='/'){
-      path = path.substring(1);
-    }
-    path = path.split('/');
-  }
-  if(!path.length){return exit('NO_FUNCTIONALITY');}
-  if(path.length>2){
-    var targetpath = path.splice(0,1);
-    var target = this.element(targetpath);
-    if(!target){
-      return exit('NO_TARGET',targetpath,'Path not found to invoke functionality');
-    }else{
-      return target.invoke(path,paramobj,username,realmname,roles,cb);
-    }
-  }
-  var methodname = path[path.length-1];
-  var functionalityname = path[path.length-2];
-  //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
-  if (username==='*'){
-    if(this.replicatingClients && typeof this.replicatingClients[realmname] !== 'undefined'){
-      username = realmname;
-      realmname = '_dcp_';
-    }else{
-      return exit('ACCESS_FORBIDDEN',[realmname],'User * may come only from a replica');
-    }
-  }
-  var u = UserBase.setUser(username,realmname,roles);
-  if(!u){
-    return exit('NO_USER',[username,realmname],'No user '+username+'@'+realmname+' found');
-  }
-  var f = this.functionalities && this.functionalities[functionalityname];
-  if(f){
-    var key = f.key;
-    if((typeof key !== 'undefined')&&(!u.contains(key))){
-      return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
-    }
-    f = f.f;
-    var m = f[methodname];
-    if(typeof m === 'function'){
-      //console.log('invoking',path,paramobj,username,realmname,roles);
-      //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
-      m(paramobj,cb,username,realmname);
-    }else{
-      return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
-    }
-  }else{
-    console.trace();
-    console.log(functionalityname,'is not a functionalityname while processing',path);
-    return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
-  }
-};
 
 Collection.prototype.attach = function(functionalityname, config, key, environment){
   var self = this;
