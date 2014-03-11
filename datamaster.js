@@ -479,6 +479,32 @@ Collection.prototype.perform_remove = function (path) {
   }
 };
 
+Collection.prototype.run = function(user,path,paramobj,cb){
+  var methodname = path[path.length-1];
+  var functionalityname = path[path.length-2];
+  //console.log(methodname);
+	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
+  var f = this.functionalities && this.functionalities[functionalityname];
+  if(f){
+    var key = f.key;
+    if((typeof key !== 'undefined')&&(!u.contains(key))){
+      return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
+    }
+    f = f.f;
+    var m = f[methodname];
+    if(typeof m === 'function'){
+      //console.log('invoking',path,paramobj,username,realmname,roles);
+      //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
+      m(paramobj,cb,user);
+    }else{
+      return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
+    }
+  }else{
+    console.trace();
+    console.log(functionalityname,'is not a functionalityname while processing',path);
+    return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
+  }
+};
 
 Collection.prototype.attach = function(functionalityname, config, key, environment){
   var self = this;
@@ -592,7 +618,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       }
 
       if(mname!=='init'){
-        return function(obj,errcb,callername,realmname){
+        return function(obj,errcb,caller){
           var pa = [];
           if(_p.params){
             if(_p.params==='originalobj'){
@@ -624,15 +650,15 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
                 pa.push(__p);
               }
             }
-            pa.push(localerrorhandler(errcb),callername,realmname);
+            pa.push(localerrorhandler(errcb),caller);
           }else{
-            pa.push(localerrorhandler(errcb),callername,realmname);
+            pa.push(localerrorhandler(errcb),caller);
           }
           _p.apply(SELF(),pa);
         };
       }else{
-        return function(errcb,callername,realmname){
-          _p.call(SELF(),localerrorhandler(errcb),callername,realmname);
+        return function(errcb,caller){
+          _p.call(SELF(),localerrorhandler(errcb),caller);
         };
       }
     })(i,p);

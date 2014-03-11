@@ -33,47 +33,16 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     path = path.split('/');
   }
   if(!path.length){return exit('NO_FUNCTIONALITY');}
-  if(path.length>2){
+  var target = data;
+  while(path.length>2){
     var targetpath = path.splice(0,1);
-    var target = data.element(targetpath);
-    if(!target){
-      return exit('NO_TARGET',targetpath,'Path not found to invoke functionality');
-    }else{
-      return target.invoke(path,paramobj,username,realmname,roles,cb);
+    var ttarget = data.element(targetpath);
+    if(!ttarget){
+      target.run(user,path,paramobj,cb);
+      return;
     }
   }
-  var methodname = path[path.length-1];
-  var functionalityname = path[path.length-2];
-  //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
-  if (username==='*'){
-    if(data.replicatingClients && typeof data.replicatingClients[realmname] !== 'undefined'){
-      username = realmname;
-      realmname = '_dcp_';
-    }else{
-      return exit('ACCESS_FORBIDDEN',[realmname],'User * may come only from a replica');
-    }
-  }
-  var f = data.functionalities && data.functionalities[functionalityname];
-  if(f){
-    var key = f.key;
-    if((typeof key !== 'undefined')&&(!u.contains(key))){
-      return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
-    }
-    f = f.f;
-    var m = f[methodname];
-    if(typeof m === 'function'){
-      //console.log('invoking',path,paramobj,username,realmname,roles);
-      //console.log('invoking',methodname,'for',username,'@',realmname,cb); 
-      m(paramobj,cb,this);
-    }else{
-      return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
-    }
-  }else{
-    console.trace();
-    console.log(functionalityname,'is not a functionalityname while processing',path);
-    return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
-  }
+  target.run(this,path,paramobj,cb);
 };
 KeyRing.prototype.invoke1 = function (data, request, paramobj, cb) {
   if(typeof data === 'string'){
