@@ -480,37 +480,36 @@ Collection.prototype.perform_remove = function (path) {
 };
 
 Collection.prototype.run = function(path,paramobj,cb,user){
-  function exit(code,params,message){
-    if(cb){
-      cb(code,params,message);
-    }else{
-      console.log('invoke exited with',code,'for',path,paramobj);
-    }
-  }
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username.charAt(0)!=='*'){return exit('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);}
+	if (methodname.charAt(0) === '_' && username.charAt(0)!=='*'){
+    cb && cb('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);
+    return;
+  }
   var f = this.functionalities && this.functionalities[functionalityname];
   if(f){
     var key = f.key;
-    if((typeof key !== 'undefined')&&(!u.contains(key))){
-      return exit('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
+    if((typeof key !== 'undefined')&&(!user.contains(key))){
+      cb && cb('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
+      return;
     }
     f = f.f;
     var m = f[methodname];
     if(typeof m === 'function'){
       //console.log('invoking',path,paramobj,username,realmname,roles);
-      console.log('invoking',methodname,'for',user.username,'@',user.realmname,cb); 
+      //console.log('invoking',methodname,'for',user.username,'@',user.realmname,cb); 
       m(paramobj,cb,user);
     }else{
-      return exit('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
+      cb && cb('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
+      return;
     }
   }else{
     //console.trace();
     console.log(functionalityname,'is not a functionalityname while processing',path);
     //console.log(this.dataDebug());
-    return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
+    cb && cb('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
+    return;
   }
 };
 

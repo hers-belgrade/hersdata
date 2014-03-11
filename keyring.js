@@ -19,21 +19,20 @@ function KeyRing(username,realmname,roles){
 };
 KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   //console.log('invoke',data.dataDebug(),path,paramobj);
-  function exit(code,params,message){
-    if(cb){
-      cb(code,params,message);
-    }else{
-      console.log('invoke exited with',code,'for',path,paramobj);
-    }
-  }
   if(typeof path === 'string'){
-    if(!path){return exit('NO_FUNCTIONALITY');}
+    if(!path){
+      cb && cb('NO_FUNCTIONALITY');
+      return;
+    }
     if(path.charAt(0)==='/'){
       path = path.substring(1);
     }
     path = path.split('/');
   }
-  if(!path.length){return exit('NO_FUNCTIONALITY');}
+  if(!path.length){
+    cb && cb('NO_FUNCTIONALITY');
+    return;
+  }
   var target = data;
   while(path.length>2){
     var ttarget = target.element([path[0]]);
@@ -47,14 +46,6 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   }
   target.run(path,paramobj,cb,this);
 };
-KeyRing.prototype.invoke1 = function (data, request, paramobj, cb) {
-  if(typeof data === 'string'){
-    console.trace();
-    console.log('backwards compatibility problem?');
-    process.exit(0);
-  }
-	data && data.invoke(request, paramobj,this.username, this.realmname, this.roles, cb);
-}
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
     if(typeof this.keys[k] === 'undefined'){

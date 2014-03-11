@@ -79,7 +79,9 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
       }
       if(commandresult==='DISCARD_THIS'){
         delete this.cbs[cbref];
-        delete this.persist[cbref];
+        if(this.persist){
+          delete this.persist[cbref];
+        }
       }
       if(commandresult==='DISCARD_GROUP'){
         var cbrefs = arguments[1];
@@ -87,6 +89,9 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
         cbrefs = cbrefs.split(',');
         for(var i in cbrefs){
           delete this.cbs[cbrefs[i]];
+          if(this.persist){
+            delete this.persist[cbrefs[i]];
+          }
         }
       }
     }
