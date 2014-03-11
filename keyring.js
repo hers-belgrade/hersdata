@@ -38,11 +38,11 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     var targetpath = path.splice(0,1);
     var ttarget = data.element(targetpath);
     if(!ttarget){
-      target.run(user,path,paramobj,cb);
+      target.run(path,paramobj,cb,user);
       return;
     }
   }
-  target.run(this,path,paramobj,cb);
+  target.run(path,paramobj,cb,this);
 };
 KeyRing.prototype.invoke1 = function (data, request, paramobj, cb) {
   if(typeof data === 'string'){

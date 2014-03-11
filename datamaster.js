@@ -479,7 +479,8 @@ Collection.prototype.perform_remove = function (path) {
   }
 };
 
-Collection.prototype.run = function(user,path,paramobj,cb){
+Collection.prototype.run = function(path,paramobj,cb,user){
+  console.log('run',path);
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
@@ -918,6 +919,7 @@ Collection.prototype.processInput = function(sender,input){
       return;
     }
     var args = rpc.slice(1);
+    /*
     if(methodname==='invoke'){
       var username = args[2],realmname= args[3],roles=args[4];
       if(!(username&&realmname)){
@@ -935,6 +937,7 @@ Collection.prototype.processInput = function(sender,input){
       }
       (UserBase.setUser(username,realmname,roles)).replicator= sender;
     }
+    */
     return method.apply(this,args);
   }
 };
