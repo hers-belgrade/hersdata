@@ -5,8 +5,6 @@ function UserBase(){
   this.realms = {};
   this.newUser = new HookCollection();
   this.userOut = new HookCollection();
-  this.keySet = new HookCollection();
-  this.keyRemoved = new HookCollection();
 };
 UserBase.prototype.constructor = UserBase;
 UserBase.prototype.setUser = function(username,realmname,roles){
@@ -81,29 +79,6 @@ UserBase.prototype.usersFromRealm = function(replicatoken){
     }
   }
   return ret;
-};
-UserBase.prototype.setKey = function(username,realmname,key){
-  if(!key){
-    throw "realmname problem?";
-  }
-  //console.trace();
-  //console.log('setting key',key,'for',username+'@'+realmname);
-  var user = this.findUser(username,realmname);
-    //console.log('setting key',key,'for',username+'@'+realmname,keyring);
-  if(!user){return;}
-  user.addKey(key);
-  this.keySet.fire(user,key);
-};
-UserBase.prototype.removeKey = function(username,realmname,key){
-  if(!key){
-    throw "realmname problem?";
-  }
-  //console.trace();
-  //console.log('removing key',key,'for',username+'@'+realmname);
-  var user = this.findUser(username,realmname);
-  if(!user){return;}
-  user.removeKey(key);
-  this.keyRemoved.fire(user,key);
 };
 
 var __Instance = new UserBase();
