@@ -71,7 +71,7 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
     cbref = commandresult.splice(0,1)[0];
     var cb = this.cbs[cbref];
-    console.log('cb for',cbref,'is',cb);
+    //console.log('cb for',cbref,'is',cb);
     if(typeof cb === 'function'){
       cb.apply(null,commandresult);
       if(!(this.persist && this.persist[cbref])){
@@ -92,25 +92,30 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
     }
   }
 };
-ReplicatorCommunication.prototype.parseAndSubstituteCBs = function(params){
+ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
   //console.log('should parse and subst',params);
   var ret = '';
   for(var i in params){
     var p = params[i];
-    if(typeof p === 'string' && p.indexOf('#FunctionRef:')===0){
-      var fnref = p.slice(13),t = this;
-      //console.log('#FunctionRef',fnref);
-      if(ret){
-        ret += ',';
+    if(typeof p === 'string'){
+      if(p.indexOf('#FunctionRef:')===0){
+        var fnref = p.slice(13),t = this;
+        //console.log('#FunctionRef',fnref);
+        if(ret){
+          ret += ',';
+        }
+        ret += fnref;
+        params[i] = function(){
+          var args = Array.prototype.slice.call(arguments);
+          args.unshift(fnref);
+          //console.log('sending commandresult',args);
+          args.unshift('commandresult');
+          t.send.apply(t,args);
+        };
       }
-      ret += fnref;
-      params[i] = function(){
-        var args = Array.prototype.slice.call(arguments);
-        args.unshift(fnref);
-        //console.log('sending commandresult',args);
-        args.unshift('commandresult');
-        t.send.apply(t,args);
-      };
+      if(p==='this'){
+        params[i] = this.data;
+      }
     }
   }
   return ret;
@@ -120,7 +125,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   var cbrefs = '';
   delete input.counter;
   for(var i in input){
-    var _cbrefs = this.parseAndSubstituteCBs(input[i]);
+    var _cbrefs = this.parseAndSubstitute(input[i]);
     if(_cbrefs){
       if(cbrefs){
         cbrefs += ',';
