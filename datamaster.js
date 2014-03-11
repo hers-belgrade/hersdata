@@ -731,10 +731,6 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
   for(var i in this.replicatingClients){
     rcc++;
   }
-  if(!rcc){
-    UserBase.keySet.detach(this.userBaseKeySet);
-    UserBase.keyRemoved.detach(this.userBaseKeyRemoved);
-  }
 };
 
 Collection.prototype.openReplication = function(port){
