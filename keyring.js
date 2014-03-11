@@ -40,6 +40,8 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     if(!ttarget){
       target.run(path,paramobj,cb,this);
       return;
+    }else{
+      target = ttarget;
     }
     path.shift();
   }
