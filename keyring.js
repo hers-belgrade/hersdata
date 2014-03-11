@@ -18,7 +18,7 @@ function KeyRing(username,realmname,roles){
   }
 };
 KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
-  //console.log('invoke',data,path,paramobj);
+  console.log('invoke',data,path,paramobj);
   function exit(code,params,message){
     if(cb){
       cb(code,params,message);
@@ -36,12 +36,12 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   if(!path.length){return exit('NO_FUNCTIONALITY');}
   var target = data;
   while(path.length>2){
-    var targetpath = path.splice(0,1);
-    var ttarget = data.element(targetpath);
+    var ttarget = data.element([target[0]]);
     if(!ttarget){
       target.run(path,paramobj,cb,this);
       return;
     }
+    target.shift();
   }
   target.run(path,paramobj,cb,this);
 };

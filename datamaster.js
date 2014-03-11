@@ -509,6 +509,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   }else{
     console.trace();
     console.log(functionalityname,'is not a functionalityname while processing',path);
+    console.log(this.dataDebug());
     return exit('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
   }
 };
