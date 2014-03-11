@@ -18,6 +18,7 @@ function KeyRing(username,realmname,roles){
   }
 };
 KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
+  console.log('invoke',data,path,paramobj);
   function exit(code,params,message){
     if(cb){
       cb(code,params,message);

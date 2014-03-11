@@ -1,5 +1,6 @@
 var Listener = require('./listener'),
     Waiter = require('./bridge').Data_CollectionElementWaiter,
+    KeyRing = require('./keyring'),
     Timeout = require('herstimeout');
 
 function removeFromArray(ar,el){
@@ -538,9 +539,9 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
     }
   };
   u.destroy = function(){
+    this.clearConsumingExtension();
     Listener.prototype.destroy.call(this);
     KeyRing.prototype.destroy.call(this);
-    this.clearConsumingExtension();
   };
 };
 

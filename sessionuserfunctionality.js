@@ -77,8 +77,9 @@ function executeOneOnUser(user,command,params,cb){
     var method = user[command];
     if(!method){
       cb('NO_FUNCTIONALITY',method);
+    }else{
+      method.call(user,params,cb);
     }
-    method.call(user,params,cb);
     return;
   }
   user.invoke(this,command,params,cb); //this is data
@@ -214,7 +215,7 @@ ConsumerSession.prototype.destroy = function(){
 ConsumerSession.prototype.retrieveQueue = function(){
   this.lastAccess = Timeout.now();
   if(this.queue && this.queue.length){
-    console.log(this.session,'splicing',this.queue.length);
+    //console.log(this.session,'splicing',this.queue.length);
     return this.queue.splice(0);
   }else{
     //console.log('empty q');
