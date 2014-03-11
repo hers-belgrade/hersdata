@@ -36,7 +36,7 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   if(!path.length){return exit('NO_FUNCTIONALITY');}
   var target = data;
   while(path.length>2){
-    var ttarget = target.element([target[0]]);
+    var ttarget = target.element([path[0]]);
     if(!ttarget){
       target.run(path,paramobj,cb,this);
       return;
