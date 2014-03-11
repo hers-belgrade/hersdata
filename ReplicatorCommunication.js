@@ -35,6 +35,13 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
+ReplicatorCommunication.prototype.usersend = function(user,code){
+  this.counter.inc();
+  var cnt = this.counter.toString();
+  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,roles:user.roles}};
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
+  this.sendobj(sendobj);
+};
 ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
   if(ca[ca.length-1]==='__persistmycb'){
     ca.pop();

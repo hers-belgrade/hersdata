@@ -23,6 +23,9 @@ CollectionReplica.prototype.constructor = CollectionReplica;
 CollectionReplica.prototype.send = function(){
   this.communication.send.apply(this.communication,arguments);
 };
+CollectionReplica.prototype.usersend = function(){
+  this.communication.usersend.apply(this.communication,arguments);
+};
 CollectionReplica.prototype.go = function(){
   //console.log(this,'should go');
   this.send('internal','need_init',this.replicaToken,this.dump());
@@ -34,15 +37,15 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
     this.send('rpc','_commit',txnalias,txnprimitives);
   }
 };
-CollectionReplica.prototype.invoke = function(path,paramobj,username,realmname,roles,cb) {
+CollectionReplica.prototype.run = function(user,path,paramobj,cb) {
   if(path.join){
     path = path.join('/');
   }
-  this.send('rpc','invoke',path,paramobj,username,realmname,roles,cb);
+  this.usersend(user,'rpc','run',path,paramobj,cb);
 };
 CollectionReplica.prototype.handleUserDestruction = function(u){
   Collection.prototype.handleUserDestruction.call(this,u);
-  this.send('rpc','removeUser',u.username,u.realmname);
+  this.usersend(u,'rpc','removeUser');
 };
 CollectionReplica.prototype.waitFor = function(querypath,cb,waiter,startindex){
   startindex = startindex||0;
