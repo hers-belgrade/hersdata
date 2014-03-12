@@ -337,7 +337,7 @@ ConsumingCollection.prototype.describe = function(u,cb){
 ConsumingCollection.prototype.target = function(name,user){
   return this.collections[name] || this.scalars[name];
 };
-ConsumingCollection.prototype.followForUser = function(path,user,startindex){
+ConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
   if(!(user.contains(this.el.access_level()))){
     return 'ACCESS_FORBIDDEN';
   }
@@ -356,7 +356,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
     var target = this.target(targetname,user);
     if(target){
       if(path.length>startindex+1){
-        return target.followForUser(path,user,startindex+1);
+        return target.followForUser(path,user,startindex+1,cb);
       }else{
         //console.log('adding',user.username,'to',target.name);
         if(!skipadd){
@@ -520,8 +520,8 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
       cb('NO_PATH');
       return;
     }
-    var ret = coll.followForUser(path,this);
-    cb && cb(ret,path);
+    coll.followForUser(path,this,0,cb);
+    //cb && cb(ret,path);
   };
   u.unfollow = function(path,cb){
     cb && cb('OK',path);
@@ -595,7 +595,7 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
     }
   },'__persistmycb');
 };
-ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex){
+ReplicatingConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
   //console.log('replica follows',path,user.username,startindex);
   if(!(user.fullname in this.locations)){
     this.add(user);
@@ -604,8 +604,8 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   for(var i = startindex; i<path.length; i++){
     args.push(path[i]);
   }
+  args.push(cb);
   this.el.send.apply(this.el,args);
-  return 'OK';
 };
 
 module.exports = ConsumingCollection;
