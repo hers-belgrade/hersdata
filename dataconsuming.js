@@ -339,7 +339,7 @@ ConsumingCollection.prototype.target = function(name,user){
 };
 ConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
   if(!(user.contains(this.el.access_level()))){
-    return 'ACCESS_FORBIDDEN';
+    cb && cb('ACCESS_FORBIDDEN',path);
   }
   startindex = startindex||0;
   //console.log(path,user.username,path.length,startindex);
@@ -361,20 +361,20 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
         //console.log('adding',user.username,'to',target.name);
         if(!skipadd){
           target.add(user);
-          return 'OK';
+          cb && cb('OK',path);
         }else{
           target.addThru(user);
-          return 'OK';
+          cb && cb('OK',path);
         }
       }
     }else{
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
-      return 'LATER';
+      cb && cb('LATER',path);
     }
   }else{
     //console.log(this.name,'adding',user.username,'myself');
     this.add(user);
-    return 'OK';
+    cb && cb('OK',path);
   }
 };
 ConsumingCollection.prototype.onUserAdded = function(u){
