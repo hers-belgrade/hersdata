@@ -979,7 +979,7 @@ Collection.prototype.doUserFollow = function(username,realmname,path,cb){
     if(!u.follow){
       return;
     }
-    u.follow(Array.prototype.slice.call(arguments,2));
+    u.follow(Array.prototype.slice.call(arguments,2,-1),cb);
   }
 };
 
