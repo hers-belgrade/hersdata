@@ -368,6 +368,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
         }
       }
     }else{
+      console.log('target not found for',targetname);
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
       cb && cb('LATER',path);
     }
@@ -512,7 +513,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    //console.log('follow',path);
+    //console.log('follow',path,cb);
     if(path.path){
       path = path.path;
     }
@@ -600,7 +601,7 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
     this.add(user);
   }
   var t = this;
-  this.el.usersend(user,'follow',path,cb);
+  this.el.usersend(user,'follow',path.slice(startindex),cb);
 };
 
 module.exports = ConsumingCollection;

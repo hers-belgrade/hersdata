@@ -950,7 +950,7 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
     if(!u.clearConsumingExtension){
       this.consumer.upgradeUserToConsumer(u);
       u.push = username==='saban' ? function(item){
-        //console.log('<== ',item);
+        console.log('<== ',item);
 			 	cb.apply(this, arguments);
       } : cb;
     }
