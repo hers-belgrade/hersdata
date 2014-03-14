@@ -940,49 +940,6 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   return w;
 };
 
-Collection.prototype.setFollower = function(username,realmname,roles,cb){
-  //console.log('setFollower',username);
-  if(!this.consumer){
-    this.consumer = new(require('./dataconsuming'))(this,[]);
-  }
-  u = UserBase.setUser(username,realmname,roles);
-  if(u){
-    if(!u.clearConsumingExtension){
-      this.consumer.upgradeUserToConsumer(u);
-      u.push = username==='saban' ? function(item){
-        //console.log('<== ',item);
-			 	cb.apply(this, arguments);
-      } : cb;
-    }
-  }else{
-    cb('DISCARD_THIS');
-    console.log(u.username,'could not be set for following');
-  }
-  return u;
-};
-
-Collection.prototype.doUserDescribe = function(username,realmname,cb){
-  console.log('doUserDescribe',username);
-  var u = UserBase.findUser(username,realmname);
-  if(u){
-    u.describe(cb);
-  }else{
-    cb('DISCARD_THIS');
-    console.log(username,realmname,'not found to describe to');
-  }
-};
-
-Collection.prototype.doUserFollow = function(username,realmname){
-  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
-  var u = UserBase.findUser(username,realmname);
-  if(u){
-    if(!u.follow){
-      return;
-    }
-    u.follow(Array.prototype.slice.call(arguments,2,-1),arguments[arguments.length-1]);
-  }
-};
-
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,
