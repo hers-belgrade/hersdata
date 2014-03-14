@@ -965,14 +965,14 @@ Collection.prototype.doUserDescribe = function(username,realmname,cb){
   }
 };
 
-Collection.prototype.doUserFollow = function(username,realmname,path){
+Collection.prototype.doUserFollow = function(username,realmname){
   //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
   var u = UserBase.findUser(username,realmname);
   if(u){
     if(!u.follow){
       return;
     }
-    u.follow(Array.prototype.slice.call(arguments,2));
+    u.follow(Array.prototype.slice.call(arguments,2,-1),arguments[arguments.length-1]);
   }
 };
 
