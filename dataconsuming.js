@@ -599,7 +599,12 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   if(!(user.fullname in this.locations)){
     this.add(user);
   }
-  this.el.usersend(user,'follow',path,0,cb);
+  this.el.usersend(user,'follow',path,function(item){
+    item = t.repackRemoteItem(item);
+    if(item){
+      cb(item);
+    }
+  });
 };
 
 module.exports = ConsumingCollection;
