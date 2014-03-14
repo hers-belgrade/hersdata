@@ -599,6 +599,7 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   if(!(user.fullname in this.locations)){
     this.add(user);
   }
+  var t = this;
   this.el.usersend(user,'follow',path,function(item){
     item = t.repackRemoteItem(item);
     if(item){
