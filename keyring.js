@@ -48,7 +48,11 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     }
     path.shift();
   }
-  target.run(path,paramobj,cb,this);
+  if(target.communication){
+    target.communication.usersend(this,'invoke','this',path,paramobj,cb);
+  }else{
+    target.run(path,paramobj,cb,this);
+  }
 };
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
