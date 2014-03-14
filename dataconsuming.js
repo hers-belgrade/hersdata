@@ -572,7 +572,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   }
   this.locations[user.fullname] = user;
   var t = this;
-  this.el.usersend(user,'follow',function(item){
+  this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     t.say(user,t.repackRemoteItem(item));
   },'__persistmycb');
   ConsumingCollection.prototype.add.call(this,user);
@@ -599,7 +599,7 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   if(!(user.fullname in this.locations)){
     this.add(user);
   }
-  this.el.usersend(user,path,0,cb);
+  this.el.usersend(user,'follow',path,0,cb);
 };
 
 module.exports = ConsumingCollection;
