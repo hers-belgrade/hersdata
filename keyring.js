@@ -37,7 +37,11 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   while(path.length>2){
     var ttarget = target.element([path[0]]);
     if(!ttarget){
-      target.run(path,paramobj,cb,this);
+      if(target.communication){
+        target.communication.usersend(this,'invoke','this',path,paramobj,cb);
+      }else{
+        console.log(this.username,'could not invoke',paramobj,'on',path);
+      }
       return;
     }else{
       target = ttarget;
