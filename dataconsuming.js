@@ -368,6 +368,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex){
         }
       }
     }else{
+      console.log('no target for',targetname);
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
       return 'LATER';
     }
@@ -521,6 +522,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
       return;
     }
     var ret = coll.followForUser(path,this);
+    console.log(path,'follow says',ret);
     cb && cb(ret,path);
   };
   u.unfollow = function(path,cb){

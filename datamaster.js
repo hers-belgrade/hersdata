@@ -546,7 +546,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   
   function localerrorhandler(originalerrcb){
     var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){return;if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
-    return function(errorkey){
+    var ret =  function(errorkey){
       if(!errorkey){
         ecb(0,'ok');
         return;
@@ -570,6 +570,7 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       }
       ecb(errorkey,errorparams,errmess);
     };
+    return ret;
   };
 
   if ('function' === typeof(m.validate_config)) {
@@ -580,40 +581,32 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   } 
 
   var my_mod = {};
-  var SELF = (function(s,r,m){var _s=s,_r=r,_m=m;return function(){return {data:_s, self:_r, cbs: _m};}})(self,ret,my_mod);
+  var req;
+  var reqs;
   if (m.requirements) {
-    if (!env) {
-      //console.log('NO environment, use defaults');
-      env = m.requirements;
+    if(!self.element(['__requirements'])){
+      self.commit('requirements_create',[
+        ['set',['__requirements']]
+      ]);
     }
-    switch(typeof env){
-      case 'function':
-        for (var j in m.requirements) {
-          (function (_j) {
-            var _e = env;
-            my_mod[_j] = function () {
-              var args = Array.prototype.slice.call(arguments);
-              args.unshift(_j);
-              return _e.apply(SELF(), args);
-            };
-          })(j);
-        }
-        break;
-      case 'object':
-        for (var j in m.requirements) {
-          (function (_j) {
-            var _e = env;
-            if ('function' != typeof(env[_j]))  throw 'Requirements not met, missing '+j;
-            //console.log('setting requirement '+j+' to '+functionalityname);
-            my_mod[_j] = function () {
-              return _e[_j].apply(SELF(), arguments);
-            };
-          })(j);
-        }
-        break;
+    var re = self.element(['__requirements']);
+    reqs = {}; 
+    re.attach('./requirements',{requirements:reqs});
+    var rf = re.functionalities.requirements.f;
+    req = rf.start;
+  }
+  var SELF = (function(s,r,m){var _s=s,_r=r,_m=m;return function(){return {data:_s, self:_r, require:req};}})(self,ret,my_mod);
+  if(req){
+    for(var i in m.requirements){
+      var r = m.requirements[i];
+      var myr = {};
+      for(var f in r){
+        var _f = r[f];
+        myr[f] = function(){_f.apply(SELF(),arguments);};
+      }
+      reqs[i] = myr;
     }
   }
-
   for(var i in m){
     var p = m[i];
     if((typeof p !== 'function')) continue;
