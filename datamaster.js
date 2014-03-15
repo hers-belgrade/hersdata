@@ -519,13 +519,30 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
     return;
   }
   var rn = path[path.length-1];
-  var re = this.element(['__requirements'],rn);
+  var re = this.element(['__requirements',rn]);
   if(!(re && re.functionalities.requirement.f)){
+    console.log('no requirement',rn,'on',this.dataDebug());
     cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
     return;
   }
   paramobj.user = user;
   re.functionalities.requirement.f.bid(paramobj,cb);
+};
+
+Collection.prototype.takeOffer = function(path,paramobj,cb,user){
+  if(!path.length){
+    cb && cb('VOID_REQUIREMENT');
+    return;
+  }
+  var rn = path[path.length-1];
+  var re = this.element(['__requirements',rn]);
+  if(!(re && re.functionalities.requirement.f)){
+    console.log('no requirement',rn,'on',this.dataDebug());
+    cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
+    return;
+  }
+  paramobj.user = user;
+  re.functionalities.requirement.f.offer(paramobj,cb);
 };
 
 Collection.prototype.attach = function(functionalityname, config, key, environment){
@@ -616,8 +633,10 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
       var r = m.requirements[i];
       var myr = {};
       for(var f in r){
-        var _f = r[f];
-        myr[f] = function(){_f.apply(SELF(),arguments);};
+        myr[f] = (function(_f){
+          var f = _f;
+          return function(){f.apply(SELF(),arguments);};
+        })(r[f]);
       }
       reqs[i] = myr;
     }

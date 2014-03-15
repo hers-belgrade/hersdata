@@ -209,9 +209,9 @@ ReplicatorSocketCommunication.prototype.exec = function(){
     }
   }catch(e){
     //console.log('ERROR processing input', util.inspect(drp,false,null,false));
+    console.log('Exception e',e);
     console.log(drp);
     console.log(e.stack);
-    console.log(e);
   }
   this.maybeExec();
 };

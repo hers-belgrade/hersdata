@@ -29,11 +29,14 @@ function start(requirements,cb){
     var r = requirements[i];
     var mr = this.self.requirements[i];
     var d = this.data;
-    this.data.element([i]).attach('./requirement',{cbs:mr,notifyDone:function(){
-      d.commit('requirement_'+i+'_done',[
-        ['remove',[i]]
-      ]);
-    }});
+    this.data.element([i]).attach('./requirement',{cbs:mr,notifyDone:(function(_mr,_i){
+      var mr = _mr, i=_i;
+      return function(){
+        d.commit('requirement_'+i+'_done',[
+          ['remove',[i]]
+        ]);
+      };
+    })(mr,i)});
     for(var ri in r){
       initactions.push(['set',[i,ri],[r[ri]]]);
     }
