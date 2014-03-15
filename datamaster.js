@@ -520,7 +520,7 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements'],rn);
-  if(!(re && re.functionalities.requirement.f){
+  if(!(re && re.functionalities.requirement.f)){
     cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
     return;
   }
