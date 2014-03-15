@@ -57,6 +57,9 @@ KeyRing.prototype.perform = function(ownmethod,data,path,pathtaillength,datameth
 KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
+KeyRing.prototype.bid = function(data,path,paramobj,cb) {
+  this.perform('bid',data,path,1,'takeBid',paramobj,cb);
+};
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
     if(typeof this.keys[k] === 'undefined'){

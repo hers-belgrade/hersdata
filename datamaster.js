@@ -513,6 +513,21 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   }
 };
 
+Collection.prototype.takeBid = function(path,paramobj,cb,user){
+  if(!path.length){
+    cb && cb('VOID_REQUIREMENT');
+    return;
+  }
+  var rn = path[path.length-1];
+  var re = this.element(['__requirements',rn);
+  if(!(re && re.functionalities.requirement.f){
+    cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
+    return;
+  }
+  paramobj.user = user;
+  re.functionalities.requirement.f.bid(paramobj,cb);
+};
+
 Collection.prototype.attach = function(functionalityname, config, key, environment){
   var self = this;
   if(!key){key=undefined;}
@@ -894,25 +909,6 @@ Collection.prototype.processInput = function(sender,input){
       return;
     }
     var args = rpc.slice(1);
-    /*
-    if(methodname==='invoke'){
-      var username = args[2],realmname= args[3],roles=args[4];
-      if(!(username&&realmname)){
-        console.log('invalid user',username,realmname,'for',args[0]);
-        typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
-        return;
-      }
-      (UserBase.setUser(username,realmname,roles)).replicator= sender;
-    }else if(methodname==='setFollower'){
-      var username = args[0],realmname= args[1],roles=args[2];
-      if(!(username&&realmname)){
-        console.log('invalid user',username,realmname,'for',args[0]);
-        typeof args[args.length-1] === 'function' && args[args.length-1]('NO_USER');
-        return;
-      }
-      (UserBase.setUser(username,realmname,roles)).replicator= sender;
-    }
-    */
     return method.apply(this,args);
   }
 };
