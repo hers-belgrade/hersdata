@@ -169,6 +169,19 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }
   }
 };
+
+ReplicatorCommunication.prototype.doUserFollow = function(username,realmname){
+  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
+  var u = UserBase.findUser(username,realmname);
+  if(u){
+    if(!u.follow){
+      return;
+    }
+    u.follow(Array.prototype.slice.call(arguments,2,-1),arguments[arguments.length-1]);
+  }
+};
+
+
 ReplicatorCommunication.metrics = function(){
   var _n = Timeout.now(), elaps = _n-__start,
     st=ReplicatorCommunication.sendingTime,rt=ReplicatorCommunication.rcvingTime,et=ReplicatorCommunication.execTime,

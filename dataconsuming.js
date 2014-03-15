@@ -368,7 +368,7 @@ ConsumingCollection.prototype.followForUser = function(path,user,startindex,cb){
         }
       }
     }else{
-      console.log('no target for',targetname);
+      console.log('target not found for',targetname);
       this.waiters.push({user:user,waitingpath:path.slice(startindex)});
       cb && cb('LATER',path);
     }
@@ -513,7 +513,7 @@ ConsumingCollection.prototype.upgradeUserToConsumer = function(u){
   }
   u.sessions = {};
   u.follow = function(path,cb){
-    //console.log('follow',path);
+    //console.log('follow',path,cb);
     if(path.path){
       path = path.path;
     }
@@ -575,7 +575,6 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
     t.say(user,t.repackRemoteItem(item));
   },'__persistmycb');
-  //this.el.send('rpc','doUserFollow',user.username,user.realmname);
   ConsumingCollection.prototype.add.call(this,user);
 };
 ReplicatingConsumingCollection.prototype.describe = function(u,cb){
@@ -588,7 +587,7 @@ ReplicatingConsumingCollection.prototype.describe = function(u,cb){
     cb(this.describer);
   }
   var t = this;
-  this.el.send('rpc','doUserDescribe',u.username,u.realmname,function(item){
+  this.el.usersend(u,'describe',function(item){
     item = t.repackRemoteItem(item);
     if(item){
       cb(item);
@@ -600,12 +599,8 @@ ReplicatingConsumingCollection.prototype.followForUser = function(path,user,star
   if(!(user.fullname in this.locations)){
     this.add(user);
   }
-  var args = ['rpc','doUserFollow',user.username,user.realmname];
-  for(var i = startindex; i<path.length; i++){
-    args.push(path[i]);
-  }
-  args.push(cb);
-  this.el.send.apply(this.el,args);
+  var t = this;
+  this.el.usersend(user,'follow',path.slice(startindex),cb);
 };
 
 module.exports = ConsumingCollection;

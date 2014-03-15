@@ -17,11 +17,11 @@ function KeyRing(username,realmname,roles){
     this.addKeys(roles.split(','));
   }
 };
-KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
+KeyRing.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb){
   //console.log('invoke',data.dataDebug(),path,paramobj);
   if(typeof path === 'string'){
     if(!path){
-      cb && cb('NO_FUNCTIONALITY');
+      cb && cb('INVALID_DATA_PATH');
       return;
     }
     if(path.charAt(0)==='/'){
@@ -29,22 +29,33 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     }
     path = path.split('/');
   }
-  if(!path.length){
-    cb && cb('NO_FUNCTIONALITY');
+  if(path.length<pathtaillength){
+    cb && cb('INVALID_DATA_PATH');
     return;
   }
   var target = data;
-  while(path.length>2){
+  while(path.length>pathtaillength){
     var ttarget = target.element([path[0]]);
     if(!ttarget){
-      target.run(path,paramobj,cb,this);
+      if(target.communication){
+        target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
+      }else{
+        console.log(this.username,'could not',ownmethod,paramobj,'on',path);
+      }
       return;
     }else{
       target = ttarget;
     }
     path.shift();
   }
-  target.run(path,paramobj,cb,this);
+  if(target.communication){
+    target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
+  }else{
+    target[datamethod](path,paramobj,cb,this);
+  }
+};
+KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
+  this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
