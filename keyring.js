@@ -17,7 +17,7 @@ function KeyRing(username,realmname,roles){
     this.addKeys(roles.split(','));
   }
 };
-KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
+KeyRing.prototype.perform = function(ownmethod,data,path,datamethod,paramobj,cb){
   //console.log('invoke',data.dataDebug(),path,paramobj);
   if(typeof path === 'string'){
     if(!path){
@@ -38,9 +38,9 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     var ttarget = target.element([path[0]]);
     if(!ttarget){
       if(target.communication){
-        target.communication.usersend(this,'invoke','this',path,paramobj,cb);
+        target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
       }else{
-        console.log(this.username,'could not invoke',paramobj,'on',path);
+        console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
       return;
     }else{
@@ -49,10 +49,13 @@ KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
     path.shift();
   }
   if(target.communication){
-    target.communication.usersend(this,'invoke','this',path,paramobj,cb);
+    target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
   }else{
-    target.run(path,paramobj,cb,this);
+    target[datamethod](path,paramobj,cb,this);
   }
+};
+KeyRing.prototype.invoke = function(data,path,paramobj,cb) {
+  this.perform('invoke',data,path,'run',paramobj,cb);
 };
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
