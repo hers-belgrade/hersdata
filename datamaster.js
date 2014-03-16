@@ -717,6 +717,10 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   return ret;
 };
 
+Collection.prototype.setSessionUserFunctionality = function(config,requirements){
+  this.attach('./sessionuserfunctionality',config,'dcp',requirements);
+};
+
 Collection.prototype.getReplicatingUser = function(cb){
   if(this.replicatingUser){
     cb(this.replicatingUser);
@@ -899,10 +903,6 @@ Collection.prototype.processInput = function(sender,input){
           sender.createListener('dataTxn',function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
             sender.send('rpc','_commit',txnalias,txnprimitives,txnid,chldcollectionpath);
           },this.onNewTransaction);
-          if(typeof sender.listener !== 'number'){
-            console.log('no return from attach');
-            process.exit(0);
-          }
         }
         this.newReplica.fire(sender);
         break;

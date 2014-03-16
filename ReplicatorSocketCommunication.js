@@ -1,4 +1,5 @@
 var ReplicatorCommunication = require('./ReplicatorCommunication'),
+  Timeout = require('herstimeout'),
   zlib = require('zlib');
 
 function ReplicatorSocketCommunication(data){
@@ -93,7 +94,6 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
   zip.end();
 };
 ReplicatorSocketCommunication.prototype.sendobj = function(obj){
-  console.log('ReplicatorSocketCommunication sending obj',obj);
   if(!this.sendingQueue){return;}
   this.sendingQueue.push(obj);
   this._internalSend();
@@ -221,3 +221,4 @@ ReplicatorSocketCommunication.prototype.maybeExec = function(){
   }
 };
 
+module.exports = ReplicatorSocketCommunication;

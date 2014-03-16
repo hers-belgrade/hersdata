@@ -256,7 +256,7 @@ function ConsumingCollection(el,path,name,parnt){
             delete w.waitingpath;
             ent.add(w.user);
           }else{
-            ent.waiters.push(w);
+            ent.waiters && ent.waiters.push(w);
           }
         }
         break;

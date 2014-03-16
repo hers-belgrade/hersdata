@@ -10,7 +10,7 @@ var errors = {
   'NO_COMMANDS':{message:'No commands to execute'}
 };
 
-function produceUser(paramobj){
+function _produceUser(paramobj){
   if(!paramobj.name){
     return;
   }
@@ -43,7 +43,7 @@ function produceUser(paramobj){
 }
 
 function dumpData(paramobj,statuscb) {
-  var user = produceUser.call(this,paramobj);
+  var user = _produceUser.call(this,paramobj);
   //console.log('recognized',user.username,user.realmname,user.keys);
   if(!user){
     statuscb('NO_USER');
@@ -52,7 +52,7 @@ function dumpData(paramobj,statuscb) {
   var sessid = paramobj[this.self.fingerprint];
   if(!sessid){
     sessid=this.self.newSession();
-    console.log('created',sessid,'on',user.username);
+    console.log('created',sessid,'on',user.username,'because',this.self.fingerprint,'was not found');
   }
   //console.log(user.sessions);
   user.makeSession(sessid);
@@ -128,7 +128,7 @@ executeOnUser.params = ['user','session','commands'];
 function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
   var session = paramobj[this.self.fingerprint];
   if(!session){
-    console.log('no session in',paramobj);
+    //console.log('no session in',paramobj);
     statuscb('NO_SESSION','');
     return;
   }
@@ -146,7 +146,7 @@ function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
       return;
     }
   }
-  var user = produceUser.call(this,paramobj);
+  var user = _produceUser.call(this,paramobj);
   //console.log('recognized',user.username,user.realmname,user.keys);
   if(!user){
     statuscb('NO_USER');
@@ -187,6 +187,7 @@ function init(){
 module.exports = {
   errors:errors,
   init:init,
+  _produceUser:_produceUser,
   dumpData: dumpData,
   executeOnUser: executeOnUser,
   produceAndExecute: produceAndExecute,
