@@ -77,6 +77,7 @@ function executeOneOnUser(user,command,params,cb){
     var method = user[command];
     if(!method){
       cb('NO_FUNCTIONALITY',method);
+      return;
     }else{
       method.call(user,params,cb);
     }
