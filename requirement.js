@@ -6,7 +6,7 @@ var errors = {
   'NO_OFFERS_ON_THIS_REQUIREMENT':{message:'This requirement does not support offers'},
   'INTERNAL_ERROR':{message:'An internal error has occured: [error]. Please contact the software vendor'},
   'BID_REFUSED':{message:'Your bid has been refused'},
-  'DO_OFFER':{message:'Give your final offer'},
+  'DO_OFFER':{message:'Give your final offer on [offerid]',params:['offerid']},
   'ACCEPTED':{message:'Your bid [bid] has been accepted, reference: [reference]',params:['reference','bid']},
   'INVALID_OFFER_ID':{message:'Your offer id [offerid] is invalid',params:['offerid']},
   'OFFER_SET':{message:'Offer set at [offerid]',params:['offerid']},
@@ -18,7 +18,7 @@ function init(){
   this.self.counter = 0;
 };
 
-function setOffer(jsondata,cb,user){
+function setOffer(jsondata,offerid,cb,user){
   if(typeof jsondata === 'object'){
     jsondata = JSON.stringify(jsondata);
   }
@@ -27,16 +27,21 @@ function setOffer(jsondata,cb,user){
   if(!offersel){
     actions.push(['set',['offers']]);
   }
-  this.self.counter++;
-  if(this.self.counter>1000000000){
-    this.self.counter=1;
+  if(offerid===null){
+    this.self.counter++;
+    if(this.self.counter>1000000000){
+      this.self.counter=1;
+    }
+    offerid = this.self.counter;
   }
-  actions.push(['set',['offers',this.self.counter]]);
-  actions.push(['set',['offers',this.self.counter,'data'],[jsondata,undefined,user.username+'@'+user.realmname]]);
+  actions.push(['set',['offers',offerid]]);
+  actions.push(['set',['offers',offerid,'data'],[jsondata,undefined,user.username+'@'+user.realmname]]);
   this.data.commit('set_offer',actions);
-  cb('OFFER_SET',this.self.counter);
-};
-setOffer.params=['jsondata'];
+  console.log('offer set',this.data.dataDebug());
+  cb('OFFER_SET',offerid);
+}
+setOffer.params=['jsondata','offerid'];
+setOffer.defaults = {offerid:null};
 
 function doCall(callname,cb,user){
   var t = this;
@@ -50,7 +55,7 @@ function doCall(callname,cb,user){
     var u = user;
     t.self.setOffer({jsondata:jsondata},function(errc,errp){
       if(errc==='OFFER_SET'){
-        cb('DO_OFFER');
+        cb('DO_OFFER',errp[0]);
         if(options){
           if(options.timeout){
             Timeout.set(function(t,oid){t.self.offer({offerid:oid})},options.timeout,t,errp[0]);
@@ -81,8 +86,8 @@ function offer(paramobj,cb,user){
     return;
   }
   var offerid = paramobj.offerid;
-  var offer = this.self.offers[offerid];
-  if(!offer){
+  var offerel = this.data.element(['offers',offerid]);
+  if(!offerel){
     cb('INVALID_OFFER_ID',offerid);
     return;
   }

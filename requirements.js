@@ -38,10 +38,12 @@ function start(requirements,cb){
       };
     })(mr,i)});
     for(var ri in r){
-      initactions.push(['set',[i,ri],[r[ri]]]);
+      var key = r[ri] === null ? undefined : r[ri];
+      initactions.push(['set',[i,ri],[key]]);
     }
   }
   this.data.commit('setting_requirement',initactions);
+  console.log('requirement set',this.data.dataDebug());
 }
 start.params = 'originalobj';
 
