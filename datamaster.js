@@ -525,8 +525,7 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
     cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
     return;
   }
-  paramobj.user = user;
-  re.functionalities.requirement.f.bid(paramobj,cb);
+  re.functionalities.requirement.f.bid(paramobj,cb,user);
 };
 
 Collection.prototype.takeOffer = function(path,paramobj,cb,user){
@@ -541,8 +540,7 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
     cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
     return;
   }
-  paramobj.user = user;
-  re.functionalities.requirement.f.offer(paramobj,cb);
+  re.functionalities.requirement.f.offer(paramobj,cb,user);
 };
 
 Collection.prototype.attach = function(functionalityname, config, key, environment){
