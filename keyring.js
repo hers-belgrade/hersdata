@@ -16,7 +16,6 @@ function KeyRing(username,realmname,roles){
   if(roles){
     this.addKeys(roles.split(','));
   }
-  this.addKey(username+'@'+realmname);
 };
 KeyRing.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb){
   //console.log('invoke',data.dataDebug(),path,paramobj);

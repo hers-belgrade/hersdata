@@ -6,8 +6,8 @@ var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var HookCollection = require('./hookcollection');
-var UserBase = require('./userbase');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
+var DataUser = require('./DataUser');
 var __ScalarCount=0, __CollectionCount = 0;
 
 function throw_if_invalid_scalar(val) {
@@ -170,7 +170,7 @@ function Collection(a_l){
     if(a_l===null){a_l=undefined;}
     if(access_level!==a_l){
       access_level = a_l;
-      this.accessLevelChanged.fire(access_level);
+      this.handleAccessLevelChanged(access_level);
     }
   };
 
@@ -321,6 +321,10 @@ Collection.prototype.type = function(){
   return 'Collection';
 };
 
+Collection.prototype.handleAccessLevelChanged = function(access_level){
+  this.accessLevelChanged.fire(access_level);
+};
+
 Collection.prototype.instanceCounts = function(){
   return {scalars:__ScalarCount, collections: __CollectionCount};
 };
@@ -392,11 +396,12 @@ Collection.prototype.resetTxns = function(){
 };
 
 Collection.prototype.dump = function(forreplicatoken){
+  return {};
   var ret = {
     data:this.toMasterPrimitives(),
   };
   if(typeof forreplicatoken !== 'undefined'){
-    ret.users = UserBase.usersFromRealm(forreplicatoken);
+    ret.users = this.usersFromRealm(forreplicatoken);
   }
   return ret;
 };
@@ -814,6 +819,14 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
   */
 };
 
+function DataSuperUser(username,realmname,roles,data,cb){
+  DataUser.call(this,username,realmname,roles,data,cb);
+};
+DataSuperUser.prototype = new DataUser();
+DataSuperUser.contains = function(){
+  return true;
+};
+
 Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
   if(remotedump){
     var remotedata = remotedump.data;
@@ -823,7 +836,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     if(docreatereplicator){
       var tkn = remotedump.token;
       console.log('cloned from remote',tkn);
-      this.replicatingUser = UserBase.setUser(tkn.name,tkn.realmname,'dcp,system,'+tkn.name);
+      this.replicatingUser = new DataSuperUser(tkn.name,tkn.realmname,'dcp,system',this,function(){});
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
@@ -881,12 +894,6 @@ Collection.prototype.processInput = function(sender,input){
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
         this.replicationInitiated.fire(this.replicatingUser);
-        break;
-      case 'setKey':
-        UserBase.setKey(internal[1],internal[2],internal[3]);
-        break;
-      case 'removeKey':
-        UserBase.removeKey(internal[1],internal[2],internal[3]);
         break;
       case 'going_down':
         console.log(sender.replicaToken.name,'going down');
@@ -946,7 +953,19 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   return w;
 };
 
-Collection.prototype.setFollower = function(username,realmname,roles,cb){
+Collection.prototype.setFollower = function(path,username,realmname,roles,cb){
+  var target = this;
+  while(path.length){
+    var ttarget = target.element([path[0]]);
+    if(!ttarget){
+      cb && cb('LATER',path);
+      return;
+    }
+    target = ttarget;
+    path.shift();
+  }
+  target.setUser(username,realmname,roles,cb);
+  return;
   //console.log('setFollower',username);
   if(!this.consumer){
     this.consumer = new(require('./dataconsuming'))(this,[]);
@@ -967,8 +986,38 @@ Collection.prototype.setFollower = function(username,realmname,roles,cb){
   return u;
 };
 
+//======= user handling methods
+
+function removeFromArray(ar,el){
+  if(!ar){return;}
+  var ind = ar.indexOf(el);
+  if(ind>=0){
+    ar.splice(ind,1);
+    return true;
+  }
+  ind = ar.indexOf(el);
+  if(ind>=0){
+    console.log('Element was duplicated in array');
+    process.exit(0);
+  }
+}
+function addToArray(ar,el){
+  var ind = ar.indexOf(el);
+  if(ind<0){
+    ar.push(el);
+    return true;
+  }/*else{
+    console.log(ar,'already has',el)
+  }*/
+};
+function relocate(src,dest,el){
+  removeFromArray(src,el);
+  addToArray(dest,el);
+}
+
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,
-  HookCollection : HookCollection
+  HookCollection : HookCollection,
+  DataUser : DataUser
 }
