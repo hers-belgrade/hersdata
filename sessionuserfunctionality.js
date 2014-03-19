@@ -11,7 +11,7 @@ var errors = {
   'NO_COMMANDS':{message:'No commands to execute'}
 };
 
-function SessionUser(username,realmname,roles,data,cb){
+function SessionUser(data,cb,username,realmname,roles){
   this.sessions = {};
   DataUser.call(this,username,realmname,roles,data,cb);
 }

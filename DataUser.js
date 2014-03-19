@@ -29,7 +29,7 @@ function relocate(src,dest,el){
   addToArray(dest,el);
 }
 
-function DataUser(username,realmname,roles,data,cb){
+function DataUser(data,cb,username,realmname,roles){
   if(!username){return};
   this.fullname = username+'@'+realmname;
   this.user = new KeyRing(username,realmname,roles);

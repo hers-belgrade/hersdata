@@ -823,8 +823,8 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
   */
 };
 
-function DataSuperUser(username,realmname,roles,data,cb){
-  DataUser.call(this,username,realmname,roles,data,cb);
+function DataSuperUser(data,cb,username,realmname,roles){
+  DataUser.call(this,data,cb,username,realmname,roles);
 };
 DataSuperUser.prototype = new DataUser();
 DataSuperUser.contains = function(){
@@ -840,7 +840,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     if(docreatereplicator){
       var tkn = remotedump.token;
       console.log('cloned from remote',tkn);
-      this.replicatingUser = new DataSuperUser(tkn.name,tkn.realmname,'dcp,system',this,function(){});
+      this.replicatingUser = new DataSuperUser(this,function(){},tkn.name,tkn.realmname,'dcp,system');
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
