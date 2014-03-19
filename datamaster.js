@@ -986,35 +986,6 @@ Collection.prototype.setFollower = function(path,username,realmname,roles,cb){
   return u;
 };
 
-//======= user handling methods
-
-function removeFromArray(ar,el){
-  if(!ar){return;}
-  var ind = ar.indexOf(el);
-  if(ind>=0){
-    ar.splice(ind,1);
-    return true;
-  }
-  ind = ar.indexOf(el);
-  if(ind>=0){
-    console.log('Element was duplicated in array');
-    process.exit(0);
-  }
-}
-function addToArray(ar,el){
-  var ind = ar.indexOf(el);
-  if(ind<0){
-    ar.push(el);
-    return true;
-  }/*else{
-    console.log(ar,'already has',el)
-  }*/
-};
-function relocate(src,dest,el){
-  removeFromArray(src,el);
-  addToArray(dest,el);
-}
-
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,
