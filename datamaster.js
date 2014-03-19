@@ -156,6 +156,10 @@ function Collection(a_l){
     return ret;
   }
 
+  this.access_level = function(){
+    return access_level;
+  };
+
   this.newElement = new HookCollection();
 
   this.onNewTransaction = new HookCollection();

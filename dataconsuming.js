@@ -572,7 +572,7 @@ ReplicatingConsumingCollection.prototype.add = function(user){
   }
   this.locations[user.fullname] = user;
   var t = this;
-  this.el.send('rpc','setFollower',user.username,user.realmname,user.roles,function(item){
+  this.el.send('rpc','setFollower',[],user.username,user.realmname,user.roles,function(item){
     t.say(user,t.repackRemoteItem(item));
   },'__persistmycb');
   ConsumingCollection.prototype.add.call(this,user);

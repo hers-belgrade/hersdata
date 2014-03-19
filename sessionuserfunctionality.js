@@ -2,6 +2,7 @@ var RandomBytes = require('crypto').randomBytes;
 var BigCounter = require('./BigCounter');
 var util = require('util');
 var Timeout = require('herstimeout');
+var DataUser = require('./DataUser');
 
 var errors = {
   'OK':{message:'OK'},
@@ -10,11 +11,35 @@ var errors = {
   'NO_COMMANDS':{message:'No commands to execute'}
 };
 
+function SessionUser(username,realmname,roles,data,cb){
+  this.sessions = {};
+  DataUser.call(this,username,realmname,roles,data,cb);
+}
+SessionUser.prototype = new DataUser();
+SessionUser.prototype.constructor = SessionUser;
+SessionUser.prototype.makeSession = function(sess){
+  if(!sess){
+    console.trace();
+    console.log('no session to make');
+    process.exit(0);
+  }
+  if(this.sessions[sess]){return;}
+  this.sessions[sess] = new ConsumerSession(this,sess);
+};
+
+function _findUser(username){
+  return this.self.userMap[username];
+}
+
 function _produceUser(paramobj){
   if(!paramobj.name){
     return;
   }
-  var user = this.data.setFollower(paramobj.name,this.self.realmName,paramobj.roles,function(item){
+  var u = this.self._findUser(paramobj.name);
+  if(u){
+    return u;
+  }
+  var user = new SessionUser(paramobj.name,this.self.realmName,paramobj.roles,this.data,function(item){
     for(var i in this.sessions){
       if(!this.sessions[i].push){
         delete this.sessions[i];
@@ -24,21 +49,7 @@ function _produceUser(paramobj){
       }
     }
   });
-  var t = this;
-  if(!user.makeSession){
-    user.makeSession = function(sess){
-      if(!sess){
-        console.trace();
-        console.log('no session to make');
-        process.exit(0);
-      }
-      if(this.sessions[sess]){return;}
-      this.sessions[sess] = new ConsumerSession(this,t,sess);
-    };
-    for(var i in this.self.userProductionCallbacks){
-      this.self.userProductionCallbacks[i](user);
-    }
-  }
+  this.self.userMap[user.user.username] = user;
   return user;
 }
 
@@ -52,7 +63,7 @@ function dumpData(paramobj,statuscb) {
   var sessid = paramobj[this.self.fingerprint];
   if(!sessid){
     sessid=this.self.newSession();
-    console.log('created',sessid,'on',user.username,'because',this.self.fingerprint,'was not found');
+    console.log('created',sessid,'on',user.username,'because',this.self.fingerprint,'was not found in',paramobj);
   }
   //console.log(user.sessions);
   user.makeSession(sessid);
@@ -76,9 +87,10 @@ function executeOneOnUser(user,command,params,cb){
     //console.log('user function',command);
     var method = user[command];
     if(!method){
+      console.log('no method named',command,'on user');
       cb('NO_FUNCTIONALITY',method);
     }else{
-      method.call(user,params,cb);
+      method.apply(user,Array.prototype.slice.call(arguments,2));
     }
     return;
   }
@@ -88,7 +100,7 @@ function executeOneOnUser(user,command,params,cb){
 function executeOnUser(user,session,commands,statuscb){
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;
-  var ret = {username:user.username,roles:user.roles,session:sessionobj};
+  var ret = {username:user.user.username,roles:user.user.roles,session:sessionobj};
   var cmdlen = commands.length;
   var cmdstodo = cmdlen/2;
   var cmdsdone = 0;
@@ -110,7 +122,7 @@ function executeOnUser(user,session,commands,statuscb){
         if(cmdsdone===cmdstodo){
           var s = user.sessions[session];
           if(!s){
-            console.log('NO_SESSION',session);
+            console.log('NO_SESSION',session,user.sessions);
             _scb('NO_SESSION',session);
             return;
           }
@@ -177,6 +189,7 @@ unRegisterUserProductionCallback.params=['cb'];
 function init(){
   this.self.fingerprint = RandomBytes(12).toString('hex');
   this.self.userProductionCallbacks = [];
+  this.self.userMap = {};
   var counter = new BigCounter();
   this.self.newSession = function(){
     counter.inc();
@@ -188,6 +201,7 @@ module.exports = {
   errors:errors,
   init:init,
   _produceUser:_produceUser,
+  _findUser:_findUser,
   dumpData: dumpData,
   executeOnUser: executeOnUser,
   produceAndExecute: produceAndExecute,
@@ -195,7 +209,7 @@ module.exports = {
 };
 
 
-function ConsumerSession(u,coll,session){
+function ConsumerSession(u,session){
   this.user = u;
   this.session = session;
   this.queue = [];
