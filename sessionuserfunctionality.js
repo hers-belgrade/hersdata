@@ -11,9 +11,21 @@ var errors = {
   'NO_COMMANDS':{message:'No commands to execute'}
 };
 
-function SessionUser(data,cb,username,realmname,roles){
-  this.sessions = {};
-  DataUser.call(this,username,realmname,roles,data,cb);
+function SessionUser(data,username,realmname,roles){
+  sessions = {};
+  var t = this;
+  DataUser.call(this,data,function(item){
+    //console.log('<=',item);
+    for(var i in t.sessions){
+      if(!t.sessions[i].say){
+        delete t.sessions[i];
+      }
+      if(t.sessions[i].say(item)===false){
+        delete t.sessions[i];
+      }
+    }
+  },username,realmname,roles);
+  this.sessions = sessions;
 }
 SessionUser.prototype = new DataUser();
 SessionUser.prototype.constructor = SessionUser;
@@ -39,17 +51,8 @@ function _produceUser(paramobj){
   if(u){
     return u;
   }
-  var user = new SessionUser(paramobj.name,this.self.realmName,paramobj.roles,this.data,function(item){
-    for(var i in this.sessions){
-      if(!this.sessions[i].push){
-        delete this.sessions[i];
-      }
-      if(this.sessions[i].push(item)===false){
-        delete this.sessions[i];
-      }
-    }
-  });
-  this.self.userMap[user.user.username] = user;
+  var user = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
+  this.self.userMap[user.username] = user;
   return user;
 }
 
@@ -100,7 +103,7 @@ function executeOneOnUser(user,command,params,cb){
 function executeOnUser(user,session,commands,statuscb){
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;
-  var ret = {username:user.user.username,roles:user.user.roles,session:sessionobj};
+  var ret = {username:user.username,roles:user.roles,session:sessionobj};
   var cmdlen = commands.length;
   var cmdstodo = cmdlen/2;
   var cmdsdone = 0;
@@ -217,7 +220,7 @@ function ConsumerSession(u,session){
   var t = this;
   u.describe(function(item){
     console.log('describe',item);
-    t.push(item);
+    t.say(item);
   });
 };
 ConsumerSession.initTxn = JSON.stringify([JSON.stringify([]),JSON.stringify([null,'init'])]);
@@ -248,7 +251,7 @@ ConsumerSession.prototype.setSocketIO = function(sock){
     sock.emit('_',this.queue.shift());
   }
 };
-ConsumerSession.prototype.push = function(item){
+ConsumerSession.prototype.say = function(item){
   var n = Timeout.now();
   if(this.sockio){
     //console.log('emitting',item);

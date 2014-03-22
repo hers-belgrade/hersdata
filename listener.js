@@ -24,10 +24,14 @@ Listener.prototype.destroyListener = function(listenername){
     delete this.listeners[listenername];
   }
 };
-Listener.prototype.destroy = function(){
+Listener.prototype.purgeListeners = function(){
   for(var i in this.listeners){
     this.listeners[i].destroy();
+    delete this.listeners[i];
   }
+};
+Listener.prototype.destroy = function(){
+  this.purgeListeners();
   delete this.listeners;
 };
 
