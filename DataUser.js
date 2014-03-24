@@ -96,6 +96,7 @@ DataFollower.prototype.huntTarget = function(data){
     this.createcb('OK');
     delete this.createcb;
     this.explain();
+    this.attachToContents();
   }
 }
 DataFollower.prototype.followerFor = function(name){
@@ -108,11 +109,35 @@ DataFollower.prototype.followerFor = function(name){
     fs = false;
   }
 };
+DataFollower.prototype.attachToScalar = function(name,el){
+  this.createListener(name+'_changed',function(changedmap){
+    this.reportScalar(name,el,this.say);
+  },el.changed);
+  this.createListener(name+'_destroyed',function(){
+    this.say([this.path,[name]]);
+  },el.destroyed);
+};
+DataFollower.prototype.attachToContents = function(){
+  if(!this.data){return;}
+  var t = this;
+  this.data.traverseElements(function(name,el){
+    switch(el.type()){
+      case 'Scalar':
+        t.attachToScalar(name,el);
+        break;
+      case 'Collection':
+        break;
+    }
+  });
+};
+DataFollower.prototype.reportScalar = function(name,el,cb){
+  cb([this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
+};
 DataFollower.prototype.reportElement = function(name,el,cb){
   cb = cb || this.say;
   switch(el.type()){
     case 'Scalar':
-      cb([this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
+      this.reportScalar(name,el,cb);
       break;
     case 'Collection':
       if(this.contains(el.access_level())){

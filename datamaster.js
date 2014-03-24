@@ -26,9 +26,9 @@ function throw_if_invalid_scalar_or_undefined(val){
   }
 }
 
-function throw_if_any_invalid (ra,pa,al) {
-  throw_if_invalid_scalar_or_undefined (ra);
-  throw_if_invalid_scalar_or_undefined (pa);
+function throw_if_any_invalid (rv,pv,al) {
+  throw_if_invalid_scalar_or_undefined (rv);
+  throw_if_invalid_scalar_or_undefined (pv);
   throw_if_invalid_scalar_or_undefined (al);
 }
 
@@ -53,18 +53,18 @@ function Scalar(res_val,pub_val, access_lvl) {
   this.changed = new HookCollection();
   this.destroyed = new HookCollection();
 
-  function set_from_vals (ra,pa,al,path) {
-    ra = nullconversion(ra);
-    pa = nullconversion(pa);
+  function set_from_vals (rv,pv,al,path) {
+    rv = nullconversion(rv);
+    pv = nullconversion(pv);
     al = nullconversion(al);
-    throw_if_any_invalid(ra,pa,al);
+    throw_if_any_invalid(rv,pv,al);
     var changedmap = {};
     var changed = false;
-    if(!equals(ra,restricted_value)){
+    if(!equals(rv,restricted_value)){
       changed = true;
       changedmap.private = 1;
     }
-    if(!equals(pa,public_value)){
+    if(!equals(pv,public_value)){
       changed = true;
       changedmap.public = 1;
     }
@@ -76,9 +76,9 @@ function Scalar(res_val,pub_val, access_lvl) {
       return;
     }
     //console.trace();
-    //console.log('[',public_value,restricted_value,access_level,'] changed to [',pa,ra,al,']');
-    restricted_value = ra;
-    public_value = pa;
+    //console.log('[',public_value,restricted_value,access_level,'] changed to [',pv,rv,al,']');
+    restricted_value = rv;
+    public_value = pv;
     access_level = al;
     //console.log(this.changed.counter);
     this.changed.fire(this,changedmap);
@@ -400,13 +400,14 @@ Collection.prototype.resetTxns = function(){
 };
 
 Collection.prototype.dump = function(forreplicatoken){
-  return {};
   var ret = {
     data:this.toMasterPrimitives(),
   };
+  /*
   if(typeof forreplicatoken !== 'undefined'){
     ret.users = this.usersFromRealm(forreplicatoken);
   }
+  */
   return ret;
 };
 

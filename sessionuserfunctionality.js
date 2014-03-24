@@ -219,7 +219,6 @@ function ConsumerSession(u,session){
   this.lastAccess = Timeout.now();
   var t = this;
   u.describe(function(item){
-    console.log('describe',item);
     t.say(item);
   });
 };
