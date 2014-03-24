@@ -25,7 +25,7 @@ RemoteCollectionReplica.prototype.go = function(cb){
     t.communication.listenTo(this);
     var _cb = cb;
     this.on('close',function(){
-      console.log('socket closed');
+      console.log('socket closed on',t.url);
       t.status = 'disconnected';
       _cb && _cb(t.status);
       Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
@@ -42,6 +42,8 @@ RemoteCollectionReplica.prototype.go = function(cb){
   });
 };
 RemoteCollectionReplica.prototype.destroy = function(){
+  console.trace();
+  console.log('RemoteCollectionReplica destroyed');
   if(this.communication && this.communication.socket){
     this.communication.socket.destroy();
   }
