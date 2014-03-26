@@ -192,13 +192,21 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
               }else{
                 oldmap[_n] = val;
               }
-              map[_n] = val;
-              if(handled.indexOf(_n)<0){
-                var h = handled;
-                this.destroyed.attach(function(){
-                  var i = h.splice(h.indexOf(_n),1);
-                });
-                handled.push(_n);
+              if(typeof val === 'undefined'){
+                delete map[_n];
+                var ni = handled.indexOf(_n);
+                if(ni>=0){
+                  handled.splice(ni,1);
+                }
+              }else{
+                map[_n] = val;
+                if(handled.indexOf(_n)<0){
+                  var h = handled;
+                  this.destroyed.attach(function(){
+                    var i = h.splice(h.indexOf(_n),1);
+                  });
+                  handled.push(_n);
+                }
               }
               if(handled.length===shouldhandle){
                 var args = Array.prototype.slice.call(arguments,0,arguments.length-1);
