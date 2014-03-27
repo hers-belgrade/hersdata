@@ -57,14 +57,15 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
   }else{
     specificargs.unshift(path);
     specificargs.push(this);
+    console.log(target,datamethod);
     target[datamethod].apply(target,specificargs);
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
-User.prototype.waitFor = function(data,path,queryarry,cb) {
-  this.perform('waitFor',data,path,1,'waitFor',paramobj,cb);
+User.prototype.waitFor = function(data,queryarry,cb) {
+  this.perform('waitFor',data,[],0,'waitFor',queryarry,cb);
 };
 User.prototype.bid = function(data,path,paramobj,cb) {
   this.perform('bid',data,path,1,'takeBid',paramobj,cb);

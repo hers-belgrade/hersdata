@@ -165,6 +165,8 @@ DataFollower.prototype.explain = function(cb){
 function DataUser(data,createcb,cb,username,realmname,roles){
   if(!data){return};
   DataFollower.call(this,data,createcb,cb,new User(username,realmname,roles));
+  var t = this;
+  data.destroyed.attach(function(){createcb.call(t,'DISCONNECTED');});
 };
 DataUser.prototype = new DataFollower();
 DataUser.prototype.constructor = DataUser;
@@ -172,10 +174,13 @@ DataUser.prototype.invoke = function(path,paramobj,cb){
   return User.prototype.invoke.call(this,this.data,path,paramobj,cb);
 };
 DataUser.prototype.bid = function(path,paramobj,cb){
-  return User.prototype.invoke.bid(this,this.data,path,paramobj,cb);
+  return User.prototype.bid.call(this,this.data,path,paramobj,cb);
 };
 DataUser.prototype.offer = function(path,paramobj,cb){
-  return User.prototype.invoke.offer(this,this.data,path,paramobj,cb);
+  return User.prototype.offer.call(this,this.data,path,paramobj,cb);
+};
+DataUser.prototype.waitFor = function(queryarry,cb){
+  return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
 DataUser.prototype.follow = function(path,cb){
   path = path || [];
