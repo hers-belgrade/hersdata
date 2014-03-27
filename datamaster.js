@@ -958,39 +958,6 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   return w;
 };
 
-Collection.prototype.setFollower = function(path,username,realmname,roles,cb){
-  var target = this;
-  while(path.length){
-    var ttarget = target.element([path[0]]);
-    if(!ttarget){
-      cb && cb('LATER',path);
-      return;
-    }
-    target = ttarget;
-    path.shift();
-  }
-  target.setUser(username,realmname,roles,cb);
-  return;
-  //console.log('setFollower',username);
-  if(!this.consumer){
-    this.consumer = new(require('./dataconsuming'))(this,[]);
-  }
-  u = UserBase.setUser(username,realmname,roles);
-  if(u){
-    if(!u.clearConsumingExtension){
-      this.consumer.upgradeUserToConsumer(u);
-      u.push = username==='saban' ? function(item){
-        //console.log('<== ',item);
-			 	cb.apply(this, arguments);
-      } : cb;
-    }
-  }else{
-    cb('DISCARD_THIS');
-    console.log(u.username,'could not be set for following');
-  }
-  return u;
-};
-
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,
