@@ -31,11 +31,15 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     return;
   }
   var target = data;
+  var specificargs = Array.prototype.slice.call(arguments,5); //here comes e.g. paramobj,cb or just cb
   while(path.length>pathtaillength){
     var ttarget = target.element([path[0]]);
     if(!ttarget){
       if(target.communication){
-        target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
+        specificargs.unshift(path);
+        specificargs.unshift(ownmethod);
+        specificargs.unshift(this);
+        target.communication.usersend.apply(target.communication,specificargs);
       }else{
         console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
@@ -46,13 +50,21 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     path.shift();
   }
   if(target.communication){
-    target.communication.usersend(this,ownmethod,'this',path,paramobj,cb);
+    specificargs.unshift(path);
+    specificargs.unshift(ownmethod);
+    specificargs.unshift(this);
+    target.communication.usersend.apply(target.communication,specificargs);
   }else{
-    target[datamethod](path,paramobj,cb,this);
+    specificargs.unshift(path);
+    specificargs.push(this);
+    target[datamethod].apply(target,specificargs);
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
+};
+User.prototype.waitFor = function(data,path,queryarry,cb) {
+  this.perform('waitFor',data,path,1,'waitFor',paramobj,cb);
 };
 User.prototype.bid = function(data,path,paramobj,cb) {
   this.perform('bid',data,path,1,'takeBid',paramobj,cb);

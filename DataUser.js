@@ -93,7 +93,7 @@ DataFollower.prototype.huntTarget = function(data){
     this.data = target;
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
-    this.createcb('OK');
+    this.createcb.call(this,'OK');
     delete this.createcb;
     this.explain();
     this.attachToContents();
@@ -162,15 +162,13 @@ DataFollower.prototype.explain = function(cb){
   }
 };
 
-function DataUser(data,cb,username,realmname,roles){
+function DataUser(data,createcb,cb,username,realmname,roles){
   if(!data){return};
-  DataFollower.call(this,data,cb,cb,new User(username,realmname,roles));
+  DataFollower.call(this,data,createcb,cb,new User(username,realmname,roles));
 };
 DataUser.prototype = new DataFollower();
 DataUser.prototype.constructor = DataUser;
 DataUser.prototype.invoke = function(path,paramobj,cb){
-  console.trace();
-  console.log('invoking',path,paramobj);
   return User.prototype.invoke.call(this,this.data,path,paramobj,cb);
 };
 DataUser.prototype.bid = function(path,paramobj,cb){

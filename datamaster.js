@@ -553,7 +553,7 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   re.functionalities.requirement.f.offer(paramobj,cb,user);
 };
 
-Collection.prototype.attach = function(functionalityname, config, key, environment){
+Collection.prototype.attach = function(functionalityname, config, key){
   var self = this;
   if(!key){key=undefined;}
   var ret = config||{};
@@ -573,15 +573,6 @@ Collection.prototype.attach = function(functionalityname, config, key, environme
   }
   if(typeof m.errors !== 'object'){
     throw functionalityname+" does not have the 'errors' map";
-  }
-  var env;
-  if ('string' === environment) {
-    try{
-      env= require(environment);
-    }
-    catch(e){}
-  }else{
-    env= environment;
   }
   
   function localerrorhandler(originalerrcb){
@@ -825,7 +816,7 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
 };
 
 function DataSuperUser(data,cb,username,realmname,roles){
-  DataUser.call(this,data,cb,username,realmname,roles);
+  DataUser.call(this,data,function(){},cb,username,realmname,roles);
 };
 DataSuperUser.prototype = new DataUser();
 DataSuperUser.contains = function(){
@@ -958,37 +949,18 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   return w;
 };
 
-Collection.prototype.setFollower = function(path,username,realmname,roles,cb){
-  var target = this;
-  while(path.length){
-    var ttarget = target.element([path[0]]);
-    if(!ttarget){
-      cb && cb('LATER',path);
-      return;
-    }
-    target = ttarget;
-    path.shift();
+Collection.prototype.plantUser = function(cb,user){
+  if(!this.users){
+    this.users = {};
   }
-  target.setUser(username,realmname,roles,cb);
-  return;
-  //console.log('setFollower',username);
-  if(!this.consumer){
-    this.consumer = new(require('./dataconsuming'))(this,[]);
+  if(this.users[user.fullname]){
+    console.log('got user',this.users[user.fullname]);
+    cb('OK');
+    return;
   }
-  u = UserBase.setUser(username,realmname,roles);
-  if(u){
-    if(!u.clearConsumingExtension){
-      this.consumer.upgradeUserToConsumer(u);
-      u.push = username==='saban' ? function(item){
-        //console.log('<== ',item);
-			 	cb.apply(this, arguments);
-      } : cb;
-    }
-  }else{
-    cb('DISCARD_THIS');
-    console.log(u.username,'could not be set for following');
-  }
-  return u;
+  this.users[user.fullname] = new DataUser(this,cb,user.say,user.username,user.realmname,user.roles);
+  console.log('!',this.users,user.fullname);
+  cb('OK');
 };
 
 module.exports = {

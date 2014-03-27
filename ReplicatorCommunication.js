@@ -37,6 +37,15 @@ ReplicatorCommunication.prototype.send = function(code){
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.usersend = function(user,code){
+  if(!(this.data.users && this.data.users[user.fullname])){
+    console.log(this.data.users,user.fullname);
+    var args = arguments;
+    var t = this;
+    this.data.plantUser(function(errc){
+      Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
+    },user);
+    return;
+  }
   this.counter.inc();
   var cnt = this.counter.toString();
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,roles:user.roles}};
@@ -118,9 +127,6 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
           t.send.apply(t,args);
         };
       }
-      if(p==='this'){
-        params[i] = this.data;
-      }
     }
   }
   return ret;
@@ -144,6 +150,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
     this.execute(commandresult);
   }
   if(input.user){
+    /*
+    var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname;
+    if(!(this.data.users && this.data.users[fullname])){
+      this.data.plantUser(
+    }
+    */
     var u = UserBase.setUser(input.user.username,input.user.realmname,input.user.roles);
     delete input.user;
     for(var i in input){
