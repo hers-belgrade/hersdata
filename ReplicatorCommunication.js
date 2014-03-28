@@ -183,7 +183,6 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
-        console.log('applying',i,'with',input[i]);
         method.apply(u,input[i]);
       }
     }
