@@ -37,18 +37,18 @@ ReplicatorCommunication.prototype.send = function(code){
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.usersend = function(user,code){
+  this.counter.inc();
+  var cnt = this.counter.toString();
+  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname}};
   if(!(this.data.users && this.data.users[user.fullname])){
+    sendobj.user.roles = user.roles;
     console.log(this.data.users,user.fullname);
     var args = arguments;
     var t = this;
     this.data.plantUser(function(errc){
-      Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
+      //Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
     },user);
-    return;
   }
-  this.counter.inc();
-  var cnt = this.counter.toString();
-  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,roles:user.roles}};
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
   this.sendobj(sendobj);
 };

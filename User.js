@@ -57,7 +57,6 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
   }else{
     specificargs.unshift(path);
     specificargs.push(this);
-    console.log(target,datamethod);
     target[datamethod].apply(target,specificargs);
   }
 };
