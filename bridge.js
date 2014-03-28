@@ -113,6 +113,7 @@ function filterer(filters,cb){
 
 function Data_CollectionElementWaiter(listener,collection,path,cb){
   if(!(listener&&collection&&path&&typeof cb === 'function')){
+    console.log('not good, listener',listener,'collection',collection,'path',path,'cb',cb);
     return;
   }
   //console.log('new Waiter',path);

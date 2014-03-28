@@ -1,5 +1,6 @@
 var User = require('./User'),
-  Listener = require('./listener');
+  Listener = require('./listener'),
+  HookCollection = require('./hookcollection');
 
 function numbTeller(){}
 
@@ -41,6 +42,7 @@ function DataFollower(data,createcb,cb,user,path){
   };*/
   this.createcb = createcb;
   this.huntTarget(data);
+  this.destroyed = new HookCollection();
 }
 DataFollower.prototype = new User();
 for(var i in Listener.prototype){
@@ -114,7 +116,7 @@ DataFollower.prototype.attachToScalar = function(name,el){
     this.reportScalar(name,el,this.say);
   },el.changed);
   this.createListener(name+'_destroyed',function(){
-    this.say([this.path,[name]]);
+    this.say.apply(this,[this.path,[name]]);
   },el.destroyed);
 };
 DataFollower.prototype.attachToContents = function(){
@@ -200,6 +202,10 @@ DataUser.prototype.describe = function(cb){
     ret.push(item);
   });
   cb(ret);
+};
+DataUser.prototype.destroy = function(){
+  this.destroyed.fire();
+  DataFollower.prototype.call(this);
 };
 
 module.exports = DataUser;

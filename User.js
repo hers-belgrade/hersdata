@@ -36,10 +36,13 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     var ttarget = target.element([path[0]]);
     if(!ttarget){
       if(target.communication){
+        target.communication.usersend(this,ownmethod,path,paramobj,cb);
+        /*
         specificargs.unshift(path);
         specificargs.unshift(ownmethod);
         specificargs.unshift(this);
         target.communication.usersend.apply(target.communication,specificargs);
+        */
       }else{
         console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
@@ -50,22 +53,45 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     path.shift();
   }
   if(target.communication){
+    target.communication.usersend(this,ownmethod,path,paramobj,cb);
+    /*
     specificargs.unshift(path);
     specificargs.unshift(ownmethod);
     specificargs.unshift(this);
     target.communication.usersend.apply(target.communication,specificargs);
+    */
   }else{
+    target[datamethod](this,path,paramobj,cb);
+    /*
     specificargs.unshift(path);
     specificargs.push(this);
-    console.log(target,datamethod);
     target[datamethod].apply(target,specificargs);
+    */
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
 User.prototype.waitFor = function(data,queryarry,cb) {
-  this.perform('waitFor',data,[],0,'waitFor',queryarry,cb);
+  //this.perform('waitFor',data,[],0,'waitFor',queryarry,cb);
+  var target = data;
+  while(queryarry.length){
+    var ttarget = target.element([queryarry[0]]);
+    if(!ttarget){
+      if(target.communication){
+        target.communication.usersend(this,'waitFor',queryarry,cb);
+      }
+      return;
+    }else{
+      target = ttarget;
+    }
+    queryarry.shift();
+  }
+  if(target.communication){
+    target.communication.usersend(this,'waitFor',queryarry,cb);
+  }else{
+    target.waitFor(queryarry,cb);
+  }
 };
 User.prototype.bid = function(data,path,paramobj,cb) {
   this.perform('bid',data,path,1,'takeBid',paramobj,cb);

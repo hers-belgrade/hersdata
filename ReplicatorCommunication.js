@@ -1,10 +1,25 @@
 var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
   Listener = require('./listener'),
+  DataUser = require('./DataUser'),
   UserBase = require('./userbase');
 
 var __start = Timeout.now();
 var __id = 0;
+
+function userStatus(replicatorcommunication){
+  var rc = replicatorcommunication;
+  return function(item){
+    rc.send('userstatus',this.fullname,item);
+  }
+}
+
+function userSayer(replicatorcommunication){
+  var rc = replicatorcommunication;
+  return function(item){
+    rc.send('usersay',this.fullname,item);
+  }
+}
 
 function ReplicatorCommunication(data){
   Listener.call(this);
@@ -14,6 +29,8 @@ function ReplicatorCommunication(data){
   this.cbs = {};
   this.__id = __id;
   this.data = data;
+  this.userStatus = userStatus(this);
+  this.userSayer = userSayer(this);
 }
 for(var i in Listener.prototype){
   ReplicatorCommunication.prototype[i] = Listener.prototype[i];
@@ -38,7 +55,7 @@ ReplicatorCommunication.prototype.send = function(code){
 };
 ReplicatorCommunication.prototype.usersend = function(user,code){
   if(!(this.data.users && this.data.users[user.fullname])){
-    console.log(this.data.users,user.fullname);
+    //console.log(this.data.users,user.fullname);
     var args = arguments;
     var t = this;
     this.data.plantUser(function(errc){
@@ -150,17 +167,21 @@ ReplicatorCommunication.prototype.handOver = function(input){
     this.execute(commandresult);
   }
   if(input.user){
-    /*
-    var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname;
+    var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
     if(!(this.data.users && this.data.users[fullname])){
-      this.data.plantUser(
+      u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
+      if(!this.data.users){
+        this.data.users = {};
+      }
+      this.data.users[fullname] = u;
+    }else{
+      u = this.data.users[fullname];
     }
-    */
-    var u = UserBase.setUser(input.user.username,input.user.realmname,input.user.roles);
     delete input.user;
     for(var i in input){
       var method = u[i];
       if(method){
+        console.log('applying',i,'with',input[i]);
         method.apply(u,input[i]);
       }
     }
