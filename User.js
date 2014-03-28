@@ -61,7 +61,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     target.communication.usersend.apply(target.communication,specificargs);
     */
   }else{
-    target[datamethod](this,path,paramobj,cb);
+    target[datamethod](path,paramobj,cb,this);
     /*
     specificargs.unshift(path);
     specificargs.push(this);
