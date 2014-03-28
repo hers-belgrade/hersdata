@@ -926,7 +926,6 @@ Collection.prototype.processInput = function(sender,input){
 };
 
 Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
-console.log('waitFor',querypath);
   waiter = waiter||this;
   startindex = startindex||0;
   var el = this.element([querypath[startindex]]);
