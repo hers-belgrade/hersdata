@@ -7,7 +7,7 @@ var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var HookCollection = require('./hookcollection');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
-var DataUser = require('./DataUser');
+var SuperUser = require('./SuperUser');
 var __ScalarCount=0, __CollectionCount = 0;
 
 function throw_if_invalid_scalar(val) {
@@ -815,14 +815,6 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
   */
 };
 
-function DataSuperUser(data,cb,username,realmname,roles){
-  DataUser.call(this,data,function(){},cb,username,realmname,roles);
-};
-DataSuperUser.prototype = new DataUser();
-DataSuperUser.contains = function(){
-  return true;
-};
-
 Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
   if(remotedump){
     var remotedata = remotedump.data;
@@ -832,7 +824,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     if(docreatereplicator){
       var tkn = remotedump.token;
       console.log('cloned from remote',tkn);
-      this.replicatingUser = new DataSuperUser(this,function(){},tkn.name,tkn.realmname,'dcp,system');
+      this.replicatingUser = new SuperUser(this,function(){},tkn.name,tkn.realmname,'dcp,system');
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
@@ -966,6 +958,5 @@ Collection.prototype.plantUser = function(cb,user){
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,
-  HookCollection : HookCollection,
-  DataUser : DataUser
+  HookCollection : HookCollection
 }

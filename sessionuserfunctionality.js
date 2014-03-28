@@ -14,7 +14,7 @@ var errors = {
 function SessionUser(data,username,realmname,roles){
   sessions = {};
   var t = this;
-  DataUser.call(this,data,function(item){
+  DataUser.call(this,data,function(){},function(item){
     //console.log('<=',item);
     for(var i in t.sessions){
       if(!t.sessions[i].say){
