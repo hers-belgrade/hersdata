@@ -54,14 +54,14 @@ User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
 User.prototype.waitFor = function(data,queryarry,cb) {
-  console.log('waitFor',data.dataDebug(),queryarry);
-  //this.perform('waitFor',data,[],0,'waitFor',queryarry,cb);
   var target = data;
   while(queryarry.length){
     var ttarget = target.element([queryarry[0]]);
     if(!ttarget){
       if(target.communication){
         target.communication.usersend(this,'waitFor',queryarry,cb);
+      }else{
+        break;
       }
       return;
     }else{
