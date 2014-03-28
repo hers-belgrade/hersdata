@@ -7,6 +7,7 @@ var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var HookCollection = require('./hookcollection');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
+var DataUser = require('./DataUser');
 var SuperUser = require('./SuperUser');
 var __ScalarCount=0, __CollectionCount = 0;
 
