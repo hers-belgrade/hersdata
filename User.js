@@ -73,6 +73,7 @@ User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
 User.prototype.waitFor = function(data,queryarry,cb) {
+  console.log('waitFor',data.dataDebug(),queryarry);
   //this.perform('waitFor',data,[],0,'waitFor',queryarry,cb);
   var target = data;
   while(queryarry.length){
@@ -83,7 +84,11 @@ User.prototype.waitFor = function(data,queryarry,cb) {
       }
       return;
     }else{
-      target = ttarget;
+      if(ttarget.type()==='Collection'){
+        target = ttarget;
+      }else{
+        break;
+      }
     }
     queryarry.shift();
   }
