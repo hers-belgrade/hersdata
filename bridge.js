@@ -39,7 +39,7 @@ function Data_Scalar(listener,scalar,cb,valueconstraint){
   Bridge.call(this,listener,scalar);
   this.createListener('__scalarchanged',function(el,changedmap){
     if(!changedmap.private){return;}
-    cb.call(this,el.value());
+    cb.call(this,listener.contains(el.access_level()) ? el.value() : el.public_value());
   },scalar.changed);
   cb.call(this,scalar.value());
 };
@@ -63,7 +63,7 @@ function nameeqfilter(name){
 function nameneqfilter(name){
   var n = name;
   return function(name,el){
-    return name===n;
+    return name!==n;
   };
 };
 
@@ -116,8 +116,14 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
     console.log('not good, listener',listener,'collection',collection,'path',path,'cb',cb);
     return;
   }
+  if(!listener.contains){
+    console.trace();
+    console.log('ooops, new school');
+    process.exit(0);
+  }
   //console.log('new Waiter',path);
   Bridge.call(this,listener,collection);
+  this.contains = function(key){return listener.contains(key);};
   var fn = path[0],tofn = typeof fn;
   switch(tofn){
     case 'string':

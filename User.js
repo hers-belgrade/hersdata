@@ -76,7 +76,7 @@ User.prototype.waitFor = function(data,queryarry,cb) {
   if(target.communication){
     target.communication.usersend(this,'waitFor',queryarry,cb);
   }else{
-    target.waitFor(queryarry,cb);
+    target.waitFor(queryarry,cb,this);
   }
 };
 User.prototype.bid = function(data,path,paramobj,cb) {
