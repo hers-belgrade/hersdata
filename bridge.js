@@ -119,6 +119,7 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
   if(!listener.contains){
     console.trace();
     console.log('ooops, new school');
+    throw('?');
     process.exit(0);
   }
   //console.log('new Waiter',path);

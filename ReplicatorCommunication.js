@@ -54,6 +54,11 @@ ReplicatorCommunication.prototype.send = function(code){
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.usersend = function(user,code){
+  if(!(user.username&&user.realmname)){
+    console.trace();
+    console.log('user no good',user);
+    process.exit(0);
+  }
   this.counter.inc();
   var cnt = this.counter.toString();
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname}};
