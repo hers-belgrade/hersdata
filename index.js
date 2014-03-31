@@ -10,7 +10,7 @@ DataMaster.prototype = new (datamaster.Collection)();
 DataMaster.prototype.constructor = DataMaster;
 DataMaster.prototype.createSuperUser = function(username,realmname){
   if(this.superUser){return;}
-  this.superUser = new SuperUser(this,function(){},function(){},username,realmname,'');
+  this.superUser = new SuperUser(this,function(){},function(){},username,realmname);
   this.superUserCreated.fire();
 };
 DataMaster.prototype.getSuperUser = function(cb){

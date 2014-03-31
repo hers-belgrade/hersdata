@@ -566,8 +566,13 @@ Collection.prototype.attach = function(functionalityname, config, key){
       fqnname = Path.basename(functionalityname);
       break;
     case 'object':
-      m = functionalityname;
-      fqnname = 'object';
+      if(functionalityname.functionalityname && functionalityname.instancename){
+        fqnname = functionalityname.instancename;
+        m = require(functionalityname.functionalityname);
+      }else{
+        m = functionalityname;
+        fqnname = 'object';
+      }
       break;
     default:
       return;// {};
@@ -627,7 +632,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     var rf = re.functionalities.requirements.f;
     req = rf.start;
   }
-  var SELF = (function(s,r,m){var _s=s,_r=r,_m=m;return function(){return {data:_s, self:_r, require:req};}})(self,ret,my_mod);
+  var SELF = (function(s,r,m,su){var _s=s,_r=r,_m=m, _su=su;return function(){return {data:_s, self:_r, superUser:_su, require:req};}})(self,ret,my_mod,new SuperUser(self,function(){},fqnname,'dcp'));
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
@@ -825,7 +830,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     if(docreatereplicator){
       var tkn = remotedump.token;
       console.log('cloned from remote',tkn);
-      this.replicatingUser = new SuperUser(this,function(){},tkn.name,tkn.realmname,'dcp,system');
+      this.replicatingUser = new SuperUser(this,function(){},tkn.name,tkn.realmname);
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
