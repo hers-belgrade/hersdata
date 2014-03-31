@@ -32,7 +32,11 @@ function relocate(src,dest,el){
 }
 
 function DataFollower(data,createcb,cb,user,path){
-  if(!data){return;}
+  if(!data){ return; }
+  if(!user.keys){
+    console.trace();
+    console.log('no user');
+  }
   Listener.call(this);
   User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
@@ -96,9 +100,9 @@ DataFollower.prototype.huntTarget = function(data){
     this.data = target;
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
-    this.createcb.call(this,'OK');
+    this.createcb && this.createcb.call(this,'OK');
     delete this.createcb;
-    this.explain();
+    this.cb && this.explain();
     this.attachToContents();
   }
 }
@@ -187,7 +191,7 @@ DataFollower.prototype.plantAt = function(path,createcb,cb,ctor){
   if(!this.followers){
     this.followers = {};
   }
-  var df = new ctor(this.data,function(){},function(){},this.say,this,path);
+  var df = new ctor(this.data,createcb,cb,this,path);
   //var df = new DataFollower(this.data,cb,this.say,this,path);
   this.followers[spath] = df;
   return df;
