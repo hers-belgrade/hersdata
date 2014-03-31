@@ -33,6 +33,11 @@ function relocate(src,dest,el){
 
 function DataFollower(data,createcb,cb,user,path){
   if(!data){ return; }
+  if(!(typeof user.username === 'string' && typeof user.realmname === 'string')){
+    console.trace();
+    console.log(user,'?');
+    process.exit(0);
+  }
   if(!user.keys){
     console.trace();
     console.log('no user');
