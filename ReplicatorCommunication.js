@@ -64,8 +64,8 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname}};
   if(!(this.data.users && this.data.users[user.fullname])){
     sendobj.user.roles = user.roles;
-    console.log(this.data.users,user.fullname);
     /*
+    console.log(this.data.users,user.fullname);
     var args = arguments;
     var t = this;
     */
