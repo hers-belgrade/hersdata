@@ -187,7 +187,7 @@ DataFollower.prototype.waitFor = function(queryarry,cb){
 };
 DataFollower.prototype.plantAt = function(path,createcb,cb,ctor){
   ctor = ctor || DataFollower;//this.constructor;
-  console.log('planting with ctor',ctor.toString());
+  //console.log('planting with ctor',ctor.toString());
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers && this.followers[spath]){
