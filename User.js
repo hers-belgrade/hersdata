@@ -87,11 +87,6 @@ User.prototype.waitFor = function(data,queryarry,cb) {
     var ttarget = target.element([queryarry[0]]);
     if(!ttarget){
       break;
-      if(target.communication){
-        target.communication.usersend(this,'waitFor',queryarry,cb);
-      }else{
-        break;
-      }
     }else{
       if(ttarget.type()==='Collection'){
         target = ttarget;
