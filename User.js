@@ -53,8 +53,10 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
 User.prototype.invoke = function(data,path,paramobj,cb) {
   this.perform('invoke',data,path,2,'run',paramobj,cb);
 };
-User.prototype.waitFor = function(data,queryarry,cb) {
-  var target = data;
+User.prototype.bridgedInvoke = function(){
+  var method = arguments[0];
+  var target = arguments[1];
+  var args = Array.prototype.slice.call(arguments,2);
   while(queryarry.length){
     var ttarget = target.element([queryarry[0]]);
     if(!ttarget){
@@ -63,6 +65,32 @@ User.prototype.waitFor = function(data,queryarry,cb) {
       }else{
         break;
       }
+      return;
+    }else{
+      if(ttarget.type()==='Collection'){
+        target = ttarget;
+      }else{
+        break;
+      }
+    }
+    queryarry.shift();
+  }
+  if(target.communication){
+    target.communication.usersend(this,'waitFor',queryarry,cb);
+  }else{
+    target.waitFor(queryarry,cb,this);
+  }
+};
+User.prototype.waitFor = function(data,queryarry,cb) {
+  var target = data;
+  while(queryarry.length){
+    var ttarget = target.element([queryarry[0]]);
+    if(!ttarget){
+      if(target.communication){
+        target.communication.usersend(this,'waitFor',queryarry,cb);
+      }/*else{
+        break;
+      }*/
       return;
     }else{
       if(ttarget.type()==='Collection'){
