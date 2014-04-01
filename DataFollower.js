@@ -92,9 +92,17 @@ DataFollower.prototype.huntTarget = function(data){
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      listenForTarget.call(this,target,data,cursor);
-      listenForDestructor.call(this,target,data,cursor);
-      target = null;
+      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication');
+      if(target.communication){
+        target.communication.usersend(this,'follow',this.path.slice(cursor),function(){
+          console.log('remote follow said',arguments);
+        },function(item){
+        });
+      }else{
+        listenForTarget.call(this,target,data,cursor);
+        listenForDestructor.call(this,target,data,cursor);
+        target = null;
+      }
       break;
     }else{
       target = ttarget;
