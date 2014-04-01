@@ -184,6 +184,17 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }else{
       u = this.data.users[fullname];
     }
+    var remotepath = input.user.remotepath;
+    if(remotepath){
+      if(typeof remotepath[0] === 'object'){
+        while(remotepath[0]){
+          u = u.follow(remotepath[0]);
+          remotepath.shift();
+        }
+      }else{
+        u = u.follow(remotepath);
+      }
+    }
     delete input.user;
     for(var i in input){
       var method = u[i];

@@ -37,7 +37,6 @@ function setOffer(jsondata,offerid,cb,user){
   actions.push(['set',['offers',offerid]]);
   actions.push(['set',['offers',offerid,'data'],[jsondata,undefined,user.username+'@'+user.realmname]]);
   this.data.commit('set_offer',actions);
-  console.log('offer set',this.data.dataDebug());
   cb('OFFER_SET',offerid);
 }
 setOffer.params=['jsondata','offerid'];
@@ -92,8 +91,7 @@ function offer(paramobj,cb,user){
     return;
   }
   delete paramobj.offerid;
-  delete this.self[offerid];
-  doCall.call(this,'onOffer',cb,user,paramobj,offer);
+  doCall.call(this,'onOffer',cb,user,paramobj,JSON.parse(offerel.element(['data']).value()));
 };
 offer.params = 'originalobj';
 

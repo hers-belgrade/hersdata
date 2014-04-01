@@ -33,7 +33,7 @@ function relocate(src,dest,el){
 
 function DataFollower(data,createcb,cb,user,path){
   if(!data){ return; }
-  if(!(typeof user.username === 'string' && typeof user.realmname === 'string')){
+  if(!(user && typeof user.username === 'string' && typeof user.realmname === 'string')){
     console.trace();
     console.log(user,'?');
     process.exit(0);
@@ -92,7 +92,7 @@ DataFollower.prototype.huntTarget = function(data){
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication');
+      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
         target.communication.usersend(this,'follow',this.path.slice(cursor),function(){
           console.log('remote follow said',arguments);
@@ -193,24 +193,24 @@ DataFollower.prototype.offer = function(path,paramobj,cb){
 DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
-DataFollower.prototype.plantAt = function(path,createcb,cb,ctor){
+DataFollower.prototype.plantAt = function(path,createcb,ctor){
   ctor = ctor || DataFollower;//this.constructor;
   //console.log('planting with ctor',ctor.toString());
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers && this.followers[spath]){
-    return;
+    return this.followers[spath];
   }
   if(!this.followers){
     this.followers = {};
   }
-  var df = new ctor(this.data,createcb,cb,this,path);
+  var df = new ctor(this.data,createcb,this.say,this,path);
   //var df = new DataFollower(this.data,cb,this.say,this,path);
   this.followers[spath] = df;
   return df;
 }
 DataFollower.prototype.follow = function(path,cb){
-  this.plantAt(path,cb,DataFollower);
+  return this.plantAt(path,cb,DataFollower);
 };
 DataFollower.prototype.describe = function(cb){
   var ret = [];
