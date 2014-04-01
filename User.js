@@ -86,6 +86,7 @@ User.prototype.waitFor = function(data,queryarry,cb) {
   while(queryarry.length){
     var ttarget = target.element([queryarry[0]]);
     if(!ttarget){
+      break;
       if(target.communication){
         target.communication.usersend(this,'waitFor',queryarry,cb);
       }else{
