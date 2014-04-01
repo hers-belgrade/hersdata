@@ -61,7 +61,7 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   }
   this.counter.inc();
   var cnt = this.counter.toString();
-  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname}};
+  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.data.users && this.data.users[user.fullname])){
     sendobj.user.roles = user.roles;
     /*
