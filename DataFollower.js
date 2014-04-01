@@ -50,8 +50,12 @@ function DataFollower(data,createcb,cb,user,path){
     cb([path,item]);
   };*/
   this.createcb = createcb;
-  this.huntTarget(data);
   this.destroyed = new HookCollection();
+  if(user.remotepath){
+    //console.log('parent remotepath',user.remotepath);
+    this.remotepath = [user.remotepath];
+  }
+  this.huntTarget(data);
 }
 DataFollower.prototype = new User();
 for(var i in Listener.prototype){
@@ -94,10 +98,19 @@ DataFollower.prototype.huntTarget = function(data){
     if(!ttarget){
       console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
-        target.communication.usersend(this,'follow',this.path.slice(cursor),function(){
+        var remotepath = this.path.slice(cursor);
+        target.communication.usersend(this,'follow',remotepath,function(){
           console.log('remote follow said',arguments);
         },function(item){
+          console.log('remote say said',item);
         });
+        if(this.remotepath){
+          //console.log('augmenting the remotepath',this.remotepath);
+          this.remotepath.push(remotepath);
+          console.log('to',this.remotepath);
+        }else{
+          this.remotepath = remotepath;
+        }
       }else{
         listenForTarget.call(this,target,data,cursor);
         listenForDestructor.call(this,target,data,cursor);
