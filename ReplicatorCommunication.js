@@ -62,7 +62,7 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   this.counter.inc();
   var cnt = this.counter.toString();
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
-  if(!(this.data.users && this.data.users[user.fullname])){
+  if(!(this.users && this.users[user.fullname])){
     sendobj.user.roles = user.roles;
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
@@ -129,19 +129,22 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
     var p = params[i];
     if(typeof p === 'string'){
       if(p.indexOf('#FunctionRef:')===0){
-        var fnref = p.slice(13),t = this;
+        var fnref = p.slice(13);
         //console.log('#FunctionRef',fnref);
         if(ret){
           ret += ',';
         }
         ret += fnref;
-        params[i] = function(){
-          var args = Array.prototype.slice.call(arguments);
-          args.unshift(fnref);
-          //console.log('sending commandresult',args);
-          args.unshift('commandresult');
-          t.send.apply(t,args);
-        };
+        params[i] = (function(_t,fr){
+          var t = _t, fnref = fr;
+          return function(){
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(fnref);
+            //console.log('sending commandresult',args);
+            args.unshift('commandresult');
+            t.send.apply(t,args);
+          };
+        })(this,fnref);
       }
     }
   }
@@ -167,14 +170,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.user){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
-    if(!(this.data.users && this.data.users[fullname])){
+    if(!(this.users && this.users[fullname])){
       u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
-      if(!this.data.users){
-        this.data.users = {};
+      if(!this.users){
+        this.users = {};
       }
-      this.data.users[fullname] = u;
+      this.users[fullname] = u;
     }else{
-      u = this.data.users[fullname];
+      u = this.users[fullname];
     }
     var remotepath = input.user.remotepath;
     if(remotepath){
