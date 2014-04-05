@@ -98,9 +98,13 @@ DataFollower.prototype.huntTarget = function(data){
       console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
         var remotepath = this.path.slice(cursor);
-        target.communication.usersend(this,'follow',remotepath,function(){
-          console.log('remote follow said',arguments);
-        },function(item){
+        target.communication.usersend(this,'follow',remotepath,(function(_t){
+          var t = _t;
+          return function(){
+            console.log('remote follow said',arguments);
+            t.createcb && t.createcb.apply(t,arguments);
+          };
+        })(this),function(item){
           console.log('remote say said',item);
         });
         if(this.remotepath){
@@ -110,6 +114,8 @@ DataFollower.prototype.huntTarget = function(data){
         }else{
           this.remotepath = remotepath;
         }
+        this.data = target;
+        return;
       }else{
         listenForTarget.call(this,target,data,cursor);
         listenForDestructor.call(this,target,data,cursor);
@@ -126,7 +132,6 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.createcb && this.createcb.call(this,'OK');
-    delete this.createcb;
     this.cb && this.explain();
     this.attachToContents();
   }
@@ -163,7 +168,16 @@ DataFollower.prototype.attachToContents = function(){
   });
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
-  cb([this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
+  if(this.contains(el.access_level())){
+    cb([this.path,[name,el.value()]]);
+  }else{
+    var pv = el.public_value();
+    if(typeof pv !== 'undefined'){
+      cb([this.path,[name,pv]]);
+    }else{
+      console.log(this.username,'will not report scalar',name);
+    }
+  }
 };
 DataFollower.prototype.reportElement = function(name,el,cb){
   cb = cb || this.say;
@@ -209,6 +223,7 @@ DataFollower.prototype.follow = function(path,cb){
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers && this.followers[spath]){
+    cb && cb('OK');
     return this.followers[spath];
   }
   if(!this.followers){

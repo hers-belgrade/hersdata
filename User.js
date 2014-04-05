@@ -7,6 +7,7 @@ function User(username,realmname,roles){
 	this.username = username;
 	this.realmname = realmname;
   this.fullname = username+'@'+realmname;
+  this.addKey(this.fullname);
 }
 User.prototype = new KeyRing();
 User.prototype.constructor = User;
