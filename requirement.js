@@ -6,6 +6,7 @@ var errors = {
   'NO_OFFERS_ON_THIS_REQUIREMENT':{message:'This requirement does not support offers'},
   'INTERNAL_ERROR':{message:'An internal error has occured: [error]. Please contact the software vendor'},
   'BID_REFUSED':{message:'Your bid has been refused'},
+  'OFFER_REFUSED':{message:'Your offer has been refused'},
   'DO_OFFER':{message:'Give your final offer on [offerid]',params:['offerid']},
   'ACCEPTED':{message:'Your bid [bid] has been accepted, reference: [reference]',params:['reference','bid']},
   'INVALID_OFFER_ID':{message:'Your offer id [offerid] is invalid',params:['offerid']},
@@ -48,8 +49,8 @@ function doCall(callname,cb,user){
   args.unshift(user);
   args.push(function accept(acceptobj){
     t.self.counter++;
-    cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj,'Bid accepted');
-    t.notifyDone();
+    cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
+    t.self.notifyDone();
   },function dooffer(jsondata,options){
     var u = user;
     t.self.setOffer({jsondata:jsondata},function(errc,errp){
@@ -57,14 +58,14 @@ function doCall(callname,cb,user){
         cb('DO_OFFER',errp[0]);
         if(options){
           if(options.timeout){
-            Timeout.set(function(t,oid){t.self.offer({offerid:oid})},options.timeout,t,errp[0]);
+            Timeout.set(function(t,oid){t&&t.self&&t.self.offer&&t.self.offer({offerid:oid})},options.timeout,t,errp[0]);
           }
         }
       }
     },user);
   },function refuse(){
     var args = Array.prototype.slice.call(arguments);
-    args.unshift('BID_REFUSED');
+    args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
     cb.apply(null,args);
   });
   this.self.cbs[callname].apply(this,args);
