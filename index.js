@@ -33,6 +33,7 @@ module.exports = {
 	helpers: require('./helpers'),
   HookCollection: HookCollection,
   Listener: require('./listener'),
-  Bridge: require('./bridge')
+  Bridge: require('./bridge'),
+  SessionUser: require('./SessionUser')
 };
 

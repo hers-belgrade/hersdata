@@ -72,6 +72,7 @@ function listenForTarget(target,data,cursor){
       this.huntTarget(data);
     }
   },target.newElement);
+  this.createcb.call(this,'LATER');
 }
 function listenForDestructor(target,data,cursor){
   this.createListener('destructlistener',function(){

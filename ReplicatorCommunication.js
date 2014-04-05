@@ -68,10 +68,10 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
     console.log(this.data.users,user.fullname);
     var args = arguments;
     var t = this;
-    */
     this.data.plantUser(function(errc){
       //Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
     },user);
+    */
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
   this.sendobj(sendobj);
