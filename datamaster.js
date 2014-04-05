@@ -947,19 +947,6 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   return w;
 };
 
-Collection.prototype.plantUser = function(createcb,/*saycb,*/user){
-  if(!this.users){
-    this.users = {};
-  }
-  if(this.users[user.fullname]){
-    console.log('got user',this.users[user.fullname]);
-    createcb('OK');
-    return;
-  }
-  this.users[user.fullname] = new DataUser(this,createcb,user.say,user.username,user.realmname,user.roles);
-  createcb('OK');
-};
-
 module.exports = {
   Scalar : Scalar,
   Collection : Collection,

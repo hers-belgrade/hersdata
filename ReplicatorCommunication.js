@@ -64,14 +64,6 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.data.users && this.data.users[user.fullname])){
     sendobj.user.roles = user.roles;
-    /*
-    console.log(this.data.users,user.fullname);
-    var args = arguments;
-    var t = this;
-    this.data.plantUser(function(errc){
-      //Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
-    },user);
-    */
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
   this.sendobj(sendobj);

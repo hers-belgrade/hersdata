@@ -205,9 +205,7 @@ DataFollower.prototype.offer = function(path,paramobj,cb){
 DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
-DataFollower.prototype.plantAt = function(path,createcb,ctor){
-  ctor = ctor || DataFollower;//this.constructor;
-  //console.log('planting with ctor',ctor.toString());
+DataFollower.prototype.follow = function(path,cb){
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers && this.followers[spath]){
@@ -216,13 +214,9 @@ DataFollower.prototype.plantAt = function(path,createcb,ctor){
   if(!this.followers){
     this.followers = {};
   }
-  var df = new ctor(this.data,createcb,this.say,this,path);
-  //var df = new DataFollower(this.data,cb,this.say,this,path);
+  var df = new DataFollower(this.data,cb,this.say,this,path);
   this.followers[spath] = df;
   return df;
-}
-DataFollower.prototype.follow = function(path,cb){
-  return this.plantAt(path,cb,DataFollower);
 };
 DataFollower.prototype.describe = function(cb){
   var ret = [];
