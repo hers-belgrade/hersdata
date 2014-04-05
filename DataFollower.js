@@ -2,8 +2,6 @@ var User = require('./User'),
   Listener = require('./listener'),
   HookCollection = require('./hookcollection');
 
-function numbTeller(){}
-
 function removeFromArray(ar,el){
   if(!ar){return;}
   var ind = ar.indexOf(el);
