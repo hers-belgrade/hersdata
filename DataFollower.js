@@ -169,11 +169,11 @@ DataFollower.prototype.attachToContents = function(){
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
   if(this.contains(el.access_level())){
-    cb([this.path,[name,el.value()]]);
+    cb.call(this,[this.path,[name,el.value()]]);
   }else{
     var pv = el.public_value();
     if(typeof pv !== 'undefined'){
-      cb([this.path,[name,pv]]);
+      cb.call(this,[this.path,[name,pv]]);
     }else{
       console.log(this.username,'will not report scalar',name);
     }
@@ -187,7 +187,7 @@ DataFollower.prototype.reportElement = function(name,el,cb){
       break;
     case 'Collection':
       if(this.contains(el.access_level())){
-        cb([this.path,[name,null]]);
+        cb.call(this,[this.path,[name,null]]);
       }
       break;
   }
@@ -223,7 +223,7 @@ DataFollower.prototype.follow = function(path,cb){
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers && this.followers[spath]){
-    cb && cb('OK');
+    cb && cb.call(this,'OK');
     return this.followers[spath];
   }
   if(!this.followers){
@@ -238,7 +238,7 @@ DataFollower.prototype.describe = function(cb){
   this.explain(function(item){
     ret.push(item);
   });
-  cb(ret);
+  cb && cb.call(this,ret);
 };
 
 module.exports = DataFollower;
