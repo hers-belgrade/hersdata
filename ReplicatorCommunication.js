@@ -22,12 +22,17 @@ function userSayer(replicatorcommunication){
   }
 }
 
+var _instanceCount = new BigCounter();
+
 function ReplicatorCommunication(data){
+  _instanceCount.inc();
+  this._id = _instanceCount.toString();
   Listener.call(this);
   if(!data){return;}
   __id++;
   this.counter = new BigCounter();
   this.cbs = {};
+  this.sayers = {};
   this.__id = __id;
   this.data = data;
   this.userStatus = userStatus(this);
@@ -62,6 +67,14 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   }
   this.counter.inc();
   var cnt = this.counter.toString();
+  if(!user.replicators){
+    user.replicators = {};
+  }
+  if(!user.replicators[this._id]){
+    user.replicators[this._id] = cnt;
+    this.sayers[cnt] = (function(u){var _u = u; return function(){_u.say.apply(_u,arguments);};})(user);
+    user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
+  }
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.users && this.users[user.fullname])){
     sendobj.user.roles = user.roles;
@@ -168,6 +181,20 @@ ReplicatorCommunication.prototype.handOver = function(input){
   if(commandresult){
     delete input.commandresult;
     this.execute(commandresult);
+  }
+  if(input.usersay){
+    var us = input.usersay;
+    console.log('usersay',us);
+    if(this.users){
+      var u = this.users[us[0]];
+      if(u){
+        console.log(u.username,'should usersay',us[1],us.say.toString());
+        u.say(us[1]);
+      }else{
+        console.log('no user for',us[0],'to usersay',us[1]);
+      }
+    }
+    return;
   }
   if(input.user){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
