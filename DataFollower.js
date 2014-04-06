@@ -229,7 +229,12 @@ DataFollower.prototype.follow = function(path,cb){
   if(!this.followers){
     this.followers = {};
   }
-  var df = new DataFollower(this.data,cb,this.say,this,path);
+  //controversial solution: this.say is mutated in order to provide proper this...
+  //so, new *say* per following. Can this be avoided?
+  var t = this;
+  var df = new DataFollower(this.data,cb,function(){
+    t.say.apply(t,arguments);
+  },this,path);
   this.followers[spath] = df;
   return df;
 };

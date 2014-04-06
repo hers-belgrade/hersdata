@@ -18,7 +18,7 @@ function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
     //console.log('userSayer',item,'on',this.fullname);
-    rc.send('usersay',this.fullname,item);
+    rc.send('usersay',this._replicationid,item);
   }
 }
 
@@ -200,6 +200,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
     if(!(this.users && this.users[fullname])){
       u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
+      u._replicationid = counter;
       if(!this.users){
         this.users = {};
       }
