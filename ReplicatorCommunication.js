@@ -59,10 +59,15 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.usersend = function(user,code){
+ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
   if(!(user.username&&user.realmname)){
     console.trace();
     console.log('user no good',user);
+    process.exit(0);
+  }
+  if(typeof pathtome !== 'object'){
+    console.trace();
+    console.log('pathtome is missing');
     process.exit(0);
   }
   this.counter.inc();
@@ -72,14 +77,14 @@ ReplicatorCommunication.prototype.usersend = function(user,code){
   }
   if(!user.replicators[this._id]){
     user.replicators[this._id] = cnt;
-    this.sayers[cnt] = (function(u){var _u = u; return function(){_u.say.apply(_u,arguments);};})(user);
+    this.sayers[cnt] = (function(u,p){var _u = u, _p = p; return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};})(user,pathtome);
     user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
   }
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.users && this.users[user.fullname])){
     sendobj.user.roles = user.roles;
   }
-  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,3),false,code);
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
@@ -184,14 +189,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.usersay){
     var us = input.usersay;
-    console.log('usersay',us);
-    if(this.users){
-      var u = this.users[us[0]];
-      if(u){
-        console.log(u.username,'should usersay',us[1],us.say.toString());
-        u.say(us[1]);
+    if(this.sayers){
+      var s = this.sayers[us[0]];
+      if(s){
+        s(us[1]);
       }else{
-        console.log('no user for',us[0],'to usersay',us[1]);
+        console.log('no sayer for',us[0],'to usersay',us[1]);
       }
     }
     return;
