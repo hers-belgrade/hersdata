@@ -132,7 +132,7 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.createcb && this.createcb.call(this,'OK');
-    this.cb && this.explain();
+    //this.cb && this.explain();
     this.attachToContents();
   }
 }
@@ -222,9 +222,13 @@ DataFollower.prototype.waitFor = function(queryarry,cb){
 DataFollower.prototype.follow = function(path,cb){
   path = path || [];
   var spath = path.join('/') || '.';
-  if(this.followers && this.followers[spath]){
-    cb && cb.call(this,'OK');
-    return this.followers[spath];
+  if(this.followers){
+    var f = this.followers[spath];
+    if(f){
+      cb && cb.call(this,'OK');
+      f.explain();
+      return f;
+    }
   }
   if(!this.followers){
     this.followers = {};
