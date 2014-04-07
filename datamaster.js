@@ -211,7 +211,7 @@ function Collection(a_l){
     this.destroyed.destruct();
     this.newElement.destruct();
     for(var i in this.functionalities){
-      console.log('__DESTROY__ing',i);
+      //console.log('__DESTROY__ing',i);
       this.functionalities[i].f.__DESTROY__();
     }
     for(var i in this){
