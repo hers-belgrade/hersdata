@@ -83,12 +83,12 @@ function executeOneOnUser(user,command,params,cb){
       console.log('no method named',command,'on user');
       cb('NO_FUNCTIONALITY',method);
     }else{
-      console.log('applying',command,'to',user.username);
+      console.log('applying',command,'to',user.username,Array.prototype.slice.call(arguments,2));
       method.apply(user,Array.prototype.slice.call(arguments,2));
     }
     return;
   }
-  user.invoke(this,command,params,cb); //this is data
+  user.invoke(command,params,cb); //this is data
 }
 
 function executeOnUser(user,session,commands,statuscb){

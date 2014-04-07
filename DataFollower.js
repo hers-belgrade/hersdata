@@ -98,7 +98,8 @@ DataFollower.prototype.huntTarget = function(data){
       console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
         var remotepath = this.path.slice(cursor);
-        target.communication.usersend(this,this.path.slice(0,cursor),'follow',remotepath,(function(_t){
+        this.pathtocommunication = this.path.slice(0,cursor);
+        target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t){
           var t = _t;
           return function(){
             console.log('remote follow said',arguments);
@@ -192,6 +193,14 @@ DataFollower.prototype.reportElement = function(name,el,cb){
 };
 DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
+  if(this.remotepath){
+    var trp = this.remotepath[this.remotepath.length-1];
+    if(typeof trp !== 'object'){
+      trp = this.remotepath;
+    }
+    this.data.communication.usersend(this,this.pathtocommunication,'follow',trp);
+    return;
+  }
   if(!this.contains(this.data.access_level())){
     return;
   }

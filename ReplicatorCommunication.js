@@ -85,6 +85,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
     sendobj.user.roles = user.roles;
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,3),false,code);
+  console.log('sending',sendobj);
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
