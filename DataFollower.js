@@ -199,7 +199,10 @@ DataFollower.prototype.explain = function(cb){
     if(typeof trp !== 'object'){
       trp = this.remotepath;
     }
-    this.data.communication.usersend(this,this.pathtocommunication,'follow',trp);
+    var t = this;
+    this.data.communication.usersend(this,this.pathtocommunication,'explain',function(item){
+      cb.apply(t,[t.path.concat[item[0]],item[1]]);
+    });
     return;
   }
   if(!this.contains(this.data.access_level())){
@@ -228,8 +231,6 @@ DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
 DataFollower.prototype.follow = function(path,cb){
-  console.trace();
-  console.log(this.username,this.keys,'follow',path);
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers){
@@ -251,6 +252,8 @@ DataFollower.prototype.follow = function(path,cb){
   return df;
 };
 DataFollower.prototype.describe = function(cb){
+  this.explain(cb);
+  return;
   var ret = [];
   this.explain(function(item){
     ret.push(item);
