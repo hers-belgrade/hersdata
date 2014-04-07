@@ -70,7 +70,7 @@ function listenForTarget(target,data,cursor){
       this.huntTarget(data);
     }
   },target.newElement);
-  this.createcb.call(this,'LATER');
+  this.createcb && this.createcb.call(this,'LATER');
 }
 function listenForDestructor(target,data,cursor){
   this.createListener('destructlistener',function(){
@@ -131,7 +131,7 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.createcb && this.createcb.call(this,'OK');
-    //this.cb && this.explain();
+    this.cb && this.explain();
     this.attachToContents();
   }
 }
@@ -146,6 +146,7 @@ DataFollower.prototype.followerFor = function(name){
   }
 };
 DataFollower.prototype.attachToScalar = function(name,el){
+  this.reportScalar(name,el,this.say);
   this.createListener(name+'_changed',function(changedmap){
     this.reportScalar(name,el,this.say);
   },el.changed);
@@ -227,17 +228,17 @@ DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
 DataFollower.prototype.follow = function(path,cb){
+  console.trace();
+  console.log(this.username,this.keys,'follow',path);
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers){
     var f = this.followers[spath];
     if(f){
       cb && cb.call(this,'OK');
-      f.explain();
       return f;
     }
-  }
-  if(!this.followers){
+  }else{
     this.followers = {};
   }
   //controversial solution: this.say is mutated in order to provide proper this...
