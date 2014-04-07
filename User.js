@@ -31,11 +31,12 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     return;
   }
   var target = data;
-  while(path.length>pathtaillength){
-    var ttarget = target.element([path[0]]);
+  var cursor = 0;
+  while(path.length-cursor>pathtaillength){
+    var ttarget = target.element([path[cursor]]);
     if(!ttarget){
       if(target.communication){
-        target.communication.usersend(this,ownmethod,path,paramobj,cb);
+        target.communication.usersend(this,path.slice(0,cursor),ownmethod,path.slice(cursor),paramobj,cb);
       }else{
         console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
@@ -43,12 +44,12 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     }else{
       target = ttarget;
     }
-    path.shift();
+    cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,ownmethod,path,paramobj,cb);
+    target.communication.usersend(this,path.slice(0,cursor),ownmethod,path.slice(cursor),paramobj,cb);
   }else{
-    target[datamethod](path,paramobj,cb,this);
+    target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb) {
@@ -56,8 +57,9 @@ User.prototype.invoke = function(data,path,paramobj,cb) {
 };
 User.prototype.waitFor = function(data,queryarry,cb) {
   var target = data;
-  while(queryarry.length){
-    var ttarget = target.element([queryarry[0]]);
+  var cursor = 0;
+  while(cursor<queryarry.length){
+    var ttarget = target.element([queryarry[cursor]]);
     if(!ttarget){
       break;
     }else{
@@ -67,12 +69,12 @@ User.prototype.waitFor = function(data,queryarry,cb) {
         break;
       }
     }
-    queryarry.shift();
+    cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,'waitFor',queryarry,cb);
+    target.communication.usersend(this,queryarry.slice(0,cursor),'waitFor',queryarry.slice(cursor),cb);
   }else{
-    target.waitFor(queryarry,cb,this);
+    target.waitFor(queryarry.slice(cursor),cb,this);
   }
 };
 User.prototype.bid = function(data,path,paramobj,cb) {

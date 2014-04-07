@@ -23,9 +23,6 @@ CollectionReplica.prototype.constructor = CollectionReplica;
 CollectionReplica.prototype.send = function(){
   this.communication.send.apply(this.communication,arguments);
 };
-CollectionReplica.prototype.usersend = function(){
-  this.communication.usersend.apply(this.communication,arguments);
-};
 CollectionReplica.prototype.go = function(){
   //console.log(this,'should go');
   this.send('internal','need_init',this.replicaToken,this.dump());
