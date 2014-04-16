@@ -44,9 +44,11 @@ function DataFollower(data,createcb,cb,user,path){
   User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
   this.path = path;
-  this.say = cb;/*function(item){
-    cb([path,item]);
-  };*/
+  if(cb){
+    this.say = cb;/*function(item){
+      cb([path,item]);
+    };*/
+  }
   this.createcb = createcb;
   this.destroyed = new HookCollection();
   if(user.remotepath){
@@ -95,14 +97,14 @@ DataFollower.prototype.huntTarget = function(data){
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
+      //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
         var remotepath = this.path.slice(cursor);
         this.pathtocommunication = this.path.slice(0,cursor);
         target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t){
           var t = _t;
           return function(){
-            console.log('remote follow said',arguments);
+            //console.log('remote follow said',arguments);
             t.createcb && t.createcb.apply(t,arguments);
           };
         })(this));
@@ -195,14 +197,10 @@ DataFollower.prototype.reportElement = function(name,el,cb){
 DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
   if(this.remotepath){
-    var trp = this.remotepath[this.remotepath.length-1];
-    if(typeof trp !== 'object'){
-      trp = this.remotepath;
-    }
     var t = this;
     this.data.communication.usersend(this,this.pathtocommunication,'explain',function(item){
-      cb.apply(t,[t.path.concat[item[0]],item[1]]);
-    });
+      cb.call(t,[t.path,item[1]]);
+    },'__persistmycb');
     return;
   }
   if(!this.contains(this.data.access_level())){

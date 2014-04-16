@@ -72,7 +72,7 @@ User.prototype.waitFor = function(data,queryarry,cb) {
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,queryarry.slice(0,cursor),'waitFor',queryarry.slice(cursor),cb);
+    target.communication.usersend(this,queryarry.slice(0,cursor),'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
   }else{
     target.waitFor(queryarry.slice(cursor),cb,this);
   }
