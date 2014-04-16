@@ -1,7 +1,7 @@
 var DataUser = require('./DataUser'),
   HookCollection = require('./hookcollection');
 
-function PathTranslator(path,replaceleading,cb){
+function PathTranslator(path,replaceleading){
   this.translate = typeof replaceleading === 'undefined' ? function(cb){
     var _cb = cb,mypath = path;
     return function(item){
@@ -13,8 +13,16 @@ function PathTranslator(path,replaceleading,cb){
       _cb([item[0] && item[0].slice ? mypath.concat(item[0].slice(replaceleading)) : mypath,item[1]]);
     };
   };
-  this.cb = this.translate(cb);
   this.hook = new HookCollection();
+  this.cb = this.translate((function(h){
+    var _h = h;
+    return function(item){
+      //console.log('hook firing',item);
+      _h.fire(item);
+    }
+  })(this.hook));
+  
+  //cb);
   this.count = 0;
 };
 PathTranslator.prototype.attach = function(cb){
@@ -29,7 +37,9 @@ PathTranslator.prototype.fire = function(item){
   if(!this.count){
     return;
   }
-  this.hook.fire(this.cb(item));
+  //console.log('outer fire',item);
+  this.cb(item);
+  //this.hook.fire(this.cb(item));
 };
 
 function Broadcaster(data,createcb,username,realmname,roles){
