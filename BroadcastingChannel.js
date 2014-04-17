@@ -1,5 +1,5 @@
 function BroadcastingChannel(sayer){
-  if(!sayer){ //broadcaster may initially be null, but sayer... no
+  if(!sayer){
     return;
   }
   var ss = sayer.say;
