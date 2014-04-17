@@ -168,6 +168,10 @@ DataFollower.prototype.attachToContents = function(){
         break;
     }
   });
+  this.createListener('newEl',function(name,el){
+    //console.log('newEl',name,el.type());
+      el.type() === 'Scalar' && this.attachToScalar(name,el);
+  },this.data.newElement);
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
   if(this.contains(el.access_level())){
