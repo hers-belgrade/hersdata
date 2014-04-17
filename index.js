@@ -37,6 +37,7 @@ module.exports = {
   SessionUser: require('./SessionUser'),
   DataFollower: require('./DataFollower'),
   Broadcaster: require('./Broadcaster'),
+  BroadcasterGroup: require('./BroadcasterGroup'),
   BroadcastingChannel: require('./BroadcastingChannel')
 };
 
