@@ -1,6 +1,6 @@
 var hersdata = require('hersdata'),
-  HookCollection = hersdata.HookCollection,
-  Broadcaster = hersdata.Broadcaster;
+  HookCollection = require('./hookcollection'),
+  Broadcaster = require('./Broadcaster');
 
 function BroadcasterGroup(){
   this.newBroadcaster = new HookCollection();
