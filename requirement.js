@@ -6,6 +6,7 @@ var errors = {
   'NO_OFFERS_ON_THIS_REQUIREMENT':{message:'This requirement does not support offers'},
   'INTERNAL_ERROR':{message:'An internal error has occured: [error]. Please contact the software vendor'},
   'BID_REFUSED':{message:'Your bid has been refused'},
+  'OFFER_REFUSED':{message:'Your offer has been refused'},
   'DO_OFFER':{message:'Give your final offer on [offerid]',params:['offerid']},
   'ACCEPTED':{message:'Your bid [bid] has been accepted, reference: [reference]',params:['reference','bid']},
   'INVALID_OFFER_ID':{message:'Your offer id [offerid] is invalid',params:['offerid']},
@@ -42,14 +43,18 @@ function setOffer(jsondata,offerid,cb,user){
 setOffer.params=['jsondata','offerid'];
 setOffer.defaults = {offerid:null};
 
-function doCall(callname,cb,user){
+
+removeOffer = function (oid) {
+  this.data.commit ('remove_offer', [ ['remove', ['offers', oid]] ]);
+}
+
+function doCall(callname,cb, id, user){
   var t = this;
-  var args = Array.prototype.slice.call(arguments,3);
+  var args = Array.prototype.slice.call(arguments,4);
   args.unshift(user);
   args.push(function accept(acceptobj){
     t.self.counter++;
-    cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj,'Bid accepted');
-    t.notifyDone();
+    cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
   },function dooffer(jsondata,options){
     var u = user;
     t.self.setOffer({jsondata:jsondata},function(errc,errp){
@@ -57,14 +62,18 @@ function doCall(callname,cb,user){
         cb('DO_OFFER',errp[0]);
         if(options){
           if(options.timeout){
-            Timeout.set(function(t,oid){t.self.offer({offerid:oid})},options.timeout,t,errp[0]);
+            Timeout.set(function(t,oid){
+              console.log('timeouted, should cancel the offer ...');
+              t&&t.self && t.self.offer && t.self.offer({offerid:oid})
+            },options.timeout,t,errp[0]);
           }
         }
       }
     },user);
   },function refuse(){
+    (callname === 'onOffer') && removeOffer.call(t, id);
     var args = Array.prototype.slice.call(arguments);
-    args.unshift('BID_REFUSED');
+    args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
     cb.apply(null,args);
   });
   this.self.cbs[callname].apply(this,args);
@@ -74,7 +83,7 @@ function bid(paramobj,cb,user){
   if(!this.self.cbs.onBid){
     cb('NO_BIDDING_ON_THIS_REQUIREMENT');
   }else{
-    doCall.call(this,'onBid',cb,user,paramobj);
+    doCall.call(this,'onBid',cb, null, user,paramobj);
   }
 };
 bid.params = 'originalobj';
@@ -91,7 +100,8 @@ function offer(paramobj,cb,user){
     return;
   }
   delete paramobj.offerid;
-  doCall.call(this,'onOffer',cb,user,paramobj,JSON.parse(offerel.element(['data']).value()));
+  if (Object.keys(paramobj).length === 0) paramobj = null;
+  doCall.call(this,'onOffer',cb, offerid, user,paramobj,JSON.parse(offerel.element(['data']).value()));
 };
 offer.params = 'originalobj';
 

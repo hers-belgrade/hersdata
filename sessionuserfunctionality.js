@@ -1,8 +1,7 @@
 var RandomBytes = require('crypto').randomBytes;
 var BigCounter = require('./BigCounter');
 var util = require('util');
-var Timeout = require('herstimeout');
-var DataUser = require('./DataUser');
+var SessionUser = require('./SessionUser');
 
 var errors = {
   'OK':{message:'OK'},
@@ -11,73 +10,63 @@ var errors = {
   'NO_COMMANDS':{message:'No commands to execute'}
 };
 
-function SessionUser(data,username,realmname,roles){
-  sessions = {};
-  var t = this;
-  DataUser.call(this,data,function(){},function(item){
-    //console.log('<=',item);
-    for(var i in t.sessions){
-      if(!t.sessions[i].say){
-        delete t.sessions[i];
-      }
-      if(t.sessions[i].say(item)===false){
-        delete t.sessions[i];
-      }
-    }
-  },username,realmname,roles);
-  this.sessions = sessions;
-}
-SessionUser.prototype = new DataUser();
-SessionUser.prototype.constructor = SessionUser;
-SessionUser.prototype.makeSession = function(sess){
-  if(!sess){
-    console.trace();
-    console.log('no session to make');
-    process.exit(0);
-  }
-  if(this.sessions[sess]){return;}
-  this.sessions[sess] = new ConsumerSession(this,sess);
-};
-
 function _findUser(username){
   return this.self.userMap[username];
 }
 
-function _produceUser(paramobj){
+function _produceUser(paramobj,cb){
   if(!paramobj.name){
+    cb();
     return;
   }
   var u = this.self._findUser(paramobj.name);
   if(u){
-    return u;
+    cb(u);
+    return;
   }
-  var user = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
-  this.self.userMap[user.username] = user;
-  return user;
+  if(this.self.userFactory){
+    var map = this.self.userMap;
+    this.self.userFactory(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
+      if(user){
+        map[user.username] = user;
+      }
+      cb(user);
+    });
+  }else{
+    var ret = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
+    this.self.userMap[user.username] = user;
+    cb(ret);
+  }
+}
+
+function userDumper(slf,po,scb){
+  var self = slf, paramobj = po, statuscb = scb;
+  return function(user){
+    if(!user){
+      statuscb('NO_USER');
+      return;
+    }
+    var sessid = paramobj[self.fingerprint];
+    if(!sessid){
+      sessid=self.newSession();
+      console.log('created',sessid,'on',user.username,'because',self.fingerprint,'was not found in',paramobj);
+    }
+    //console.log(user.sessions);
+    user.makeSession(sessid);
+    var session = {};
+    session[self.fingerprint]=sessid;
+    statuscb('OK', {
+      username:user.username,
+      realmname:user.realmname,
+      roles:paramobj.roles,
+      session:session,
+      data:user.sessions[sessid] ? user.sessions[sessid].retrieveQueue() : []
+    });
+  };
 }
 
 function dumpData(paramobj,statuscb) {
-  var user = _produceUser.call(this,paramobj);
-  //console.log('recognized',user.username,user.realmname,user.keys);
-  if(!user){
-    statuscb('NO_USER');
-    return;
-  }
-  var sessid = paramobj[this.self.fingerprint];
-  if(!sessid){
-    sessid=this.self.newSession();
-    console.log('created',sessid,'on',user.username,'because',this.self.fingerprint,'was not found in',paramobj);
-  }
-  //console.log(user.sessions);
-  user.makeSession(sessid);
-  var session = {};
-  session[this.self.fingerprint]=sessid;
-  statuscb('OK', {
-    username:paramobj.name,
-    roles:paramobj.roles,
-    session:session,
-    data:user.sessions[sessid] ? user.sessions[sessid].retrieveQueue() : []
-  });
+  var user = _produceUser.call(this,paramobj,userDumper(this.self,paramobj,statuscb));
 };
 dumpData.params = 'originalobj';
 
@@ -90,20 +79,22 @@ function executeOneOnUser(user,command,params,cb){
     //console.log('user function',command);
     var method = user[command];
     if(!method){
+      //console.trace();
       console.log('no method named',command,'on user');
       cb('NO_FUNCTIONALITY',method);
     }else{
+      //console.log('applying',command,'to',user.username,Array.prototype.slice.call(arguments,2));
       method.apply(user,Array.prototype.slice.call(arguments,2));
     }
     return;
   }
-  user.invoke(this,command,params,cb); //this is data
+  user.invoke(command,params,cb); //this is data
 }
 
 function executeOnUser(user,session,commands,statuscb){
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;
-  var ret = {username:user.username,roles:user.roles,session:sessionobj};
+  var ret = {username:user.username,realmnname:user.realmname,roles:user.roles,session:sessionobj};
   var cmdlen = commands.length;
   var cmdstodo = cmdlen/2;
   var cmdsdone = 0;
@@ -161,37 +152,23 @@ function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
       return;
     }
   }
-  var user = _produceUser.call(this,paramobj);
-  //console.log('recognized',user.username,user.realmname,user.keys);
-  if(!user){
-    statuscb('NO_USER');
-    return;
-  }
-  this.self.executeOnUser({user:user,session:session,commands:commands},function(ecb,ep,em){
-    statuscb(ecb,ep[0],em);
+  var self = this.self;
+  _produceUser.call(this,paramobj,function(user){
+    //console.log('recognized',user.username,user.realmname,user.keys);
+    if(!user){
+      statuscb('NO_USER');
+      return;
+    }
+    self.executeOnUser({user:user,session:session,commands:commands},function(ecb,ep,em){
+      statuscb(ecb,ep[0],em);
+    });
   });
 };
 produceAndExecute.params='originalobj';
 
-function registerUserProductionCallback(cb,statuscb){
-  if(this.self.userProductionCallbacks.indexOf(cb)<0){
-    this.self.userProductionCallbacks.push(cb);
-  }
-};
-registerUserProductionCallback.params=['cb'];
-
-function unRegisterUserProductionCallback(cb,statuscb){
-  var cbi = this.self.userProductionCallbacks.indexOf(cb);
-  if(cbi>=0){
-    this.self.userProductionCallbacks.splice(cbi,1);
-  }
-};
-unRegisterUserProductionCallback.params=['cb'];
-
 
 function init(){
   this.self.fingerprint = RandomBytes(12).toString('hex');
-  this.self.userProductionCallbacks = [];
   this.self.userMap = {};
   var counter = new BigCounter();
   this.self.newSession = function(){
@@ -207,65 +184,5 @@ module.exports = {
   _findUser:_findUser,
   dumpData: dumpData,
   executeOnUser: executeOnUser,
-  produceAndExecute: produceAndExecute,
-  registerUserProductionCallback:registerUserProductionCallback
-};
-
-
-function ConsumerSession(u,session){
-  this.user = u;
-  this.session = session;
-  this.queue = [];
-  this.lastAccess = Timeout.now();
-  var t = this;
-  u.describe(function(item){
-    t.say(item);
-  });
-};
-ConsumerSession.initTxn = JSON.stringify([JSON.stringify([]),JSON.stringify([null,'init'])]);
-ConsumerSession.prototype.destroy = function(){
-  for(var i in this){
-    delete this[i];
-  }
-};
-ConsumerSession.prototype.retrieveQueue = function(){
-  this.lastAccess = Timeout.now();
-  if(this.queue && this.queue.length){
-    //console.log(this.session,'splicing',this.queue.length);
-    return this.queue.splice(0);
-  }else{
-    //console.log('empty q');
-    return [];
-  }
-};
-ConsumerSession.prototype.setSocketIO = function(sock){
-  //console.log('setSocketIO, queue len',this.queue.length);
-  this.sockio = sock;
-  var t = this;
-  sock.on('disconnect',function(){
-    delete t.sockio;
-  });
-  while(this.queue.length){
-    //console.log('dumping q',this.queue);
-    sock.emit('_',this.queue.shift());
-  }
-};
-ConsumerSession.prototype.say = function(item){
-  var n = Timeout.now();
-  if(this.sockio){
-    //console.log('emitting',item);
-    this.lastAccess = n;
-    this.sockio.emit('_',item);
-  }else{
-    if(n-this.lastAccess>10000){
-      this.destroy();
-      return false;
-    }
-    if(!this.queue){
-      return false;
-    }
-    this.queue.push(item);
-    //console.log(this.user.username,this.session,'queue len',this.queue.length);
-  }
-  return true;
+  produceAndExecute: produceAndExecute
 };

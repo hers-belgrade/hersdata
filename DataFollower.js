@@ -2,8 +2,6 @@ var User = require('./User'),
   Listener = require('./listener'),
   HookCollection = require('./hookcollection');
 
-function numbTeller(){}
-
 function removeFromArray(ar,el){
   if(!ar){return;}
   var ind = ar.indexOf(el);
@@ -46,9 +44,11 @@ function DataFollower(data,createcb,cb,user,path){
   User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
   this.path = path;
-  this.say = cb;/*function(item){
-    cb([path,item]);
-  };*/
+  if(cb){
+    this.say = cb;/*function(item){
+      cb([path,item]);
+    };*/
+  }
   this.createcb = createcb;
   this.destroyed = new HookCollection();
   if(user.remotepath){
@@ -72,6 +72,7 @@ function listenForTarget(target,data,cursor){
       this.huntTarget(data);
     }
   },target.newElement);
+  this.createcb && this.createcb.call(this,'LATER');
 }
 function listenForDestructor(target,data,cursor){
   this.createListener('destructlistener',function(){
@@ -96,14 +97,17 @@ DataFollower.prototype.huntTarget = function(data){
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
+      //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       if(target.communication){
         var remotepath = this.path.slice(cursor);
-        target.communication.usersend(this,'follow',remotepath,function(){
-          console.log('remote follow said',arguments);
-        },function(item){
-          console.log('remote say said',item);
-        });
+        this.pathtocommunication = this.path.slice(0,cursor);
+        target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t){
+          var t = _t;
+          return function(){
+            //console.log('remote follow said',arguments);
+            t.createcb && t.createcb.apply(t,arguments);
+          };
+        })(this));
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
@@ -111,6 +115,8 @@ DataFollower.prototype.huntTarget = function(data){
         }else{
           this.remotepath = remotepath;
         }
+        this.data = target;
+        return;
       }else{
         listenForTarget.call(this,target,data,cursor);
         listenForDestructor.call(this,target,data,cursor);
@@ -127,7 +133,6 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.createcb && this.createcb.call(this,'OK');
-    delete this.createcb;
     this.cb && this.explain();
     this.attachToContents();
   }
@@ -143,6 +148,7 @@ DataFollower.prototype.followerFor = function(name){
   }
 };
 DataFollower.prototype.attachToScalar = function(name,el){
+  this.reportScalar(name,el,this.say);
   this.createListener(name+'_changed',function(changedmap){
     this.reportScalar(name,el,this.say);
   },el.changed);
@@ -162,9 +168,22 @@ DataFollower.prototype.attachToContents = function(){
         break;
     }
   });
+  this.createListener('newEl',function(name,el){
+    //console.log('newEl',name,el.type());
+      el.type() === 'Scalar' && this.attachToScalar(name,el);
+  },this.data.newElement);
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
-  cb([this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
+  if(this.contains(el.access_level())){
+    cb.call(this,[this.path,[name,el.value()]]);
+  }else{
+    var pv = el.public_value();
+    if(typeof pv !== 'undefined'){
+      cb.call(this,[this.path,[name,pv]]);
+    }/*else{
+      console.log(this.username,'will not report scalar',name);
+    }*/
+  }
 };
 DataFollower.prototype.reportElement = function(name,el,cb){
   cb = cb || this.say;
@@ -174,13 +193,20 @@ DataFollower.prototype.reportElement = function(name,el,cb){
       break;
     case 'Collection':
       if(this.contains(el.access_level())){
-        cb([this.path,[name,null]]);
+        cb.call(this,[this.path,[name,null]]);
       }
       break;
   }
 };
 DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
+  if(this.remotepath){
+    var t = this;
+    this.data.communication.usersend(this,this.pathtocommunication,'explain',function(item){
+      cb.call(t,[t.path,item[1]]);
+    },'__persistmycb');
+    return;
+  }
   if(!this.contains(this.data.access_level())){
     return;
   }
@@ -206,31 +232,35 @@ DataFollower.prototype.offer = function(path,paramobj,cb){
 DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
-DataFollower.prototype.plantAt = function(path,createcb,ctor){
-  ctor = ctor || DataFollower;//this.constructor;
-  //console.log('planting with ctor',ctor.toString());
+DataFollower.prototype.follow = function(path,cb){
   path = path || [];
   var spath = path.join('/') || '.';
-  if(this.followers && this.followers[spath]){
-    return this.followers[spath];
-  }
-  if(!this.followers){
+  if(this.followers){
+    var f = this.followers[spath];
+    if(f){
+      cb && cb.call(this,'OK');
+      return f;
+    }
+  }else{
     this.followers = {};
   }
-  var df = new ctor(this.data,createcb,this.say,this,path);
-  //var df = new DataFollower(this.data,cb,this.say,this,path);
+  //controversial solution: this.say is mutated in order to provide proper this...
+  //so, new *say* per following. Can this be avoided?
+  var t = this;
+  var df = new DataFollower(this.data,cb,function(){
+    t.say.apply(t,arguments);
+  },this,path);
   this.followers[spath] = df;
   return df;
-}
-DataFollower.prototype.follow = function(path,cb){
-  return this.plantAt(path,cb,DataFollower);
 };
 DataFollower.prototype.describe = function(cb){
+  this.explain(cb);
+  return;
   var ret = [];
   this.explain(function(item){
     ret.push(item);
   });
-  cb(ret);
+  cb && cb.call(this,ret);
 };
 
 module.exports = DataFollower;

@@ -33,6 +33,11 @@ module.exports = {
 	helpers: require('./helpers'),
   HookCollection: HookCollection,
   Listener: require('./listener'),
-  Bridge: require('./bridge')
+  Bridge: require('./bridge'),
+  SessionUser: require('./SessionUser'),
+  DataFollower: require('./DataFollower'),
+  Broadcaster: require('./Broadcaster'),
+  BroadcasterGroup: require('./BroadcasterGroup'),
+  BroadcastingChannel: require('./BroadcastingChannel')
 };
 

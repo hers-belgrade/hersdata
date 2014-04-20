@@ -17,16 +17,22 @@ function userStatus(replicatorcommunication){
 function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
-    rc.send('usersay',this.fullname,item);
+    console.log('userSayer',item,'on',this.fullname);
+    rc.send('usersay',this._replicationid,item);
   }
 }
 
+var _instanceCount = new BigCounter();
+
 function ReplicatorCommunication(data){
+  _instanceCount.inc();
+  this._id = _instanceCount.toString();
   Listener.call(this);
   if(!data){return;}
   __id++;
   this.counter = new BigCounter();
   this.cbs = {};
+  this.sayers = {};
   this.__id = __id;
   this.data = data;
   this.userStatus = userStatus(this);
@@ -53,27 +59,33 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.usersend = function(user,code){
+ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
   if(!(user.username&&user.realmname)){
     console.trace();
     console.log('user no good',user);
     process.exit(0);
   }
+  if(typeof pathtome !== 'object'){
+    console.trace();
+    console.log('pathtome is missing');
+    process.exit(0);
+  }
   this.counter.inc();
   var cnt = this.counter.toString();
-  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
-  if(!(this.data.users && this.data.users[user.fullname])){
-    sendobj.user.roles = user.roles;
-    /*
-    console.log(this.data.users,user.fullname);
-    var args = arguments;
-    var t = this;
-    */
-    this.data.plantUser(function(errc){
-      //Timeout.next(function(t,args){t.usersend.apply(t,args);},t,args);
-    },user);
+  if(!user.replicators){
+    user.replicators = {};
   }
-  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,2),false,code);
+  if(!user.replicators[this._id]){
+    user.replicators[this._id] = cnt;
+    this.sayers[cnt] = (function(u,p){var _u = u, _p = p; return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};})(user,pathtome);
+    user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
+  }
+  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
+  if(!(this.users && this.users[user.fullname])){
+    sendobj.user.roles = user.roles;
+  }
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,3),false,code);
+  //console.log('sending',sendobj);
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
@@ -137,19 +149,22 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
     var p = params[i];
     if(typeof p === 'string'){
       if(p.indexOf('#FunctionRef:')===0){
-        var fnref = p.slice(13),t = this;
+        var fnref = p.slice(13);
         //console.log('#FunctionRef',fnref);
         if(ret){
           ret += ',';
         }
         ret += fnref;
-        params[i] = function(){
-          var args = Array.prototype.slice.call(arguments);
-          args.unshift(fnref);
-          //console.log('sending commandresult',args);
-          args.unshift('commandresult');
-          t.send.apply(t,args);
-        };
+        params[i] = (function(_t,fr){
+          var t = _t, fnref = fr;
+          return function(){
+            var args = Array.prototype.slice.call(arguments);
+            args.unshift(fnref);
+            //console.log('sending commandresult',args);
+            args.unshift('commandresult');
+            t.send.apply(t,args);
+          };
+        })(this,fnref);
       }
     }
   }
@@ -173,16 +188,29 @@ ReplicatorCommunication.prototype.handOver = function(input){
     delete input.commandresult;
     this.execute(commandresult);
   }
+  if(input.usersay){
+    var us = input.usersay;
+    if(this.sayers){
+      var s = this.sayers[us[0]];
+      if(s){
+        s(us[1]);
+      }else{
+        console.log('no sayer for',us[0],'to usersay',us[1]);
+      }
+    }
+    return;
+  }
   if(input.user){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
-    if(!(this.data.users && this.data.users[fullname])){
+    if(!(this.users && this.users[fullname])){
       u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
-      if(!this.data.users){
-        this.data.users = {};
+      u._replicationid = counter;
+      if(!this.users){
+        this.users = {};
       }
-      this.data.users[fullname] = u;
+      this.users[fullname] = u;
     }else{
-      u = this.data.users[fullname];
+      u = this.users[fullname];
     }
     var remotepath = input.user.remotepath;
     if(remotepath){
@@ -199,6 +227,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
+        console.log(u.username,'applies',i,input[i]);
         method.apply(u,input[i]);
       }
     }

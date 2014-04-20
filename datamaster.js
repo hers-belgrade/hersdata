@@ -211,7 +211,7 @@ function Collection(a_l){
     this.destroyed.destruct();
     this.newElement.destruct();
     for(var i in this.functionalities){
-      console.log('__DESTROY__ing',i);
+      //console.log('__DESTROY__ing',i);
       this.functionalities[i].f.__DESTROY__();
     }
     for(var i in this){
@@ -945,19 +945,6 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
     console.log('Waiter dead',targetpath);
   });
   return w;
-};
-
-Collection.prototype.plantUser = function(createcb,/*saycb,*/user){
-  if(!this.users){
-    this.users = {};
-  }
-  if(this.users[user.fullname]){
-    console.log('got user',this.users[user.fullname]);
-    createcb('OK');
-    return;
-  }
-  this.users[user.fullname] = new DataUser(this,createcb,user.say,user.username,user.realmname,user.roles);
-  createcb('OK');
 };
 
 module.exports = {

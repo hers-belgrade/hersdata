@@ -1,9 +1,11 @@
 function HookCollection(){
 };
 HookCollection.prototype.empty = function(){
-	var c = 0;
-	for(var n in this.collection){
-		return false;
+  if(!this.cbs){return true;}
+	for(var n in this.cbs){
+    if(this.cbs[n]){
+      return false;
+    }
 	}
   return true;
 };
@@ -26,6 +28,7 @@ HookCollection.prototype.attach = function(cb){
       cursor++;
     }
   }else{
+    console.trace();
     console.log(cb.toString(),'is not a function');
   }
 };
@@ -44,7 +47,6 @@ HookCollection.prototype.detach = function(i){
 };
 HookCollection.prototype.fire = function(){
   var cbs = this.cbs;
-  var fordel=[];
   //console.log('firing on',c);
   for(var i in cbs){
     try{
