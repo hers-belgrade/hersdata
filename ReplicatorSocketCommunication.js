@@ -16,7 +16,12 @@ function ReplicatorSocketCommunication(data){
   this.dataCursor = 0;
   this.incomingData = [];
 };
-ReplicatorSocketCommunication.prototype = new ReplicatorCommunication();
+ReplicatorSocketCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
+  value:ReplicatorSocketCommunication,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 ReplicatorSocketCommunication.prototype.destroy = function(){
   this.socket && this.socket.destroy();
   ReplicatorCommunication.call(this);
