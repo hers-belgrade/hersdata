@@ -155,7 +155,7 @@ DataFollower.prototype.followerFor = function(name){
 DataFollower.prototype.attachToCollection = function(name,el){
   this.reportCollection(name,el,this.say);
   this.createListener(name+'_destroyed',function(){
-    this.say.apply(this,[this.path,[name]]);
+    this.say.call(this,[this.path,[name]]);
   },el.destroyed);
 };
 DataFollower.prototype.attachToScalar = function(name,el){
@@ -164,7 +164,7 @@ DataFollower.prototype.attachToScalar = function(name,el){
     this.reportScalar(name,el,this.say);
   },el.changed);
   this.createListener(name+'_destroyed',function(){
-    this.say.apply(this,[this.path,[name]]);
+    this.say.call(this,[this.path,[name]]);
     this.destroyListener(name+'_changed');
     this.destroyListener(name+'_destroyed');
   },el.destroyed);
