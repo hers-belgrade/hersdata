@@ -7,7 +7,11 @@ function DataUser(data,createcb,cb,username,realmname,roles){
   var t = this;
   data.destroyed.attach(function(){createcb.call(t,'DISCONNECTED');});
 };
-DataUser.prototype = new DataFollower();
-DataUser.prototype.constructor = DataUser;
+DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
+  value:DataUser,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 
 module.exports = DataUser;

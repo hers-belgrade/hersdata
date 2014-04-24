@@ -7,13 +7,23 @@ function CPReplicatorCommunication(data){
     t.handOver(input);
   };
 }
-CPReplicatorCommunication.prototype = new ReplicatorCommunication();
+CPReplicatorCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
+  value:CPReplicatorCommunication,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 
 function Child(data){
   CPReplicatorCommunication.call(this,data);
   process.on('message',this.messageHandler);
 }
-Child.prototype = new CPReplicatorCommunication();
+Child.prototype = Object.create(CPReplicatorCommunication.prototype,{constructor:{
+  value:Child,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 Child.prototype.destroy = function(){
   process.removeListener('message',this.messageHandler);
   CPReplicatorCommunication.prototype.destroy.call(this);
@@ -30,7 +40,12 @@ Child.prototype.sendobj = function(obj){
 function Parent(data){
   CPReplicatorCommunication.call(this,data);
 }
-Parent.prototype = new CPReplicatorCommunication();
+Parent.prototype = Object.create(CPReplicatorCommunication.prototype,{constructor:{
+  value:Parent,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 Parent.prototype.destroy = function(){
   if(this.cp){
     this.cp.removeListener('message',this.messageHandler);

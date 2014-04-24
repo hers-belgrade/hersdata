@@ -57,7 +57,12 @@ function DataFollower(data,createcb,cb,user,path){
   }
   this.huntTarget(data);
 }
-DataFollower.prototype = new User();
+DataFollower.prototype = Object.create(User.prototype,{constructor:{
+  value:DataFollower,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 for(var i in Listener.prototype){
   DataFollower.prototype[i] = Listener.prototype[i];
 }
@@ -111,7 +116,7 @@ DataFollower.prototype.huntTarget = function(data){
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
-          console.log('to',this.remotepath);
+          //console.log('to',this.remotepath);
         }else{
           this.remotepath = remotepath;
         }
@@ -133,7 +138,7 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.createcb && this.createcb.call(this,'OK');
-    this.cb && this.explain();
+    //this.cb && this.explain();
     this.attachToContents();
   }
 }
@@ -146,6 +151,12 @@ DataFollower.prototype.followerFor = function(name){
     fn = name;
     fs = false;
   }
+};
+DataFollower.prototype.attachToCollection = function(name,el){
+  this.reportCollection(name,el,this.say);
+  this.createListener(name+'_destroyed',function(){
+    this.say.apply(this,[this.path,[name]]);
+  },el.destroyed);
 };
 DataFollower.prototype.attachToScalar = function(name,el){
   this.reportScalar(name,el,this.say);
@@ -172,6 +183,11 @@ DataFollower.prototype.attachToContents = function(){
     //console.log('newEl',name,el.type());
       el.type() === 'Scalar' && this.attachToScalar(name,el);
   },this.data.newElement);
+};
+DataFollower.prototype.reportCollection = function(name,el,cb){
+  if(this.contains(el.access_level())){
+    cb.call(this,[this.path,[name,null]]);
+  }
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
   if(this.contains(el.access_level())){
