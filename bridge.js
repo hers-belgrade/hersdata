@@ -84,7 +84,7 @@ Data_Scalar.prototype = Object.create(Data_Element.prototype,{constructor:{
 function typefilter(type){
   var t = type;
   return function(name,el){
-    return el.type()===t;
+    return el && el.type ? el.type()===t : false;
   };
 };
 
