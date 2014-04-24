@@ -38,7 +38,10 @@ function setOffer(data4json,timeout,offerid,cb,user){
   actions.push(['set',['offers',offerid]]);
   actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.username+'@'+user.realmname]]);
   if(timeout>0){
-    Timeout.set(function(t,oid){
+    if(!this.self.offertimeouts){
+      this.self.offertimeouts = {};
+    }
+    this.self.offertimeouts[offerid] = Timeout.set(function(t,oid){
       console.log('timed out, should cancel the offer ...',oid);
       t&&t.self && t.self.offer && t.self.offer({offerid:oid})
     },timeout,this,offerid);
@@ -93,6 +96,10 @@ function offer(paramobj,cb,user){
   }
   //console.log('offer',paramobj,offerid);
   var offerid = paramobj.offerid;
+  if(this.self.offertimeouts && this.self.offertimeouts[offerid]){
+    Timeout.clear(this.self.offertimeouts[offerid]);
+    delete this.self.offertimeouts[offerid];
+  }
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
     cb('INVALID_OFFER_ID',offerid);
