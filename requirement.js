@@ -19,9 +19,9 @@ function init(){
   this.self.counter = 0;
 };
 
-function setOffer(jsondata,offerid,cb,user){
-  if(typeof jsondata === 'object'){
-    jsondata = JSON.stringify(jsondata);
+function setOffer(data4json,timeout,offerid,cb,user){
+  if(typeof data4json === 'object'){
+    data4json = JSON.stringify(data4json);
   }
   var actions = [];
   var offersel = this.data.element(['offers']);
@@ -36,12 +36,18 @@ function setOffer(jsondata,offerid,cb,user){
     offerid = this.self.counter;
   }
   actions.push(['set',['offers',offerid]]);
-  actions.push(['set',['offers',offerid,'data'],[jsondata,undefined,user.username+'@'+user.realmname]]);
+  actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.username+'@'+user.realmname]]);
+  if(timeout>0){
+    Timeout.set(function(t,oid){
+      console.log('timed out, should cancel the offer ...',oid);
+      t&&t.self && t.self.offer && t.self.offer({offerid:oid})
+    },timeout,this,offerid);
+  }
   this.data.commit('set_offer',actions);
   cb('OFFER_SET',offerid);
 }
-setOffer.params=['jsondata','offerid'];
-setOffer.defaults = {offerid:null};
+setOffer.params=['data4json','timeout','offerid'];
+setOffer.defaults = {offerid:null,timeout:0};
 
 
 removeOffer = function (oid) {
@@ -50,24 +56,15 @@ removeOffer = function (oid) {
 
 function doCall(callname,cb, id, user){
   var t = this;
-  var args = Array.prototype.slice.call(arguments,4);
-  args.unshift(user);
+  var args = Array.prototype.slice.call(arguments,3);
   args.push(function accept(acceptobj){
     t.self.counter++;
     cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
-  },function dooffer(jsondata,options){
+  },function dooffer(offerobj){
     var u = user;
-    t.self.setOffer({jsondata:jsondata},function(errc,errp){
+    t.self.setOffer(offerobj,function(errc,errp){
       if(errc==='OFFER_SET'){
         cb('DO_OFFER',errp[0]);
-        if(options){
-          if(options.timeout){
-            Timeout.set(function(t,oid){
-              console.log('timeouted, should cancel the offer ...');
-              t&&t.self && t.self.offer && t.self.offer({offerid:oid})
-            },options.timeout,t,errp[0]);
-          }
-        }
       }
     },user);
   },function refuse(){
@@ -76,6 +73,7 @@ function doCall(callname,cb, id, user){
     args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
     cb.apply(null,args);
   });
+  //console.log(args);
   this.self.cbs[callname].apply(this,args);
 };
 
@@ -93,6 +91,7 @@ function offer(paramobj,cb,user){
     cb('NO_OFFERS_ON_THIS_REQUIREMENT');
     return;
   }
+  //console.log('offer',paramobj,offerid);
   var offerid = paramobj.offerid;
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
@@ -101,6 +100,7 @@ function offer(paramobj,cb,user){
   }
   delete paramobj.offerid;
   if (Object.keys(paramobj).length === 0) paramobj = null;
+  //console.log('offer',paramobj,offerid);
   doCall.call(this,'onOffer',cb, offerid, user,paramobj,JSON.parse(offerel.element(['data']).value()));
 };
 offer.params = 'originalobj';

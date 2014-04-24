@@ -19,8 +19,12 @@ function Bridge(listener,data){
   this.createListener('__listenerdestroyed',function(){this.destroy();},listener.destroyed);
   this.createListener('__datadestroyed',function(){this.destroy();},data.destroyed);
 };
-Bridge.prototype = new Listener();
-Bridge.prototype.constructor = Bridge;
+Bridge.prototype = Object.create(Listener.prototype,{constructor:{
+  value:Bridge,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 Bridge.prototype.destroy = function(){
   //console.log(this.__counter,'destroyed');
   this.destroyed.fire();
@@ -34,17 +38,48 @@ Bridge.prototype.destroy = function(){
   }
 }
 
+/*
+ * Data_Element was intended to handle data element destruction.
+ * However, it turned out that destruction is much better handled
+ * from within filterer (see below)
+ */
+function Data_Element(listener,scalar,cb){
+  Bridge.call(this,listener,scalar);
+  this._cb = cb;
+};
+Data_Element.prototype = Object.create(Bridge.prototype,{constructor:{
+  value:Data_Element,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
+Data_Element.prototype.destroy = function(){
+  /*
+  console.trace();
+  console.log('destruction',this._cb.toString());
+  */
+  this._cb.call(this,null);
+  Bridge.prototype.destroy.call(this);
+};
+/**/
+
 function Data_Scalar(listener,scalar,cb,valueconstraint){
   if(!(listener&&scalar&&typeof cb === 'function')){return;}
-  Bridge.call(this,listener,scalar);
+  Data_Element.call(this,listener,scalar,cb);
+  //Bridge.call(this,listener,scalar);
   this.createListener('__scalarchanged',function(el,changedmap){
     if(!changedmap.private){return;}
     cb.call(this,listener.contains(el.access_level()) ? el.value() : el.public_value());
   },scalar.changed);
   cb.call(this,scalar.value());
 };
-Data_Scalar.prototype = new Bridge();
-Data_Scalar.prototype.constructor = Data_Scalar;
+Data_Scalar.prototype = Object.create(Data_Element.prototype,{constructor:{
+//Data_Scalar.prototype = Object.create(Bridge.prototype,{constructor:{
+  value:Data_Scalar,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 
 function typefilter(type){
   var t = type;
@@ -86,14 +121,18 @@ function waiter_callback(name,cb){
 function collectionhandler(path,cb){
   var t = this, _p = path, _cb = cb;
   return function(name,el){
-    new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
+    if(el){
+      new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
+    }
   };
 };
 
 function scalarhandler(path,cb){
   var t = this, _p = path, _cb = cb;
   return function(name,el){
-    new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
+    if(el){
+      new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
+    }
   };
 };
 
@@ -108,11 +147,18 @@ function filterer(filters,cb){
       }
     }
     _cb.call(t,name,el);
+    if(el && el.destroyed){
+      var _t = t, _ccb = _cb;
+      el.destroyed.attach(function(){
+        _ccb.call(_t,name,null);
+      });
+    }
   };
 };
 
 function Data_CollectionElementWaiter(listener,collection,path,cb){
   if(!(listener&&collection&&path&&typeof cb === 'function')){
+    console.trace();
     console.log('not good, listener',listener,'collection',collection,'path',path,'cb',cb);
     return;
   }
@@ -123,7 +169,9 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
     process.exit(0);
   }
   //console.log('new Waiter',path);
-  Bridge.call(this,listener,collection);
+  Data_Element.call(this,listener,collection,cb);
+  //Bridge.call(this,listener,collection);
+  this.ccb = cb;
   this.contains = function(key){return listener.contains(key);};
   var fn = path[0],tofn = typeof fn;
   switch(tofn){
@@ -178,6 +226,7 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
         }
       }
       var _h = filterer.call(this,filters,handler||scalarhandler.call(this,path.slice(1),cb));
+      this._cb = _h;
       collection.traverseElements(_h);
       this.createListener('__followeesnewelement',_h,collection.newElement);
       break;
@@ -231,8 +280,13 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
       break;
   }
 };
-Data_CollectionElementWaiter.prototype = new Bridge();
-Data_CollectionElementWaiter.prototype.constructor = Data_CollectionElementWaiter;
+Data_CollectionElementWaiter.prototype = Object.create(Data_Element.prototype,{constructor:{
+//Data_CollectionElementWaiter.prototype = Object.create(Bridge.prototype,{constructor:{
+  value:Data_CollectionElementWaiter,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 
 module.exports = {
   Bridge:Bridge,

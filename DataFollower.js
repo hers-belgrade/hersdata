@@ -154,6 +154,8 @@ DataFollower.prototype.attachToScalar = function(name,el){
   },el.changed);
   this.createListener(name+'_destroyed',function(){
     this.say.apply(this,[this.path,[name]]);
+    this.destroyListener(name+'_changed');
+    this.destroyListener(name+'_destroyed');
   },el.destroyed);
 };
 DataFollower.prototype.attachToContents = function(){
