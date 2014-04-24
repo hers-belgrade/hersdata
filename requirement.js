@@ -62,6 +62,7 @@ function doCall(callname,cb, id, user){
   var args = Array.prototype.slice.call(arguments,3);
   args.push(function accept(acceptobj){
     t.self.counter++;
+    (callname === 'onOffer') && removeOffer.call(t, id);
     cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
   },function dooffer(offerobj){
     var u = user;
