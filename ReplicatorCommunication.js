@@ -80,7 +80,10 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
   }
   if(!user.replicators[this._id]){
     user.replicators[this._id] = cnt;
-    this.sayers[cnt] = (function(u,p){var _u = u, _p = p; return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};})(user,pathtome);
+    this.sayers[cnt] = (function(u,p){
+      var _u = u, _p = p;
+      return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
+    })(user,pathtome);
     user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
   }
   var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
@@ -252,17 +255,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
 };
 
-ReplicatorCommunication.prototype.doUserFollow = function(username,realmname){
-  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
-  var u = UserBase.findUser(username,realmname);
-  if(u){
-    if(!u.follow){
-      return;
-    }
-    u.follow(Array.prototype.slice.call(arguments,2,-1),arguments[arguments.length-1]);
+ReplicatorCommunication.prototype.purge = function () {
+  var old_cbs = this.cbs;
+  this.cbs = {};
+  for (var i in old_cbs) {
+    old_cbs[i].call(null, 'DISCARD_THIS');
   }
+  console.log('discard this sent ....');
 };
-
 
 ReplicatorCommunication.metrics = function(){
   var _n = Timeout.now(), elaps = _n-__start,

@@ -127,13 +127,18 @@ ReplicatorSocketCommunication.prototype.sendingDoneHandler = function(){
     t.sendMore();
   },this);
 };
+
+
+ReplicatorSocketCommunication.prototype.purge = function () {
+  delete this.socket;
+  ReplicatorCommunication.prototype.purge.apply(this, arguments);
+}
+
 ReplicatorSocketCommunication.prototype.listenTo = function(socket){
+  console.trace();
   var t = this;
   this.socket = socket;
   this.socket.setNoDelay(true);
-  socket.on('error',function(){
-    delete t.socket;
-  });
   socket.on('data',function(data){
     //console.log(t.__id,'data');
     Timeout.next(function(t){t.processData(data);},t);

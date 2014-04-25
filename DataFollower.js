@@ -108,7 +108,11 @@ DataFollower.prototype.huntTarget = function(data){
         this.pathtocommunication = this.path.slice(0,cursor);
         target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t){
           var t = _t;
-          return function(){
+          return function(status){
+            if (status === 'DISCARD_THIS') {
+              t.huntTarget(data);
+              return;
+            }
             //console.log('remote follow said',arguments);
             t.createcb && t.createcb.apply(t,arguments);
           };
