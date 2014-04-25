@@ -71,14 +71,17 @@ DataFollower.prototype.destroy = function(){
   Listener.prototype.destroy.call(this);
   User.prototype.destroy.call(this);
 }
+DataFollower.prototype.setStatus = function(stts){
+  this._status = stts;
+  this.createcb && this.createcb.call(this,this._status);
+};
 function listenForTarget(target,data,cursor){
   this.createListener('newelementlistener',function(name,el){
     if(name===this.path[cursor]){
       this.huntTarget(data);
     }
   },target.newElement);
-  console.log('================', this.createcb.toString());
-  this.createcb && this.createcb.call(this,'LATER');
+  this.setStatus('LATER');
 }
 function listenForDestructor(target,data,cursor){
   this.createListener('destructlistener',function(){
@@ -116,8 +119,8 @@ DataFollower.prototype.huntTarget = function(data){
               t.huntTarget(d);
               return;
             }
-            console.log('remote follow said',arguments);
-            t.createcb && t.createcb.apply(t,arguments);
+            //console.log('remote follow said',arguments);
+            t.setStatus(status);
           };
         })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),'__persistmycb');
         if(this.remotepath){
@@ -144,7 +147,7 @@ DataFollower.prototype.huntTarget = function(data){
     this.data = target;
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
-    this.createcb && this.createcb.call(this,'OK');
+    this.setStatus('OK');
     //this.cb && this.explain();
     this.attachToContents();
   }
@@ -263,7 +266,7 @@ DataFollower.prototype.follow = function(path,cb){
   if(this.followers){
     var f = this.followers[spath];
     if(f){
-      cb && cb.call(this,'OK');
+      cb && cb.call(this,f._status);
       return f;
     }
   }else{

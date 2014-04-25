@@ -10,7 +10,6 @@ var __id = 0;
 function userStatus(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
-    console.log('!!!!!!!! user status', this.fullname, item);
     rc.send('userstatus',this.fullname,item);
   }
 }
@@ -226,12 +225,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.user){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
-    if(!(this.users && this.users[fullname])){
+    if (!this.users) this.users = {};
+
+    if(!this.users[fullname]){
+      console.log('new user created :', fullname);
       u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
-      u._replicationid = counter;
-      if(!this.users){
-        this.users = {};
-      }
+      u._replicationid = input.user._id;
       this.users[fullname] = u;
     }else{
       u = this.users[fullname];
