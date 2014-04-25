@@ -10,8 +10,8 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
   }
   console.log('new RemoteCollectionReplica',name,realmname,url);
   this.url = url;
-  this.communication = new ReplicatorSocketCommunication(this);
   CollectionReplica.call(this,name,realmname,skipdcp);
+  this.communication = new ReplicatorSocketCommunication(this);
   this.status = 'initialized';
 };
 RemoteCollectionReplica.prototype = new CollectionReplica();
@@ -23,26 +23,23 @@ RemoteCollectionReplica.prototype.go = function(cb){
   net.createConnection(this.url.port,this.url.address,function(){
     t.status = 'connected';
     cb && cb(t.status);
+    console.log(Object.keys(t.communication.cbs).length,'cbs to handle');
     t.communication.listenTo(this);
+    console.log('reconnecting');
     CollectionReplica.prototype.go.call(t);
-  }).on('error',function(e){
-    t.communication.purge();
-    console.log('socket error on',t.url.address,':',t.url.port,e);
-    if(t.status === 'connected'){
-      t.status = 'disconnected';
-      cb && cb(t.status);
-    };
-    Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
-  }).on('close',function(){
-    t.communication.purge();
-    console.log('socket closed on',t.url);
+  }).on('error', function () {
+    ///due to stupidity of error handler ...
+  }).on('close',function(err){
+    //if(t.status === 'connected'){
+      t.communication.purge();
+    //}
+    console.log('socket closed on',t.url, err);
     t.status = 'disconnected';
     cb && cb(t.status);
     Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
   });
 };
 RemoteCollectionReplica.prototype.destroy = function(){
-  console.trace();
   console.log('RemoteCollectionReplica destroyed');
   if(this.communication && this.communication.socket){
     this.communication.socket.destroy();

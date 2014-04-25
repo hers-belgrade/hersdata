@@ -887,6 +887,7 @@ Collection.prototype.processInput = function(sender,input){
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
+        console.log('REPLICA INITIATED', this.replicationInitiated.cbs);
         this.replicationInitiated.fire(this.replicatingUser);
         break;
       case 'going_down':

@@ -4,6 +4,7 @@ var ReplicatorCommunication = require('./ReplicatorCommunication'),
 
 function ReplicatorSocketCommunication(data){
   ReplicatorCommunication.call(this,data);
+
   this.lenBuf = new Buffer(4);
   this.lenBufread = 0;
   this.bytesToRead = -1;
@@ -15,6 +16,15 @@ function ReplicatorSocketCommunication(data){
   this.createUnzip();
   this.dataCursor = 0;
   this.incomingData = [];
+  this._auxSendingQueue = undefined;
+
+  var self = this;
+  data.replicationInitiated.attach (function () {
+    if (!self._auxSendingQueue) return;
+    Array.prototype.push.apply (self.sendingQueue, self._auxSendingQueue);
+    self._auxSendingQueue = undefined;
+    self._internalSend();
+  });
 };
 ReplicatorSocketCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
   value:ReplicatorSocketCommunication,
@@ -135,8 +145,10 @@ ReplicatorSocketCommunication.prototype.purge = function () {
 }
 
 ReplicatorSocketCommunication.prototype.listenTo = function(socket){
-  console.trace();
   var t = this;
+  console.log('will recreate socket ...');
+  this._auxSendingQueue = this.sendingQueue; //naivno, sta ako nije prazan ...
+  this.sendingQueue = [];
   this.socket = socket;
   this.socket.setNoDelay(true);
   socket.on('data',function(data){

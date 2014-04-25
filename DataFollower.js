@@ -77,6 +77,7 @@ function listenForTarget(target,data,cursor){
       this.huntTarget(data);
     }
   },target.newElement);
+  console.log('================', this.createcb.toString());
   this.createcb && this.createcb.call(this,'LATER');
 }
 function listenForDestructor(target,data,cursor){
@@ -106,17 +107,19 @@ DataFollower.prototype.huntTarget = function(data){
       if(target.communication){
         var remotepath = this.path.slice(cursor);
         this.pathtocommunication = this.path.slice(0,cursor);
-        target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t){
-          var t = _t;
+        target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t, _d,_p){
+          var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
-              t.huntTarget(data);
+              console.log('GOT DISCARD THIS');
+              t.remotepath = p;
+              t.huntTarget(d);
               return;
             }
-            //console.log('remote follow said',arguments);
+            console.log('remote follow said',arguments);
             t.createcb && t.createcb.apply(t,arguments);
           };
-        })(this));
+        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),'__persistmycb');
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);

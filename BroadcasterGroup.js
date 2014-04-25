@@ -11,7 +11,11 @@ BroadcasterGroup.prototype.add = function(bcastername,data,username,realmname,ro
     return this.bcasters[bcastername];
   }
   bcasterctor = bcasterctor||Broadcaster;
-  var b = new bcasterctor(data,undefined,username,realmname,roles);
+  var b = new bcasterctor(data,function (status) {
+    if (status === 'LATER') {
+      console.log('KA BUM ...');
+    }
+  },username,realmname,roles);
   makeupcb && makeupcb(b);
   this.bcasters[bcastername] = b;
   this.newBroadcaster.fire(bcastername,b);
