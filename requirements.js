@@ -1,4 +1,5 @@
 var errors = {
+  'OK' : {message:'OK'},
   'INVALID_REQUIREMENTNAMES' : {message:'Requirements to start may be a string, commadelimited string or an array'},
   'REQUIREMENT_NOT_RECOGNIZED' : {message:'Requirement [requirement] cannot be started because it is not in the initial map', params:['requirement']},
   'REQUIREMENT_ALREADY_PENDING' : {message:'Requirement [requirement] is already pending', params:['requirement']}
@@ -24,26 +25,59 @@ function start(requirements,cb){
     createactions.push(['set',[i],requirements[i]==='null'?undefined:requirements[i]]);
   }
   this.data.commit('creating_requirement',createactions);
-  var initactions = [];
   for(var i in requirements){
-    var r = requirements[i];
     var mr = this.self.requirements[i];
     var d = this.data;
-    this.data.element([i]).attach('./requirement',{cbs:mr,notifyDone:(function(_mr,_i){
-      var mr = _mr, i=_i;
+    this.data.element([i]).attach('./requirement',{
+      cbs:mr,
+      notifyDone:(function(_i){
+      var i=_i;
       return function(){
         d.commit('requirement_'+i+'_done',[
           ['remove',[i]]
         ]);
       };
-    })(mr,i)});
-    for(var ri in r){
-      var key = r[ri] === null ? undefined : r[ri];
-      initactions.push(['set',[i,ri],[key]]);
-    }
+    })(i)});
   }
-  this.data.commit('setting_requirement',initactions);
   console.log('requirement set',this.data.dataDebug());
+  cb('OK');
+}
+start.params = 'originalobj';
+
+function startwoffer(requirementswoffers,cb){
+  var createactions = [];
+  for(var i in requirementswoffers){
+    var mr = this.self.requirements[i];
+    if(typeof mr === 'undefined'){
+      cb('REQUIREMENT_NOT_RECOGNIZED',i);
+      return;
+    }
+    if(this.data.element([i])){
+      cb('REQUIREMENT_ALREADY_PENDING',i);
+      return;
+    }
+    var key = requirementswoffers[i].key;
+    createactions.push(['set',[i],key==='null'?undefined:key]);
+  }
+  this.data.commit('creating_requirement',createactions);
+  for(var i in requirementswoffers){
+    var r = requirementswoffers[i];
+    var mr = this.self.requirements[i];
+    var d = this.data;
+    var f = this.data.element([i]).attach('./requirement',{
+      cbs:mr,
+      notifyDone:(function(_i){
+      var i=_i;
+      return function(){
+        d.commit('requirement_'+i+'_done',[
+          ['remove',[i]]
+        ]);
+      };
+    })(i)});
+    f.setOffer(r.offer);
+  }
+  console.log('requirement set',this.data.dataDebug());
+  cb('OK');
 }
 start.params = 'originalobj';
 
@@ -51,5 +85,6 @@ start.params = 'originalobj';
 module.exports = {
   errors:errors,
   init:init,
-  start:start
+  start:start,
+  startwoffer:startwoffer
 };

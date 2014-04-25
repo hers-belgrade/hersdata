@@ -35,8 +35,10 @@ module.exports = {
   Listener: require('./listener'),
   Bridge: require('./bridge'),
   SessionUser: require('./SessionUser'),
+  DataUser: require('./DataUser'),
   DataFollower: require('./DataFollower'),
   Broadcaster: require('./Broadcaster'),
+  BroadcasterGroup: require('./BroadcasterGroup'),
   BroadcastingChannel: require('./BroadcastingChannel')
 };
 

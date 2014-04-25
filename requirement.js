@@ -19,9 +19,9 @@ function init(){
   this.self.counter = 0;
 };
 
-function setOffer(jsondata,offerid,cb,user){
-  if(typeof jsondata === 'object'){
-    jsondata = JSON.stringify(jsondata);
+function setOffer(data4json,timeout,offerid,cb,user){
+  if(typeof data4json === 'object'){
+    data4json = JSON.stringify(data4json);
   }
   var actions = [];
   var offersel = this.data.element(['offers']);
@@ -36,38 +36,48 @@ function setOffer(jsondata,offerid,cb,user){
     offerid = this.self.counter;
   }
   actions.push(['set',['offers',offerid]]);
-  actions.push(['set',['offers',offerid,'data'],[jsondata,undefined,user.username+'@'+user.realmname]]);
+  actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.username+'@'+user.realmname]]);
+  if(timeout>0){
+    if(!this.self.offertimeouts){
+      this.self.offertimeouts = {};
+    }
+    this.self.offertimeouts[offerid] = Timeout.set(function(t,oid){
+      console.log('timed out, should cancel the offer ...',oid);
+      t&&t.self && t.self.offer && t.self.offer({offerid:oid})
+    },timeout,this,offerid);
+  }
   this.data.commit('set_offer',actions);
   cb('OFFER_SET',offerid);
 }
-setOffer.params=['jsondata','offerid'];
-setOffer.defaults = {offerid:null};
+setOffer.params=['data4json','timeout','offerid'];
+setOffer.defaults = {offerid:null,timeout:0};
 
-function doCall(callname,cb,user){
+
+removeOffer = function (oid) {
+  this.data.commit ('remove_offer', [ ['remove', ['offers', oid]] ]);
+}
+
+function doCall(callname,cb, id, user){
   var t = this;
   var args = Array.prototype.slice.call(arguments,3);
-  args.unshift(user);
   args.push(function accept(acceptobj){
     t.self.counter++;
+    (callname === 'onOffer') && removeOffer.call(t, id);
     cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
-    t.self.notifyDone();
-  },function dooffer(jsondata,options){
+  },function dooffer(offerobj){
     var u = user;
-    t.self.setOffer({jsondata:jsondata},function(errc,errp){
+    t.self.setOffer(offerobj,function(errc,errp){
       if(errc==='OFFER_SET'){
         cb('DO_OFFER',errp[0]);
-        if(options){
-          if(options.timeout){
-            Timeout.set(function(t,oid){t&&t.self&&t.self.offer&&t.self.offer({offerid:oid})},options.timeout,t,errp[0]);
-          }
-        }
       }
     },user);
   },function refuse(){
+    (callname === 'onOffer') && removeOffer.call(t, id);
     var args = Array.prototype.slice.call(arguments);
     args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
     cb.apply(null,args);
   });
+  //console.log(args);
   this.self.cbs[callname].apply(this,args);
 };
 
@@ -75,7 +85,7 @@ function bid(paramobj,cb,user){
   if(!this.self.cbs.onBid){
     cb('NO_BIDDING_ON_THIS_REQUIREMENT');
   }else{
-    doCall.call(this,'onBid',cb,user,paramobj);
+    doCall.call(this,'onBid',cb, null, user,paramobj);
   }
 };
 bid.params = 'originalobj';
@@ -85,14 +95,21 @@ function offer(paramobj,cb,user){
     cb('NO_OFFERS_ON_THIS_REQUIREMENT');
     return;
   }
+  //console.log('offer',paramobj,offerid);
   var offerid = paramobj.offerid;
+  if(this.self.offertimeouts && this.self.offertimeouts[offerid]){
+    Timeout.clear(this.self.offertimeouts[offerid]);
+    delete this.self.offertimeouts[offerid];
+  }
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
     cb('INVALID_OFFER_ID',offerid);
     return;
   }
   delete paramobj.offerid;
-  doCall.call(this,'onOffer',cb,user,paramobj,JSON.parse(offerel.element(['data']).value()));
+  if (Object.keys(paramobj).length === 0) paramobj = null;
+  //console.log('offer',paramobj,offerid);
+  doCall.call(this,'onOffer',cb, offerid, user,paramobj,JSON.parse(offerel.element(['data']).value()));
 };
 offer.params = 'originalobj';
 

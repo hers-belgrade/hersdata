@@ -75,8 +75,12 @@ function SessionUser(data,username,realmname,roles){
   },username,realmname,roles);
   this.sessions = sessions;
 }
-SessionUser.prototype = new DataUser();
-SessionUser.prototype.constructor = SessionUser;
+SessionUser.prototype = Object.create(DataUser.prototype,{constructor:{
+  value:SessionUser,
+  enumerable:false,
+  writable:true,
+  configurable:true
+}});
 SessionUser.prototype.makeSession = function(sess){
   if(!sess){
     console.trace();
