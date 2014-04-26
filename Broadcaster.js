@@ -52,9 +52,14 @@ function Broadcaster(data,createcb,username,realmname,roles){
   this.dcptree = {};
   DataUser.call(this,data,createcb,undefined,username,realmname,roles);
 }
-Broadcaster.prototype = new DataUser();
-Broadcaster.prototype.constructor = Broadcaster;
+Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{
+  value:Broadcaster,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
 Broadcaster.prototype.say = function(item){
+  if(!this.broadcast){return;}
   if(this.remotepath){
     this.commit(item);
   }

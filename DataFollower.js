@@ -60,13 +60,17 @@ function DataFollower(data,createcb,cb,user,path){
 DataFollower.prototype = Object.create(User.prototype,{constructor:{
   value:DataFollower,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 for(var i in Listener.prototype){
   DataFollower.prototype[i] = Listener.prototype[i];
 }
 DataFollower.prototype.destroy = function(){
+  console.log('firing destroyed of DataFollower',this.path);
+  for(var i in this.followers){
+    this.followers[i].destroy();
+  }
   this.destroyed.fire();
   Listener.prototype.destroy.call(this);
   User.prototype.destroy.call(this);
@@ -114,7 +118,7 @@ DataFollower.prototype.huntTarget = function(data){
           var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
-              console.log('GOT DISCARD THIS');
+              //console.log('GOT DISCARD THIS');
               t.remotepath = p;
               t.huntTarget(d);
               return;
@@ -279,6 +283,12 @@ DataFollower.prototype.follow = function(path,cb){
     t.say.apply(t,arguments);
   },this,path);
   this.followers[spath] = df;
+  df.destroyed.attach((function(fs,sp){
+    var _fs=fs,_sp = sp;
+    return function(){
+      delete _fs[_sp];
+    }
+  })(this.followers,spath));
   return df;
 };
 DataFollower.prototype.describe = function(cb){

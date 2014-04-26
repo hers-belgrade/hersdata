@@ -84,7 +84,13 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
       var _u = u, _p = p;
       return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome);
-    user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
+    user.destroyed.attach((function(ss,cnt){
+      var _ss = ss, _cnt = cnt; 
+      return function(){
+        console.log(user.fullname,'destroyed');
+        delete _ss[_cnt];
+      };
+    })(this.sayers,cnt));
   }
   var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.users && this.users[user.fullname])){
@@ -147,9 +153,9 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
           }
         }
       }
-    }else{
+    }/*else{
       console.log('no cb to invoke for',cbref,commandresult);
-    }
+    }*/
   }
 };
 ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
