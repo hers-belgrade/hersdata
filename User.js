@@ -9,7 +9,12 @@ function User(username,realmname,roles){
   this.fullname = username+'@'+realmname;
   this.addKey(this.fullname);
 }
-User.prototype = new KeyRing();
+User.prototype = Object.create(KeyRing.prototype,{constructor:{
+  value:User,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
 User.prototype.constructor = User;
 User.prototype.contains = function(key){
   if(key===this.fullname){return true;}

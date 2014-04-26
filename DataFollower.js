@@ -276,12 +276,14 @@ DataFollower.prototype.follow = function(path,cb,saycb){
   }else{
     this.followers = {};
   }
-  saycb = saycb || (function(t){
-    var _t = t;
-    return function(){
-      _t.say.apply(_t,arguments);
-    };
-  })(this);
+  if(typeof saycb === 'undefined'){
+    saycb = (function(t){
+      var _t = t;
+      return function(){
+        _t.say.apply(_t,arguments);
+      };
+    })(this);
+  }
   var df = new DataFollower(this.data,cb,saycb,this,path);
   this.followers[spath] = df;
   df.destroyed.attach((function(fs,sp){
