@@ -59,7 +59,7 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
+ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
   if(!(user.username()&&user.realmname())){
     console.trace();
     console.log('user no good',user);
@@ -92,7 +92,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
       };
     })(this.sayers,cnt));
   }
-  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:user.remotepath}};
+  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
   }

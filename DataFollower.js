@@ -117,7 +117,7 @@ DataFollower.prototype.huntTarget = function(data){
       if(target.communication){
         var remotepath = this.path.slice(cursor);
         this.pathtocommunication = this.path.slice(0,cursor);
-        target.communication.usersend(this.topSayer(),this.pathtocommunication,'follow',remotepath,(function(_t, _d,_p){
+        target.communication.usersend(this.topSayer(),this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
           var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
@@ -237,7 +237,7 @@ DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
   if(this.remotepath){
     var t = this;
-    this.data.communication.usersend(this.topSayer(),this.pathtocommunication,'explain',function(item){
+    this.data.communication.usersend(this.topSayer(),this.pathtocommunication,this.remotepath,'explain',function(item){
       cb.call(t,[t.path,item[1]]);
     },'__persistmycb');
     return;
