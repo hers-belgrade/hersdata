@@ -48,7 +48,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     var ttarget = target.element([path[cursor]]);
     if(!ttarget){
       if(target.communication){
-        target.communication.usersend(this,path.slice(0,cursor),ownmethod,path.slice(cursor),paramobj,cb);
+        target.communication.usersend(this,path.slice(0,cursor),this.remotepath,ownmethod,path.slice(cursor),paramobj,cb);
       }else{
         console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
@@ -59,7 +59,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,path.slice(0,cursor),ownmethod,path.slice(cursor),paramobj,cb);
+    target.communication.usersend(this,path.slice(0,cursor),this.remotepath,ownmethod,path.slice(cursor),paramobj,cb);
   }else{
     target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
@@ -84,7 +84,7 @@ User.prototype.waitFor = function(data,queryarry,cb) {
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,queryarry.slice(0,cursor),'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
+    target.communication.usersend(this,queryarry.slice(0,cursor),this.remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
   }else{
     target.waitFor(queryarry.slice(cursor),cb,this);
   }
