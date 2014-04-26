@@ -8,10 +8,13 @@ function KeyRing(roles){
   this.newKey = new HookCollection();
   this.keyRemoved = new HookCollection();
   this.destroyed = new HookCollection();
-	this.roles = roles;
+	this._roles = roles;
   if(roles){
     this.addKeys(roles.split(','));
   }
+};
+KeyRing.prototype.roles = function(){
+  return this._roles;
 };
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){

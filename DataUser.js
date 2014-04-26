@@ -10,8 +10,8 @@ function DataUser(data,createcb,cb,username,realmname,roles){
 DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:DataUser,
   enumerable:false,
-  writable:false,
-  configurable:false
+  writable:true,
+  configurable:true
 }});
 
 module.exports = DataUser;

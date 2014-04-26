@@ -494,7 +494,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   var methodname = path[path.length-1];
   var functionalityname = path[path.length-2];
   //console.log(methodname);
-	if (methodname.charAt(0) === '_' && username.charAt(0)!=='*'){
+	if (methodname.charAt(0) === '_' && user.username().charAt(0)!=='*'){
     cb && cb('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);
     return;
   }
@@ -508,8 +508,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
     f = f.f;
     var m = f[methodname];
     if(typeof m === 'function'){
-      //console.log('invoking',path,paramobj,username,realmname,roles);
-      //console.log('invoking',methodname,'for',user.username,'@',user.realmname,cb); 
+      //console.log('invoking',methodname,'for',user.fullname(),cb); 
       m(paramobj,cb,user);
     }else{
       cb && cb('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);

@@ -36,7 +36,7 @@ function setOffer(data4json,timeout,offerid,cb,user){
     offerid = this.self.counter;
   }
   actions.push(['set',['offers',offerid]]);
-  actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.username+'@'+user.realmname]]);
+  actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.fullname()]]);
   if(timeout>0){
     if(!this.self.offertimeouts){
       this.self.offertimeouts = {};
