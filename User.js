@@ -65,6 +65,11 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
   }
 };
 User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
+  if(typeof remotepath === 'undefined'){
+    console.trace();
+    console.log('remotepath compatibility?');
+    process.exit(0);
+  }
   var target = data;
   var cursor = 0;
   while(cursor<queryarry.length){
