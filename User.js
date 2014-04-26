@@ -4,10 +4,9 @@ var HookCollection = require('./hookcollection');
 function User(username,realmname,roles){
   if(!username){return;}
   KeyRing.call(this,roles);
-	this.username = username;
-	this.realmname = realmname;
-  this.fullname = username+'@'+realmname;
-  this.addKey(this.fullname);
+	this._username = username;
+	this._realmname = realmname;
+  this.addKey(this.fullname());
 }
 User.prototype = Object.create(KeyRing.prototype,{constructor:{
   value:User,
@@ -15,7 +14,15 @@ User.prototype = Object.create(KeyRing.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-User.prototype.constructor = User;
+User.prototype.username = function(){
+  return this._username;
+};
+User.prototype.realmname = function(){
+  return this._realmname;
+};
+User.prototype.fullname = function(){
+  return this._username+'@'+this._realmname;
+};
 User.prototype.contains = function(key){
   if(key===this.fullname){return true;}
   return KeyRing.prototype.contains.call(this,key);

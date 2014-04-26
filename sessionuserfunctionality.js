@@ -28,13 +28,13 @@ function _produceUser(paramobj,cb){
     var map = this.self.userMap;
     this.self.userFactory(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
       if(user){
-        map[user.username] = user;
+        map[user.username()] = user;
       }
       cb(user);
     });
   }else{
     var ret = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
-    this.self.userMap[user.username] = user;
+    this.self.userMap[user.username()] = user;
     cb(ret);
   }
 }
@@ -49,15 +49,15 @@ function userDumper(slf,po,scb){
     var sessid = paramobj[self.fingerprint];
     if(!sessid){
       sessid=self.newSession();
-      console.log('created',sessid,'on',user.username,'because',self.fingerprint,'was not found in',paramobj);
+      console.log('created',sessid,'on',user.username(),'because',self.fingerprint,'was not found in',paramobj);
     }
     //console.log(user.sessions);
     user.makeSession(sessid);
     var session = {};
     session[self.fingerprint]=sessid;
     statuscb('OK', {
-      username:user.username,
-      realmname:user.realmname,
+      username:user.username(),
+      realmname:user.realmname(),
       roles:paramobj.roles,
       session:session,
       data:user.sessions[sessid] ? user.sessions[sessid].retrieveQueue() : []
@@ -94,7 +94,7 @@ function executeOneOnUser(user,command,params,cb){
 function executeOnUser(user,session,commands,statuscb){
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;
-  var ret = {username:user.username,realmnname:user.realmname,roles:user.roles,session:sessionobj};
+  var ret = {username:user.username(),realmnname:user.realmname(),roles:user.roles(),session:sessionobj};
   var cmdlen = commands.length;
   var cmdstodo = cmdlen/2;
   var cmdsdone = 0;
@@ -154,7 +154,7 @@ function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
   }
   var self = this.self;
   _produceUser.call(this,paramobj,function(user){
-    //console.log('recognized',user.username,user.realmname,user.keys);
+    //console.log('recognized',user.username(),user.realmname(),user.keys);
     if(!user){
       statuscb('NO_USER');
       return;

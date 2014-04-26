@@ -16,6 +16,14 @@ function CollectionReplica(name,realmname,skipdcp){
   process.on('SIGINT',going_down);
   process.on('SIGTERM',going_down);
   process.on('SIGQUIT',going_down);
+  process.on('uncaughtException',function(err){
+    if(err.stack){
+      console.log(err.stack);
+    }else{
+      console.log(err);
+    }
+    going_down();
+  });
   Collection.call(this);
 };
 CollectionReplica.prototype = new Collection();

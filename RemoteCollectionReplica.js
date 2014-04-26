@@ -30,9 +30,9 @@ RemoteCollectionReplica.prototype.go = function(cb){
   }).on('error', function () {
     ///due to stupidity of error handler ...
   }).on('close',function(err){
-    //if(t.status === 'connected'){
+    if(t.status === 'connected'){
       t.communication.purge();
-    //}
+    }
     console.log('socket closed on',t.url, err);
     t.status = 'disconnected';
     cb && cb(t.status);

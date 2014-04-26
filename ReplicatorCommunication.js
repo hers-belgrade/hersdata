@@ -60,7 +60,7 @@ ReplicatorCommunication.prototype.send = function(code){
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
-  if(!(user.username&&user.realmname)){
+  if(!(user.username()&&user.realmname())){
     console.trace();
     console.log('user no good',user);
     process.exit(0);
@@ -79,7 +79,10 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
     user.replicators[this._id] = cnt;
     this.sayers[cnt] = (function(u,p){
       var _u = u, _p = p;
-      return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
+      return function(item){if(!_u.say){
+        console.log(_u,'has no say');
+        return;
+      }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome);
     user.destroyed.attach((function(ss,cnt){
       var _ss = ss, _cnt = cnt; 
@@ -89,9 +92,9 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
       };
     })(this.sayers,cnt));
   }
-  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
-  if(!(this.users && this.users[user.fullname])){
-    sendobj.user.roles = user.roles;
+  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:user.remotepath}};
+  if(!(this.users && this.users[user.fullname()])){
+    sendobj.user.roles = user.roles();
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,3),false,code);
   //console.log('sending',sendobj);
@@ -253,7 +256,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
-        //console.log(u.username,'applies',i,input[i]);
+        console.log(u.username(),'applies',i,input[i]);
         method.apply(u,input[i]);
       }
     }

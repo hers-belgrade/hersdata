@@ -47,9 +47,8 @@ function Broadcaster(data,createcb,username,realmname,roles){
     console.log('no data');
     return;
   }
-  console.log('Broadcaster calling DataUser',username,realmname,roles);
   this.broadcast = new HookCollection();
-  this.dcptree = {};
+  //this.dcptree = {};
   DataUser.call(this,data,createcb,undefined,username,realmname,roles);
 }
 Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{

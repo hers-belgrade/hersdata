@@ -31,41 +31,44 @@ function relocate(src,dest,el){
 
 function DataFollower(data,createcb,cb,user,path){
   if(!data){ return; }
-  if(!(user && typeof user.username === 'string' && typeof user.realmname === 'string')){
+  if(!(user && typeof user.username === 'function' && typeof user.realmname === 'function')){
     console.trace();
     console.log(user,'?');
     process.exit(0);
   }
+  /*
   if(!user.keys){
     console.trace();
     console.log('no user');
   }
+  */
   Listener.call(this);
-  User.call(this,user.username,user.realmname,user.roles);
+  //User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
   this.path = path;
   if(cb){
-    this.say = cb;/*function(item){
-      cb([path,item]);
-    };*/
+    this.say = cb;
   }
   this.createcb = createcb;
   this.destroyed = new HookCollection();
+  this._parent = user;
   if(user.remotepath){
     //console.log('parent remotepath',user.remotepath);
     this.remotepath = [user.remotepath];
   }
   this.huntTarget(data);
 }
-DataFollower.prototype = Object.create(User.prototype,{constructor:{
+DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   value:DataFollower,
   enumerable:false,
   writable:false,
   configurable:false
 }});
+/*
 for(var i in Listener.prototype){
   DataFollower.prototype[i] = Listener.prototype[i];
 }
+*/
 DataFollower.prototype.destroy = function(){
   console.log('firing destroyed of DataFollower',this.path);
   for(var i in this.followers){
@@ -73,7 +76,7 @@ DataFollower.prototype.destroy = function(){
   }
   this.destroyed.fire();
   Listener.prototype.destroy.call(this);
-  User.prototype.destroy.call(this);
+  //User.prototype.destroy.call(this);
 }
 DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
@@ -114,7 +117,7 @@ DataFollower.prototype.huntTarget = function(data){
       if(target.communication){
         var remotepath = this.path.slice(cursor);
         this.pathtocommunication = this.path.slice(0,cursor);
-        target.communication.usersend(this,this.pathtocommunication,'follow',remotepath,(function(_t, _d,_p){
+        target.communication.usersend(this.topSayer(),this.pathtocommunication,'follow',remotepath,(function(_t, _d,_p){
           var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
@@ -126,7 +129,7 @@ DataFollower.prototype.huntTarget = function(data){
             //console.log('remote follow said',arguments);
             t.setStatus(status);
           };
-        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
+        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),'__persistmycb');
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
@@ -213,7 +216,7 @@ DataFollower.prototype.reportScalar = function(name,el,cb){
     if(typeof pv !== 'undefined'){
       cb.call(this,[this.path,[name,pv]]);
     }/*else{
-      console.log(this.username,'will not report scalar',name);
+      console.log(this.username(),'will not report scalar',name);
     }*/
   }
 };
@@ -234,7 +237,7 @@ DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
   if(this.remotepath){
     var t = this;
-    this.data.communication.usersend(this,this.pathtocommunication,'explain',function(item){
+    this.data.communication.usersend(this.topSayer(),this.pathtocommunication,'explain',function(item){
       cb.call(t,[t.path,item[1]]);
     },'__persistmycb');
     return;
@@ -252,16 +255,41 @@ DataFollower.prototype.explain = function(cb){
     }
   }
 };
+DataFollower.prototype.username = function(){
+  return this._parent.username();
+};
+DataFollower.prototype.realmname = function(){
+  return this._parent.realmname();
+};
+DataFollower.prototype.fullname = function(){
+  return this._parent.fullname();
+};
+DataFollower.prototype.roles = function(){
+  return this._parent.roles();
+};
+DataFollower.prototype.user = function(){
+  return this._parent.user ? this._parent.user() : this._parent;
+};
+DataFollower.prototype.topSayer = function(){
+  return this._parent.say ? this._parent : this;
+};
+DataFollower.prototype.contains = function(key){
+  return this._parent.contains(key);
+};
 DataFollower.prototype.invoke = function(path,paramobj,cb){
+  return this.user().invoke(this.data,path,paramobj,cb);
   return User.prototype.invoke.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.bid = function(path,paramobj,cb){
+  return this.user().bid(this.data,path,paramobj,cb);
   return User.prototype.bid.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.offer = function(path,paramobj,cb){
+  return this.user().offer(this.data,path,paramobj,cb);
   return User.prototype.offer.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.waitFor = function(queryarry,cb){
+  return this.user().waitFor(this.data,queryarry,cb);
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
 DataFollower.prototype.follow = function(path,cb,saycb){

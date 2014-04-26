@@ -54,7 +54,7 @@ ConsumerSession.prototype.say = function(item){
       return false;
     }
     this.queue.push(item);
-    //console.log(this.user.username,this.session,'queue len',this.queue.length);
+    //console.log(this.user.username(),this.session,'queue len',this.queue.length);
   }
   return true;
 };
@@ -63,7 +63,7 @@ function SessionUser(data,username,realmname,roles){
   sessions = {};
   var t = this;
   DataUser.call(this,data,function(){},function(item){
-    console.log(t.username,'<=',item);
+    //console.log(t.username,'<=',item);
     for(var i in t.sessions){
       if(!t.sessions[i].say){
         delete t.sessions[i];
