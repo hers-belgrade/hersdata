@@ -96,7 +96,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
   }
-  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,3),false,code);
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,code);
   //console.log('sending',sendobj);
   this.sendobj(sendobj);
 };
