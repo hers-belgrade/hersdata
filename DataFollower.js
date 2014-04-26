@@ -264,7 +264,7 @@ DataFollower.prototype.offer = function(path,paramobj,cb){
 DataFollower.prototype.waitFor = function(queryarry,cb){
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
-DataFollower.prototype.follow = function(path,cb){
+DataFollower.prototype.follow = function(path,cb,saycb){
   path = path || [];
   var spath = path.join('/') || '.';
   if(this.followers){
@@ -276,12 +276,13 @@ DataFollower.prototype.follow = function(path,cb){
   }else{
     this.followers = {};
   }
-  //controversial solution: this.say is mutated in order to provide proper this...
-  //so, new *say* per following. Can this be avoided?
-  var t = this;
-  var df = new DataFollower(this.data,cb,function(){
-    t.say.apply(t,arguments);
-  },this,path);
+  saycb = saycb || (function(t){
+    var _t = t;
+    return function(){
+      _t.say.apply(_t,arguments);
+    };
+  })(this);
+  var df = new DataFollower(this.data,cb,saycb,this,path);
   this.followers[spath] = df;
   df.destroyed.attach((function(fs,sp){
     var _fs=fs,_sp = sp;

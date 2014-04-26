@@ -253,7 +253,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
-        //console.log(u.username,'applies',i,input[i]);
+        console.log(u.username,'applies',i,input[i]);
         method.apply(u,input[i]);
       }
     }
