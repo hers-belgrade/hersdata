@@ -17,10 +17,7 @@ function userStatus(replicatorcommunication){
 function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
-    /*
-    console.trace();
-    console.log('userSayer',item,'on',this.fullname);
-    */
+    //console.log('userSayer',item,'on',this.fullname,this.keys);
     rc.send('usersay',this._replicationid,item);
   }
 }
@@ -256,7 +253,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
-        console.log(u.username,'applies',i,input[i]);
+        //console.log(u.username,'applies',i,input[i]);
         method.apply(u,input[i]);
       }
     }
