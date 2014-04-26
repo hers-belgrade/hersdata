@@ -126,7 +126,7 @@ DataFollower.prototype.huntTarget = function(data){
             //console.log('remote follow said',arguments);
             t.setStatus(status);
           };
-        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),'__persistmycb');
+        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
