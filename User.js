@@ -27,7 +27,7 @@ User.prototype.contains = function(key){
   if(key===this.fullname){return true;}
   return KeyRing.prototype.contains.call(this,key);
 };
-User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb){
+User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb,remotepath){
   if(typeof path === 'string'){
     if(!path){
       cb && cb('INVALID_DATA_PATH');
@@ -48,7 +48,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     var ttarget = target.element([path[cursor]]);
     if(!ttarget){
       if(target.communication){
-        target.communication.usersend(this,path.slice(0,cursor),this.remotepath,ownmethod,path.slice(cursor),paramobj,cb);
+        target.communication.usersend(this,path.slice(0,cursor),remotepath,ownmethod,path.slice(cursor),paramobj,cb);
       }else{
         console.log(this.username,'could not',ownmethod,paramobj,'on',path);
       }
@@ -64,10 +64,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
 };
-User.prototype.invoke = function(data,path,paramobj,cb) {
-  this.perform('invoke',data,path,2,'run',paramobj,cb);
-};
-User.prototype.waitFor = function(data,queryarry,cb) {
+User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
   var target = data;
   var cursor = 0;
   while(cursor<queryarry.length){
@@ -84,17 +81,20 @@ User.prototype.waitFor = function(data,queryarry,cb) {
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,queryarry.slice(0,cursor),this.remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
+    target.communication.usersend(this,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
   }else{
     console.log('waitingFor',queryarry.slice(cursor));
     target.waitFor(queryarry.slice(cursor),cb,this);
   }
 };
-User.prototype.bid = function(data,path,paramobj,cb) {
-  this.perform('bid',data,path,1,'takeBid',paramobj,cb);
+User.prototype.invoke = function(data,path,paramobj,cb,remotepath) {
+  this.perform('invoke',data,path,2,'run',paramobj,cb,remotepath);
 };
-User.prototype.offer = function(data,path,paramobj,cb) {
-  this.perform('offer',data,path,1,'takeOffer',paramobj,cb);
+User.prototype.bid = function(data,path,paramobj,cb,remotepath) {
+  this.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);
+};
+User.prototype.offer = function(data,path,paramobj,cb,remotepath) {
+  this.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
 };
 
 module.exports = User;

@@ -277,19 +277,19 @@ DataFollower.prototype.contains = function(key){
   return this._parent.contains(key);
 };
 DataFollower.prototype.invoke = function(path,paramobj,cb){
-  return this.user().invoke(this.data,path,paramobj,cb);
+  return this.user().invoke(this.data,path,paramobj,cb,this.remotepath);
   return User.prototype.invoke.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.bid = function(path,paramobj,cb){
-  return this.user().bid(this.data,path,paramobj,cb);
+  return this.user().bid(this.data,path,paramobj,cb,this.remotepath);
   return User.prototype.bid.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.offer = function(path,paramobj,cb){
-  return this.user().offer(this.data,path,paramobj,cb);
+  return this.user().offer(this.data,path,paramobj,cb,this.remotepath);
   return User.prototype.offer.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.waitFor = function(queryarry,cb){
-  return this.user().waitFor(this.data,queryarry,cb);
+  return this.user().waitFor(this.data,queryarry,cb,this.remotepath);
   return User.prototype.waitFor.call(this,this.data,queryarry,cb);
 };
 DataFollower.prototype.follow = function(path,cb,saycb){
