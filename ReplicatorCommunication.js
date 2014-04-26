@@ -77,10 +77,13 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,code){
   }
   if(!user.replicators[this._id]){
     user.replicators[this._id] = cnt;
-    this.sayers[cnt] = (function(u,p){var _u = u, _p = p; return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};})(user,pathtome);
+    this.sayers[cnt] = (function(u,p){
+      var _u = u, _p = p;
+      return function(item){_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
+    })(user,pathtome);
     user.destroyed.attach((function(ss,cnt){var _ss = ss, _cnt = cnt; return function(){delete _ss[_cnt];};})(this.sayers,cnt));
   }
-  var sendobj = {counter:cnt,user:{username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
+  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username,realmname:user.realmname,remotepath:user.remotepath}};
   if(!(this.users && this.users[user.fullname])){
     sendobj.user.roles = user.roles;
   }
@@ -123,6 +126,7 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
         delete this.cbs[cbref];
       }
       if(commandresult==='DISCARD_THIS'){
+        console.log('discarding',cbref);
         delete this.cbs[cbref];
         if(this.persist){
           delete this.persist[cbref];
@@ -133,12 +137,15 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
         if(!cbrefs){return;}
         cbrefs = cbrefs.split(',');
         for(var i in cbrefs){
+          console.log('discarding',i);
           delete this.cbs[cbrefs[i]];
           if(this.persist){
             delete this.persist[cbrefs[i]];
           }
         }
       }
+    }else{
+      console.log('no cb to invoke for',cbref,commandresult);
     }
   }
 };
@@ -188,6 +195,19 @@ ReplicatorCommunication.prototype.handOver = function(input){
     delete input.commandresult;
     this.execute(commandresult);
   }
+  if(input.userstatus) {
+    var us = input.userstatus;
+
+    if(this.statii){
+      var s = this.statii[us[0]];
+      if(s){
+        s(us[1]);
+      }else{
+        console.log('no status for',us[0],'to userstatus',us[1]);
+      }
+    }
+    return;
+  }
   if(input.usersay){
     var us = input.usersay;
     if(this.sayers){
@@ -195,19 +215,19 @@ ReplicatorCommunication.prototype.handOver = function(input){
       if(s){
         s(us[1]);
       }else{
-        console.log('no sayer for',us[0],'to usersay',us[1]);
+        console.log('no sayer for',us[0],'to usersay',us[1], input);
       }
     }
     return;
   }
   if(input.user){
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
-    if(!(this.users && this.users[fullname])){
+    if (!this.users) this.users = {};
+
+    if(!this.users[fullname]){
+      console.log('new user created :', fullname);
       u = new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles); 
-      u._replicationid = counter;
-      if(!this.users){
-        this.users = {};
-      }
+      u._replicationid = input.user._id;
       this.users[fullname] = u;
     }else{
       u = this.users[fullname];
@@ -249,17 +269,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
 };
 
-ReplicatorCommunication.prototype.doUserFollow = function(username,realmname){
-  //console.log('doUserFollow',username,realmname,Array.prototype.slice.call(arguments,2));
-  var u = UserBase.findUser(username,realmname);
-  if(u){
-    if(!u.follow){
-      return;
-    }
-    u.follow(Array.prototype.slice.call(arguments,2,-1),arguments[arguments.length-1]);
+ReplicatorCommunication.prototype.purge = function () {
+  var old_cbs = this.cbs;
+  this.cbs = {};
+  for (var i in old_cbs) {
+    old_cbs[i].call(null, 'DISCARD_THIS');
   }
+  console.log('discard this sent ....');
 };
-
 
 ReplicatorCommunication.metrics = function(){
   var _n = Timeout.now(), elaps = _n-__start,
