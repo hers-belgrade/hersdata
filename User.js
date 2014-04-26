@@ -59,7 +59,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,path.slice(0,cursor),this.remotepath,ownmethod,path.slice(cursor),paramobj,cb);
+    target.communication.usersend(this,path.slice(0,cursor),remotepath,ownmethod,path.slice(cursor),paramobj,cb);
   }else{
     target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
