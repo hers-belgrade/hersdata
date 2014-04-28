@@ -235,14 +235,15 @@ ReplicatorCommunication.prototype.handOver = function(input){
     if (!this.users) this.users = {};
 
     if(!this.users[fullname]){
-      var ut;
+      var ut, uc;
       if(this.replicaToken.name+'@'+this.replicaToken.realmname===fullname){
         ut = 'superuser';
-        u =  new SuperUser(this.data,this.userSayer,username,realmname,input.user.roles);
+        uc = SuperUser;
       }else{
         ut = 'user';
-        u =  new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
+        uc = DataUser;
       }
+      u =  new uc(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
       u._replicationid = input.user._id;
       this.users[fullname] = u;
     }else{

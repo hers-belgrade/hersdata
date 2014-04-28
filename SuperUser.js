@@ -31,8 +31,8 @@ SuperUser.prototype.contains = function(){
 };
 */
 
-function DataSuperUser(data,cb,username,realmname){
-  DataFollower.call(this,data,function(){},cb,new SuperUser(username,realmname));
+function DataSuperUser(data,statuscb, cb,username,realmname){
+  DataFollower.call(this,data,statuscb,cb,new SuperUser(username,realmname));
 }
 DataSuperUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:DataSuperUser,
