@@ -34,7 +34,7 @@ function _produceUser(paramobj,cb){
     });
   }else{
     var ret = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
-    this.self.userMap[user.username()] = user;
+    this.self.userMap[ret.username()] = ret;
     cb(ret);
   }
 }
