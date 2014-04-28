@@ -72,6 +72,11 @@ function Data_Scalar(listener,scalar,cb,valueconstraint){
     cb.call(this,listener.contains(el.access_level()) ? el.value() : el.public_value());
   },scalar.changed);
   cb.call(this,listener.contains(scalar.access_level()) ? scalar.value() : scalar.public_value());
+  if(!listener.contains(scalar.access_level())){
+    console.trace();
+    console.log('should have said',scalar.public_value(),'instead of',scalar.value(),'because',scalar.access_level());
+  }
+  //cb.call(this,scalar.value());
 };
 Data_Scalar.prototype = Object.create(Data_Element.prototype,{constructor:{
 //Data_Scalar.prototype = Object.create(Bridge.prototype,{constructor:{
