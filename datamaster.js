@@ -395,6 +395,7 @@ Collection.prototype.pathToScalars = function(name,value,path){
 Collection.prototype.resetTxns = function(){
   var ret = [];
   this.traverseElements(function(name){
+    if(name==='__requirements'){return;}
     ret.push(['remove',[name]]);
   });
   return ret;
@@ -631,7 +632,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     var rf = re.functionalities.requirements.f;
     req = rf.start;
   }
-  var SELF = (function(s,r,m,su){var _s=s,_r=r,_m=m, _su=su;return function(){return {data:_s, self:_r, superUser:_su, require:req};}})(self,ret,my_mod,new SuperUser(self,function(){},fqnname,'dcp'));
+  var SELF = (function(s,r,m,su,rq){var _s=s,_r=r,_m=m, _su=su, _req=rq;return function(){return {data:_s, self:_r, superUser:_su, require:_req};}})(self,ret,my_mod,new SuperUser(self,function(){},fqnname,'dcp'),req);
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
@@ -886,7 +887,6 @@ Collection.prototype.processInput = function(sender,input){
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
-        console.log('REPLICA INITIATED', this.replicationInitiated.cbs);
         this.replicationInitiated.fire(this.replicatingUser);
         break;
       case 'going_down':

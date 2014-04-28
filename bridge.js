@@ -71,7 +71,7 @@ function Data_Scalar(listener,scalar,cb,valueconstraint){
     if(!changedmap.private){return;}
     cb.call(this,listener.contains(el.access_level()) ? el.value() : el.public_value());
   },scalar.changed);
-  cb.call(this,scalar.value());
+  cb.call(this,listener.contains(scalar.access_level()) ? scalar.value() : scalar.public_value());
 };
 Data_Scalar.prototype = Object.create(Data_Element.prototype,{constructor:{
 //Data_Scalar.prototype = Object.create(Bridge.prototype,{constructor:{
@@ -121,17 +121,34 @@ function waiter_callback(name,cb){
 function collectionhandler(path,cb){
   var t = this, _p = path, _cb = cb;
   return function(name,el){
-    if(el){
+    if(el && el.type()==='Collection'){
       new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
     }
   };
 };
 
 function scalarhandler(path,cb){
+  var t = this, _cb = cb;
+  return function(name,el){
+    if(el && el.type()==='Scalar'){
+      new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
+    }
+  };
+};
+
+function elementhandler(path,cb){
   var t = this, _p = path, _cb = cb;
   return function(name,el){
     if(el){
+     if(el.type()==='Scalar'){
       new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
+     }
+     if(el.type()==='Collection'){
+       if(name==='clear'){
+         console.log('path is',_p);
+       }
+      new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
+     }
     }
   };
 };
@@ -171,10 +188,12 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
   //console.log('new Waiter',path);
   Data_Element.call(this,listener,collection,cb);
   //Bridge.call(this,listener,collection);
-  this.ccb = cb;
   this.contains = function(key){return listener.contains(key);};
   var fn = path[0],tofn = typeof fn;
   switch(tofn){
+    case 'undefined':
+      cb.call(this,collection);
+      break;
     case 'string':
       var filters = [],handler;
       if(path.length>1){
@@ -225,7 +244,7 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
           filters.push(nameeqfilter(fn));
         }
       }
-      var _h = filterer.call(this,filters,handler||scalarhandler.call(this,path.slice(1),cb));
+      var _h = filterer.call(this,filters,handler||elementhandler.call(this,path.slice(1),cb));
       this._cb = _h;
       collection.traverseElements(_h);
       this.createListener('__followeesnewelement',_h,collection.newElement);

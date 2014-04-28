@@ -1,11 +1,44 @@
-var DataUser = require('./DataUser');
+var DataFollower = require('./DataFollower'),
+  User = require('./User');
 
-function SuperUser(data,cb,username,realmname){
-  DataUser.call(this,data,function(){},cb,username,realmname,'');
+function SuperUser(username,realmname){
+  User.call(this,username,realmname,'');
 };
-SuperUser.prototype = new DataUser();
+SuperUser.prototype = Object.create(User.prototype,{constructor:{
+  value:SuperUser,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
 SuperUser.prototype.contains = function(){
   return true;
 };
 
-module.exports = SuperUser;
+
+/*
+function SuperUser(data,cb,username,realmname){
+};
+SuperUser.prototype = Object.create(DataUser.prototype,{constructor:{
+  value:SuperUser,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+SuperUser.prototype.contains = function(){
+  console.trace();
+  console.log('do I contain? HA!');
+  return true;
+};
+*/
+
+function DataSuperUser(data,cb,username,realmname){
+  DataFollower.call(this,data,function(){},cb,new SuperUser(username,realmname));
+}
+DataSuperUser.prototype = Object.create(DataFollower.prototype,{constructor:{
+  value:DataSuperUser,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+
+module.exports = DataSuperUser;

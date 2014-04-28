@@ -6,8 +6,10 @@ var errors = {
 };
 
 function init(){
+  /*
   var actions = [];
   this.data.commit('requirements_init',actions);
+  */
 };
 
 function start(requirements,cb){
