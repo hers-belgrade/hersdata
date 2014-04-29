@@ -96,6 +96,11 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   this.counter.inc();
   var cnt = this.counter.toString();
   this.addToSenders(user,cnt,pathtome);
+  if(!user.replicators[this._id]){
+    console.trace();
+    console.log('no replicationid on the sending side');
+    process.exit(0);
+  }
   var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
