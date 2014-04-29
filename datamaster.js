@@ -531,8 +531,8 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements',rn]);
-  if(!(re && re.functionalities.requirement.f)){
-    console.log('no requirement',rn,'on',this.dataDebug());
+  if(!(re && re.functionalities && re.functionalities.requirement.f)){
+    console.log('no requirement',rn,'on',this.dataDebug(),'=>',re?re.dataDebug():'','with',path);
     cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
     return;
   }

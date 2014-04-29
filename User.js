@@ -1,5 +1,6 @@
-var KeyRing = require('./keyring');
-var HookCollection = require('./hookcollection');
+var KeyRing = require('./keyring'),
+  HookCollection = require('./hookcollection'),
+  Timeout = require('herstimeout');
 
 function User(username,realmname,roles){
   if(!username){return;}
@@ -81,20 +82,21 @@ User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
     cursor++;
   }
   if(target.communication){
-    target.communication.usersend(this,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
+    Timeout.next(function(target,queryarry,cursor,cb){target.communication.usersend(this,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');},target,queryarry,cursor,cb);
   }else{
-    console.log('waitingFor',queryarry.slice(cursor));
-    target.waitFor(queryarry.slice(cursor),cb,this);
+    Timeout.next(function(target,queryarry,cursor,cb,t){target.waitFor(queryarry.slice(cursor),cb,t);},target,queryarry,cursor,cb,this);
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb,remotepath) {
-  this.perform('invoke',data,path,2,'run',paramobj,cb,remotepath);
+  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('invoke',data,path,2,'run',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
 };
 User.prototype.bid = function(data,path,paramobj,cb,remotepath) {
-  this.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);
+  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
+  //this.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);
 };
 User.prototype.offer = function(data,path,paramobj,cb,remotepath) {
-  this.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
+  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
+  //this.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
 };
 
 module.exports = User;
