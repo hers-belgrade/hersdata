@@ -1,7 +1,6 @@
 var User = require('./User'),
   Listener = require('./listener'),
-  HookCollection = require('./hookcollection'),
-  Timeout = require('herstimeout');
+  HookCollection = require('./hookcollection');
 
 function removeFromArray(ar,el){
   if(!ar){return;}
@@ -57,7 +56,7 @@ function DataFollower(data,createcb,cb,user,path){
     //console.log('parent remotepath',user.remotepath);
     this.remotepath = [user.remotepath];
   }
-  Timeout.next(function(t){t.huntTarget(data);},this);
+  this.huntTarget(data);
 }
 DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   value:DataFollower,

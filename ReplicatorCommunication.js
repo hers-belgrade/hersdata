@@ -19,7 +19,7 @@ function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
     console.log('userSayer',item,'on',this.fullname(),this._replicationid);
-    rc.send('usersay',this._replicationid,item);
+    Timeout.next(function(rc,item,rid){rc.send('usersay',rid,item);},rc,item,this._replicationid);
   }
 }
 
@@ -202,7 +202,6 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
   var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
   u.replicators = {};
-  u.replicators[this._id] = '0.0.0.0';
   this.users[u.fullname()] = u;
   this.addToSenders(u,'0.0.0.0');
   return u;
