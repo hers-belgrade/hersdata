@@ -18,7 +18,7 @@ function userStatus(replicatorcommunication){
 function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
-    //console.log('userSayer',item,'on',this.fullname,this.keys);
+    console.log('userSayer',item,'on',this.fullname(),this._replicationid);
     rc.send('usersay',this._replicationid,item);
   }
 }
