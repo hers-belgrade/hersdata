@@ -192,6 +192,7 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
     this.users = {};
   }
   var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
+  u.replicationid = '0.0.0.0';
   this.users[u.fullname()] = u;
   return u;
 };
