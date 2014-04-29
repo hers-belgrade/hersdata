@@ -199,9 +199,10 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
   if(!this.users){
     this.users = {};
   }
-  var rs = {};
-  rs[this._id] = '0.0.0.0';
-  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname,{_replicationid:'0.0.0.0',replicators:rs});
+  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
+  u._replicationid = '0.0.0.0';
+  u.replicators = {};
+  u.replicators[this._id] = '0.0.0.0';
   this.users[u.fullname()] = u;
   this.addToSenders(u,'0.0.0.0');
   return u;

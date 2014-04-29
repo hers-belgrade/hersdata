@@ -56,7 +56,7 @@ function DataFollower(data,createcb,cb,user,path){
     //console.log('parent remotepath',user.remotepath);
     this.remotepath = [user.remotepath];
   }
-  this.huntTarget(data);
+  Timeout.next(function(t){t.huntTarget(data);},this);
 }
 DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   value:DataFollower,

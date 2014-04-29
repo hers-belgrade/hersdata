@@ -14,11 +14,8 @@ SuperUser.prototype.contains = function(){
   return true;
 };
 
-function DataSuperUser(data,statuscb, cb,username,realmname,props){
+function DataSuperUser(data,statuscb, cb,username,realmname){
   console.log('creating SuperUser');
-  for(var i in props){
-    this[i] = props[i];
-  }
   DataFollower.call(this,data,statuscb,cb,new SuperUser(username,realmname));
   console.log('SuperUser has say',this.say);
 }
