@@ -19,7 +19,7 @@ function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
     Timeout.next(function(rc,item,t){
-      console.log('userSayer',t._replicationid,item);
+      //console.log('userSayer',t._replicationid,item);
       rc.send('usersay',t._replicationid,item);
     },rc,item,this);
   }
