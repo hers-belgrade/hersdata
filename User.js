@@ -82,7 +82,7 @@ User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
     cursor++;
   }
   if(target.communication){
-    Timeout.next(function(target,queryarry,cursor,cb){target.communication.usersend(this,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');},target,queryarry,cursor,cb);
+    Timeout.next(function(t,target,queryarry,cursor,cb){target.communication.usersend(t,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');},this,target,queryarry,cursor,cb);
   }else{
     Timeout.next(function(target,queryarry,cursor,cb,t){target.waitFor(queryarry.slice(cursor),cb,t);},target,queryarry,cursor,cb,this);
   }
