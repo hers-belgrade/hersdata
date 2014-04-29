@@ -11,7 +11,7 @@ var __id = 0;
 function userStatus(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
-    rc.send('userstatus',this.fullname,item);
+    rc.send('userstatus',this.fullname(),item);
   }
 }
 
@@ -310,7 +310,13 @@ ReplicatorCommunication.prototype.purge = function () {
   var old_cbs = this.cbs;
   this.cbs = {};
   for (var i in old_cbs) {
+    try{
     old_cbs[i].call(null, 'DISCARD_THIS');
+    }
+    catch(e){
+      console.log(e.stack);
+      console.log(old_cbs[i].toString());
+    }
   }
   console.log('discard this sent ....');
 };
