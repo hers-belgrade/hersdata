@@ -874,7 +874,7 @@ Collection.prototype.processInput = function(sender,input){
         if(dodcp){
           this.cloneFromRemote(internal[2]);
         }
-        this.replicatingUser = sender.createSuperUser(this.replicaToken);
+        this.replicatingUser = sender.createSuperUser(sender.replicaToken);
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
         sender.send('internal','initDCPreplica',ret);
