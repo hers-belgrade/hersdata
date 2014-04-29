@@ -18,6 +18,7 @@ function userStatus(replicatorcommunication){
 function userSayer(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
+    console.trace();
     console.log('userSayer',item,'on',this.fullname(),this._replicationid);
     Timeout.next(function(rc,item,rid){rc.send('usersay',rid,item);},rc,item,this._replicationid);
   }
@@ -195,11 +196,11 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
   }
   return ret;
 };
-ReplicatorCommunication.prototype.createSuperUser = function(token){
+ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   if(!this.users){
     this.users = {};
   }
-  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
+  var u =  new SuperUser(this.data,this.userStatus,slaveside?function(){}:this.userSayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
   u.replicators = {};
   this.users[u.fullname()] = u;

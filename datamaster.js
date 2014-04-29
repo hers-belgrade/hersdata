@@ -887,7 +887,7 @@ Collection.prototype.processInput = function(sender,input){
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
-        this.replicatingUser = sender.createSuperUser(this.replicaToken);
+        this.replicatingUser = sender.createSuperUser(this.replicaToken,true);
         console.log('superuser replicationid',this.replicatingUser._replicationid);
         this.replicationInitiated.fire(this.replicatingUser);
         break;
