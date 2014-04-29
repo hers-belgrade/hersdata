@@ -239,6 +239,9 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }
     return;
   }
+  if(input.slavesay){
+    console.log(input.slavesay);
+  }
   if(input.usersay){
     var us = input.usersay;
     if(this.sayers){
