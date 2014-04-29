@@ -187,6 +187,14 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
   }
   return ret;
 };
+ReplicatorCommunication.prototype.createSuperUser = function(token){
+  if(!this.users){
+    this.users = {};
+  }
+  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
+  this.users[u.fullname()] = u;
+  return u;
+};
 ReplicatorCommunication.prototype.handOver = function(input){
   var counter = input.counter;
   var cbrefs = '';
@@ -239,6 +247,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
       if(this.replicaToken.name+'@'+this.replicaToken.realmname===fullname){
         ut = 'superuser';
         uc = SuperUser;
+        console.log('superuser has replicationid',input.user._id);
       }else{
         ut = 'user';
         uc = DataUser;
