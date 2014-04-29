@@ -830,7 +830,6 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
     if(docreatereplicator){
       var tkn = remotedump.token;
       console.log('cloned from remote',tkn);
-      this.replicatingUser = new SuperUser(this,function () {}, function(){},tkn.name,tkn.realmname);
       this.replicaToken = tkn;
     }
     var remoteusers = remotedump.users;
@@ -875,6 +874,7 @@ Collection.prototype.processInput = function(sender,input){
         if(dodcp){
           this.cloneFromRemote(internal[2]);
         }
+        this.replicatingUser = sender.createSuperUser(this.replicaToken);
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
         ret.token = sender.replicaToken;
         sender.send('internal','initDCPreplica',ret);
@@ -887,6 +887,8 @@ Collection.prototype.processInput = function(sender,input){
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
+        this.replicatingUser = sender.createSuperUser(this.replicaToken);
+        //new SuperUser(this,function () {}, function(){},tkn.name,tkn.realmname);
         this.replicationInitiated.fire(this.replicatingUser);
         break;
       case 'going_down':
