@@ -60,6 +60,28 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
+ReplicatorCommunication.prototype.addToSenders = function(replicationid){
+  if(!user.replicators){
+    user.replicators = {};
+  }
+  if(!user.replicators[this._id]){
+    user.replicators[this._id] = replicationid;
+    this.sayers[replicationid] = (function(u,p){
+      var _u = u, _p = p;
+      return function(item){if(!_u.say){
+        console.log(_u,'has no say');
+        return;
+      }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
+    })(user,pathtome);
+    user.destroyed.attach((function(ss,replicationid){
+      var _ss = ss, _cnt = replicationid; 
+      return function(){
+        console.log(user.fullname,'destroyed');
+        delete _ss[_cnt];
+      };
+    })(this.sayers,replicationid));
+  }
+};
 ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
   if(!(user.username()&&user.realmname())){
     console.trace();
@@ -73,26 +95,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   }
   this.counter.inc();
   var cnt = this.counter.toString();
-  if(!user.replicators){
-    user.replicators = {};
-  }
-  if(!user.replicators[this._id]){
-    user.replicators[this._id] = cnt;
-    this.sayers[cnt] = (function(u,p){
-      var _u = u, _p = p;
-      return function(item){if(!_u.say){
-        console.log(_u,'has no say');
-        return;
-      }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
-    })(user,pathtome);
-    user.destroyed.attach((function(ss,cnt){
-      var _ss = ss, _cnt = cnt; 
-      return function(){
-        console.log(user.fullname,'destroyed');
-        delete _ss[_cnt];
-      };
-    })(this.sayers,cnt));
-  }
+  this.addToSenders(cnt);
   var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
@@ -196,6 +199,7 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
   u.replicators = {};
   u.replicators[this._id] = '0.0.0.0';
   this.users[u.fullname()] = u;
+  this.addToSenders('0.0.0.0');
   return u;
 };
 ReplicatorCommunication.prototype.handOver = function(input){
