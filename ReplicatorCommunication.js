@@ -2,8 +2,7 @@ var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
   Listener = require('./listener'),
   DataUser = require('./DataUser'),
-  SuperUser = require('./SuperUser'),
-  UserBase = require('./userbase');
+  SuperUser = require('./SuperUser');
 
 var __start = Timeout.now();
 var __id = 0;
@@ -15,13 +14,14 @@ function userStatus(replicatorcommunication){
   }
 }
 
-function userSayer(replicatorcommunication){
+function userSayer(replicatorcommunication,sendcode){
   var rc = replicatorcommunication;
+  var sc = sendcode || 'usersay';
   return function(item){
-    Timeout.next(function(rc,item,t){
+    Timeout.next(function(sc,rc,item,t){
       //console.log('userSayer',t._replicationid,item);
-      rc.send('usersay',t._replicationid,item);
-    },rc,item,this);
+      rc.send(sc,t._replicationid,item);
+    },sc,rc,item,this);
   }
 }
 
@@ -201,7 +201,13 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   if(!this.users){
     this.users = {};
   }
-  var u =  new SuperUser(this.data,this.userStatus,slaveside?function(){}:this.userSayer,token.name,token.realmname);
+  var sayer;
+  if(slaveside){
+    sayer = userSayer(this,'slavesay');
+  }else{
+    sayer = this.userSayer;
+  }
+  var u =  new SuperUser(this.data,this.userStatus,sayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
   u.replicators = {};
   this.users[u.fullname()] = u;

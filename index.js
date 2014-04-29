@@ -27,7 +27,6 @@ DataMaster.prototype.getSuperUser = function(cb){
 
 module.exports = {
   DataMaster:DataMaster,
-  UserBase : require('./userbase'),
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
