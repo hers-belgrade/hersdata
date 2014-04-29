@@ -60,7 +60,7 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.addToSenders = function(replicationid){
+ReplicatorCommunication.prototype.addToSenders = function(user,replicationid){
   if(!user.replicators){
     user.replicators = {};
   }
@@ -95,7 +95,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   }
   this.counter.inc();
   var cnt = this.counter.toString();
-  this.addToSenders(cnt);
+  this.addToSenders(user,cnt);
   var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
@@ -199,7 +199,7 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
   u.replicators = {};
   u.replicators[this._id] = '0.0.0.0';
   this.users[u.fullname()] = u;
-  this.addToSenders('0.0.0.0');
+  this.addToSenders(u,'0.0.0.0');
   return u;
 };
 ReplicatorCommunication.prototype.handOver = function(input){
