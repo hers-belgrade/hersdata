@@ -14,24 +14,11 @@ SuperUser.prototype.contains = function(){
   return true;
 };
 
-
-/*
-function SuperUser(data,cb,username,realmname){
-};
-SuperUser.prototype = Object.create(DataUser.prototype,{constructor:{
-  value:SuperUser,
-  enumerable:false,
-  writable:false,
-  configurable:false
-}});
-SuperUser.prototype.contains = function(){
-  console.trace();
-  console.log('do I contain? HA!');
-  return true;
-};
-*/
-
-function DataSuperUser(data,statuscb, cb,username,realmname){
+function DataSuperUser(data,statuscb, cb,username,realmname,props){
+  console.log('creating SuperUser');
+  for(var i in props){
+    this[i] = props[i];
+  }
   DataFollower.call(this,data,statuscb,cb,new SuperUser(username,realmname));
   console.log('SuperUser has say',this.say);
 }

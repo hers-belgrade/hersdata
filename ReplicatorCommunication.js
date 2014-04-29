@@ -199,10 +199,9 @@ ReplicatorCommunication.prototype.createSuperUser = function(token){
   if(!this.users){
     this.users = {};
   }
-  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname);
-  u._replicationid = '0.0.0.0';
-  u.replicators = {};
-  u.replicators[this._id] = '0.0.0.0';
+  var rs = {};
+  rs[this._id] = '0.0.0.0';
+  var u =  new SuperUser(this.data,this.userStatus,this.userSayer,token.name,token.realmname,{_replicationid:'0.0.0.0',replicators:rs});
   this.users[u.fullname()] = u;
   this.addToSenders(u,'0.0.0.0');
   return u;
@@ -257,14 +256,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
     if(!this.users[fullname]){
       var ut, uc;
       if(this.replicaToken.name+'@'+this.replicaToken.realmname===fullname){
-        ut = 'superuser';
-        uc = SuperUser;
-        console.log('superuser has replicationid',input.user._id);
-      }else{
-        ut = 'user';
-        uc = DataUser;
+        console.trace();
+        console.log('superuser cannot be automatically created');
+        process.exit(0);
       }
-      u =  new uc(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
+      u =  new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
       u._replicationid = input.user._id;
       this.users[fullname] = u;
     }else{
