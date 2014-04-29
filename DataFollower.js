@@ -1,6 +1,7 @@
 var User = require('./User'),
   Listener = require('./listener'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('./hookcollection'),
+  Timeout = require('herstimeout');
 
 function removeFromArray(ar,el){
   if(!ar){return;}
