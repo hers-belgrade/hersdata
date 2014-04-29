@@ -60,7 +60,7 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.addToSenders = function(user,replicationid){
+ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pathtome){
   if(!user.replicators){
     user.replicators = {};
   }
@@ -72,7 +72,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid){
         console.log(_u,'has no say');
         return;
       }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
-    })(user,pathtome);
+    })(user,pathtome||[]);
     user.destroyed.attach((function(ss,replicationid){
       var _ss = ss, _cnt = replicationid; 
       return function(){
@@ -95,7 +95,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   }
   this.counter.inc();
   var cnt = this.counter.toString();
-  this.addToSenders(user,cnt);
+  this.addToSenders(user,cnt,pathtome);
   var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
