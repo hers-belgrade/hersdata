@@ -250,7 +250,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.mastersay){
-    this.slaveSays.fire(input.mastersay[1]);
+    this.masterSays.fire(input.mastersay[1]);
   }
   if(input.slavesay){
     this.slaveSays.fire(input.slavesay[1]);
