@@ -204,10 +204,11 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   }
   var sayer;
   if(slaveside){
+    this.masterSays = new HookCollection();
     sayer = userSayer(this,'slavesay');
   }else{
     this.slaveSays = new HookCollection();
-    sayer = this.userSayer;
+    sayer = userSayer(this,'mastersay');
   }
   var u =  new SuperUser(this.data,this.userStatus,sayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
@@ -248,8 +249,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }
     return;
   }
+  if(input.mastersay){
+    this.slaveSays.fire(input.mastersay[1]);
+  }
   if(input.slavesay){
-    //console.log('slavesay',input.slavesay);
     this.slaveSays.fire(input.slavesay[1]);
   }
   if(input.usersay){
