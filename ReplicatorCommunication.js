@@ -2,7 +2,8 @@ var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
   Listener = require('./listener'),
   DataUser = require('./DataUser'),
-  SuperUser = require('./SuperUser');
+  SuperUser = require('./SuperUser'),
+  HookCollection = require('./hookcollection');
 
 var __start = Timeout.now();
 var __id = 0;
@@ -205,12 +206,14 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   if(slaveside){
     sayer = userSayer(this,'slavesay');
   }else{
+    this.slaveSays = new HookCollection();
     sayer = this.userSayer;
   }
   var u =  new SuperUser(this.data,this.userStatus,sayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
   u.replicators = {};
   this.users[u.fullname()] = u;
+  this._fullname = u.fullname();
   this.addToSenders(u,'0.0.0.0');
   return u;
 };
@@ -246,7 +249,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.slavesay){
-    console.log(input.slavesay);
+    //console.log('slavesay',input.slavesay);
+    this.slaveSays.fire(input.slavesay[1]);
   }
   if(input.usersay){
     var us = input.usersay;
