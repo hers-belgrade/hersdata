@@ -19,8 +19,13 @@ function userSayer(replicatorcommunication,sendcode){
   var rc = replicatorcommunication;
   var sc = sendcode || 'usersay';
   return function(item){
+    /*
+    if(this._replicationid==='0.0.0.0'){
+      console.trace();
+      console.log('<=',sc,this._replicationid,item);
+    }
+      */
     Timeout.next(function(sc,rc,item,t){
-      //console.log('userSayer',t._replicationid,item);
       rc.send(sc,t._replicationid,item);
     },sc,rc,item,this);
   }

@@ -41,12 +41,11 @@ function start(requirements,cb){
       };
     })(i)});
   }
-  console.log('requirement set',this.data.dataDebug());
   cb('OK');
 }
 start.params = 'originalobj';
 
-function startwoffer(requirementswoffers,cb){
+function startwoffer(requirementswoffers,cb,user){
   var createactions = [];
   for(var i in requirementswoffers){
     var mr = this.self.requirements[i];
@@ -76,12 +75,12 @@ function startwoffer(requirementswoffers,cb){
         ]);
       };
     })(i)});
-    f.setOffer(r.offer);
+    f.setOffer(r.offer,function(){},user);
   }
-  console.log('requirement set',this.data.dataDebug());
+  console.log('requirementwoffer set',this.data.dataDebug());
   cb('OK');
 }
-start.params = 'originalobj';
+startwoffer.params = 'originalobj';
 
 
 module.exports = {

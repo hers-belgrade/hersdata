@@ -617,9 +617,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     }
   } 
 
-  var my_mod = {};
-  var req;
-  var reqs;
+  var my_mod = {},req,off,reqs;
   if (m.requirements) {
     if(!self.element(['__requirements'])){
       self.commit('requirements_create',[
@@ -631,8 +629,9 @@ Collection.prototype.attach = function(functionalityname, config, key){
     re.attach('./requirements',{requirements:reqs});
     var rf = re.functionalities.requirements.f;
     req = rf.start;
+    off = rf.startwoffer;
   }
-  var SELF = (function(s,r,m,su,rq){var _s=s,_r=r,_m=m, _su=su, _req=rq;return function(){return {data:_s, self:_r, superUser:_su, require:_req};}})(self,ret,my_mod,new SuperUser(self,function() {}, function(){},fqnname,'dcp'),req);
+  var SELF = (function(s,r,m,su,rq,off){var _s=s,_r=r,_m=m, _su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, require:_req, offer:_offer};}})(self,ret,my_mod,new SuperUser(self,function() {}, function(){},fqnname,'dcp'),req,off);
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
