@@ -279,19 +279,34 @@ DataFollower.prototype.contains = function(key){
 };
 DataFollower.prototype.invoke = function(path,paramobj,cb){
   return this.user().invoke(this.data,path,paramobj,cb,this.remotepath);
-  return User.prototype.invoke.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.bid = function(path,paramobj,cb){
   return this.user().bid(this.data,path,paramobj,cb,this.remotepath);
-  return User.prototype.bid.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.offer = function(path,paramobj,cb){
   return this.user().offer(this.data,path,paramobj,cb,this.remotepath);
-  return User.prototype.offer.call(this,this.data,path,paramobj,cb);
 };
 DataFollower.prototype.waitFor = function(queryarry,cb){
   return this.user().waitFor(this.data,queryarry,cb,this.remotepath);
-  return User.prototype.waitFor.call(this,this.data,queryarry,cb);
+};
+DataFollower.prototype.waitForever = function(queryarry,cb){
+  var t = this;
+  var wfFunc = function(){
+    var u = t.user();
+    if(!u){return;}
+    u.waitFor(t.data,queryarry,function(discard){
+      if(discard==='DISCARD_THIS'){
+        console.log('waitFor again',wfFunc);
+        wfFunc && wfFunc();
+        return;
+      }
+      cb.apply(t,arguments);
+    });
+  };
+  this.user().destroyed.attach(function(){
+    wfFunc=null;
+  });
+  wfFunc();
 };
 DataFollower.prototype.follow = function(path,cb,saycb){
   path = path || [];

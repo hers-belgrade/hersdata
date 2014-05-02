@@ -147,7 +147,9 @@ ReplicatorSocketCommunication.prototype.purge = function () {
 ReplicatorSocketCommunication.prototype.listenTo = function(socket){
   var t = this;
   console.log('will recreate socket ...');
-  this._auxSendingQueue = this.sendingQueue; //naivno, sta ako nije prazan ...
+  if(this.sendingQueue && this.sendingQueue.length){
+    this._auxSendingQueue = this.sendingQueue;
+  }
   this.sendingQueue = [];
   this.socket = socket;
   this.socket.setNoDelay(true);
