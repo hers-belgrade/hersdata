@@ -176,6 +176,7 @@ DataFollower.prototype.attachToCollection = function(name,el){
   },el.destroyed);
 };
 DataFollower.prototype.attachToScalar = function(name,el){
+  if(!this.say){return;}
   this.reportScalar(name,el,this.say);
   this.createListener(name+'_changed',function(changedmap){
     this.reportScalar(name,el,this.say);
