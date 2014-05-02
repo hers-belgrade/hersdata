@@ -51,7 +51,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
       if(target.communication){
         target.communication.usersend(this,path.slice(0,cursor),remotepath,ownmethod,path.slice(cursor),paramobj,cb);
       }else{
-        console.log(this.username,'could not',ownmethod,paramobj,'on',path);
+        console.log(this.username(),'could not',ownmethod,paramobj,'on',path,'at',cursor,'with data',target.dataDebug(),'master data',data.dataDebug());
       }
       return;
     }else{

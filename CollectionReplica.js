@@ -26,8 +26,12 @@ function CollectionReplica(name,realmname,skipdcp){
   });
   Collection.call(this);
 };
-CollectionReplica.prototype = new Collection();
-CollectionReplica.prototype.constructor = CollectionReplica;
+CollectionReplica.prototype = Object.create(Collection.prototype,{constructor:{
+  value:CollectionReplica,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
 CollectionReplica.prototype.send = function(){
   this.communication.send.apply(this.communication,arguments);
 };

@@ -824,7 +824,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
   if(remotedump){
     var remotedata = remotedump.data;
     if(remotedata){
-      this._commit('initDCPreplica',remotedata);
+      //this._commit('initDCPreplica',remotedata);
     }
     if(docreatereplicator){
       var tkn = remotedump.token;
