@@ -77,7 +77,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
     this.sayers[replicationid] = (function(u,p){
       var _u = u, _p = p;
       return function(item){if(!_u.say){
-        console.log(_u,'has no say');
+        //console.log(_u,'has no say');
         return;
       }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome||[]);
@@ -115,7 +115,15 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,code);
   //console.log('sending',sendobj);
-  this.sendobj(sendobj);
+  Timeout.next(function(t){t.sendobj(sendobj);},this);
+  var t = this;
+  return {
+    destroy:function(){
+      delete t.cbs[cnt];
+      delete t.persist[cnt];
+      t.sendobj({destroy:cnt});
+    }
+  }
 };
 ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
   if(ca[ca.length-1]==='__persistmycb'){
