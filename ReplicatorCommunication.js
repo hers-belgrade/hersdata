@@ -241,6 +241,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
     delete input.commandresult;
     this.execute(commandresult);
   }
+  if(input.destroy){
+    var di = input.destroy;
+    var d = this.destroyables[di];
+    if(d){
+      d.destroy();
+      delete this.destroyables[di];
+    }
+  }
   if(input.userstatus) {
     var us = input.userstatus;
 

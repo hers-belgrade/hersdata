@@ -175,11 +175,33 @@ DataFollower.prototype.attachToCollection = function(name,el){
     this.say.call(this,[this.path,[name]]);
   },el.destroyed);
 };
+DataFollower.prototype.emitScalarValue = function(name,val,cb){
+  if(!cb){return;}
+  if(typeof val === 'undefined'){
+    cb.call(this,[this.path,[name]]);
+  }else{
+    cb.call(this,[this.path,[name,val]]);
+  }
+};
 DataFollower.prototype.attachToScalar = function(name,el){
   if(!this.say){return;}
   this.reportScalar(name,el,this.say);
-  this.createListener(name+'_changed',function(changedmap){
-    this.reportScalar(name,el,this.say);
+  this.createListener(name+'_changed',function(el,changedmap){
+    var priv = this.contains(el.access_level());
+    var val = priv ? el.value() : el.public_value();
+    if(changedmap.key){
+      this.emitScalarValue(name,val,this.say);
+      return;
+    }
+    if(priv){
+      if(changedmap.private){
+        this.emitScalarValue(name,val,this.say);
+      }
+    }else{
+      if(changedmap.public){
+        this.emitScalarValue(name,val,this.say);
+      }
+    }
   },el.changed);
   this.createListener(name+'_destroyed',function(){
     this.say.call(this,[this.path,[name]]);
@@ -210,19 +232,11 @@ DataFollower.prototype.reportCollection = function(name,el,cb){
   }
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
-  if(this.contains(el.access_level())){
-    cb.call(this,[this.path,[name,el.value()]]);
-  }else{
-    var pv = el.public_value();
-    if(typeof pv !== 'undefined'){
-      cb.call(this,[this.path,[name,pv]]);
-    }/*else{
-      console.log(this.username(),'will not report scalar',name);
-    }*/
-  }
+  cb.call(this,[this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
 };
 DataFollower.prototype.reportElement = function(name,el,cb){
   cb = cb || this.say;
+  if(!cb){return;}
   switch(el.type()){
     case 'Scalar':
       this.reportScalar(name,el,cb);

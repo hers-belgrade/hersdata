@@ -19,7 +19,18 @@ function init(){
   this.self.counter = 0;
 };
 
-function setOffer(data4json,timeout,offerid,cb,user){
+function offerTickOut(t,to,oid,tocb){
+  tocb(to);
+  if(to){
+    to--;
+    t.self.offertimeouts[oid] = {timeout:Timeout.set(offerTickOut,1000,t,to,oid,tocb),cb:tocb};
+  }else{
+    tocb();
+    t&&t.self && t.self.offer && t.self.offer({offerid:oid});
+  }
+};
+
+function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
   if(typeof data4json === 'object'){
     data4json = JSON.stringify(data4json);
   }
@@ -41,16 +52,20 @@ function setOffer(data4json,timeout,offerid,cb,user){
     if(!this.self.offertimeouts){
       this.self.offertimeouts = {};
     }
-    this.self.offertimeouts[offerid] = Timeout.set(function(t,oid){
-      console.log('timed out, should cancel the offer ...',oid);
-      t&&t.self && t.self.offer && t.self.offer({offerid:oid})
-    },timeout,this,offerid);
+    if(!timeoutcb){
+      this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid){
+        console.log('timed out, should cancel the offer ...',oid);
+        t&&t.self && t.self.offer && t.self.offer({offerid:oid})
+      },timeout,this,offerid)};
+    }else{
+      offerTickOut(this,timeout,offerid,timeoutcb);
+    }
   }
   this.data.commit('set_offer',actions);
   cb('OFFER_SET',offerid);
 }
-setOffer.params=['data4json','timeout','offerid'];
-setOffer.defaults = {offerid:null,timeout:0};
+setOffer.params=['data4json','timeout','timeoutcb','offerid'];
+setOffer.defaults = {offerid:null,timeout:0,timeoutcb:null};
 
 
 removeOffer = function (oid) {
@@ -62,7 +77,7 @@ function doCall(callname,cb, id, user){
   var args = Array.prototype.slice.call(arguments,3);
   args.push(function accept(acceptobj){
     t.self.counter++;
-    console.log('accepted in',callname);
+    //console.log('accepted in',callname);
     switch(callname){
       case 'onBid':
         t.self.notifyDone();
@@ -106,7 +121,11 @@ function offer(paramobj,cb,user){
   //console.log('offer',paramobj,offerid);
   var offerid = paramobj.offerid;
   if(this.self.offertimeouts && this.self.offertimeouts[offerid]){
-    Timeout.clear(this.self.offertimeouts[offerid]);
+    var to = this.self.offertimeouts[offerid];
+    Timeout.clear(to.timeout);
+    if(to.cb){
+      to.cb();
+    }
     delete this.self.offertimeouts[offerid];
   }
   var offerel = this.data.element(['offers',offerid]);
@@ -115,7 +134,7 @@ function offer(paramobj,cb,user){
     return;
   }
   delete paramobj.offerid;
-  if (Object.keys(paramobj).length === 0) paramobj = null;
+  //if (Object.keys(paramobj).length === 0) paramobj = null;
   //console.log('offer',paramobj,offerid);
   doCall.call(this,'onOffer',cb, offerid, user,paramobj,JSON.parse(offerel.element(['data']).value()));
 };

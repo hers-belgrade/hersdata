@@ -54,13 +54,16 @@ function startwoffer(requirementswoffers,cb,user){
       return;
     }
     if(this.data.element([i])){
-      cb('REQUIREMENT_ALREADY_PENDING',i);
-      return;
+      //cb('REQUIREMENT_ALREADY_PENDING',i);
+      //return;
+    }else{
+      var key = requirementswoffers[i].key;
+      createactions.push(['set',[i],key==='null'?undefined:key]);
     }
-    var key = requirementswoffers[i].key;
-    createactions.push(['set',[i],key==='null'?undefined:key]);
   }
-  this.data.commit('creating_requirement',createactions);
+  if(createactions.length){
+    this.data.commit('creating_requirement',createactions);
+  }
   for(var i in requirementswoffers){
     var r = requirementswoffers[i];
     var mr = this.self.requirements[i];
