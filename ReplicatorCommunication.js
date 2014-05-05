@@ -99,7 +99,8 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
     user.destroyed.attach((function(ss,replicationid){
       var _ss = ss, _cnt = replicationid; 
       return function(){
-        console.log(user.fullname,'destroyed');
+        console.trace();
+        console.log(user.fullname(),'destroyed on',_cnt);
         delete _ss[_cnt];
       };
     })(this.sayers,replicationid));

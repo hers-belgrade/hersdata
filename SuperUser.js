@@ -24,8 +24,9 @@ DataSuperUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   configurable:false
 }});
 DataSuperUser.prototype.destroy = function(){
-  this._parent.destroy();
+  var p = this._parent;
   DataFollower.prototype.destroy.call(this);
+  p.destroy();
 };
 
 module.exports = DataSuperUser;

@@ -735,6 +735,7 @@ Collection.prototype.getReplicatingUser = function(cb){
 };
 
 Collection.prototype.createRemoteReplica = function(localname,name,realmname,url,skipdcp){
+  if(this.element([localname])){return;}
   if(!url){
     console.trace();
     throw "createRemoteReplica expects 4 params now";
