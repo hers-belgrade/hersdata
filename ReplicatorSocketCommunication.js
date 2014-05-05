@@ -118,7 +118,7 @@ ReplicatorSocketCommunication.prototype.sendMore = function(){
     this.start = this.now;
     var b = this.sendingBuffs.shift();
     this.sendingLength = b.length;
-    if(this.socket.writable){
+    if(this.socket && this.socket.writable){
       if(this.socket.write(b)){
         this.sendingDoneHandler();
       }
