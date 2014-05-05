@@ -34,7 +34,7 @@ ReplicatorSocketCommunication.prototype = Object.create(ReplicatorCommunication.
 }});
 ReplicatorSocketCommunication.prototype.destroy = function(){
   this.socket && this.socket.destroy();
-  ReplicatorCommunication.call(this);
+  ReplicatorCommunication.prototype.destroy.call(this);
 };
 ReplicatorSocketCommunication.prototype.createUnzip = function(){
   this.unzip = zlib.createGunzip();

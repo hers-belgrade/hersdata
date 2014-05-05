@@ -54,6 +54,9 @@ function startwoffer(requirementswoffers,cb,user){
       return;
     }
     if(this.data.element([i])){
+      var r = requirementswoffers[i];
+      delete requirementswoffers[i];
+      this.data.element([i]).functionalities.requirement.f.setOffer(r.offer,function(){},user);
       //cb('REQUIREMENT_ALREADY_PENDING',i);
       //return;
     }else{
@@ -68,6 +71,7 @@ function startwoffer(requirementswoffers,cb,user){
     var r = requirementswoffers[i];
     var mr = this.self.requirements[i];
     var d = this.data;
+    console.log('attaching requirement on',i);
     var f = this.data.element([i]).attach('./requirement',{
       cbs:mr,
       notifyDone:(function(_i){

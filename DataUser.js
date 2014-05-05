@@ -13,5 +13,9 @@ DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:true,
   configurable:true
 }});
+DataUser.prototype.destroy = function(){
+  this._parent.destroy();
+  DataFollower.prototype.destroy.call(this);
+};
 
 module.exports = DataUser;

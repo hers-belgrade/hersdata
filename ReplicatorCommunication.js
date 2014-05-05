@@ -1,6 +1,5 @@
 var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
-  Listener = require('./listener'),
   DataUser = require('./DataUser'),
   SuperUser = require('./SuperUser'),
   HookCollection = require('./hookcollection');
@@ -26,6 +25,7 @@ function userSayer(replicatorcommunication,sendcode){
     }
       */
     Timeout.next(function(sc,rc,item,t){
+      if(!rc.counter){return;} //rc ded
       rc.send(sc,t._replicationid,item);
     },sc,rc,item,this);
   }
@@ -36,7 +36,6 @@ var _instanceCount = new BigCounter();
 function ReplicatorCommunication(data){
   _instanceCount.inc();
   this._id = _instanceCount.toString();
-  Listener.call(this);
   if(!data){return;}
   __id++;
   this.counter = new BigCounter();
@@ -47,18 +46,34 @@ function ReplicatorCommunication(data){
   this.userStatus = userStatus(this);
   this.userSayer = userSayer(this);
 }
-for(var i in Listener.prototype){
-  ReplicatorCommunication.prototype[i] = Listener.prototype[i];
-}
 ReplicatorCommunication.prototype.destroy = function(){
+  if(this.slaveSays){
+    this.slaveSays.destruct();
+  }
+  if(this.masterSays){
+    this.masterSays.destruct();
+  }
+  if(this.data && this.data.communication){
+    delete this.data.communication;
+  }
   if (this.destroyables) {
     for (var i in this.destroyables) {
-      this.destroyables[i] && this.destroyables[i].destroy();
+      if(this.destroyables[i]){
+        this.destroyables[i].destroy();
+      }
     }
   }
-  Listener.prototype.destroy.call(this);
-  for(var i in rc){
-    delete rc[i];
+  for(var i in this.cbs){
+    this.cbs[i] = null;
+    delete this.cbs[i];
+  }
+  if(this.users){
+    for(var i in this.users){
+      this.users[i].destroy();
+    }
+  }
+  for(var i in this){
+    delete this[i];
   }
 };
 ReplicatorCommunication.prototype.send = function(code){
@@ -151,7 +166,7 @@ ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
 };
 ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
-    cbref = commandresult.splice(0,1)[0];
+    cbref = commandresult.shift();
     var cb = this.cbs[cbref];
     //console.log('cb for',cbref,'is',cb);
     if(typeof cb === 'function'){
@@ -254,7 +269,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var d = this.destroyables[di];
     if(d){
       d.destroy();
-      delete this.destroyables[di];
+      //delete this.destroyables[di];
     }
   }
   if(input.userstatus) {
@@ -321,24 +336,32 @@ ReplicatorCommunication.prototype.handOver = function(input){
     for(var i in input){
       var method = u[i];
       if(method){
-        //console.log(u.username(),'applies',i,input[i]);
-        method.apply(u,input[i]);
+        //console.log(u.username(),'applies',i);//,input[i]);
+        this.handleDestroyable(counter,cbrefs,method.apply(u,input[i]));
       }
     }
     return;
   }
-  var ret = this.data.processInput(this,input);
-  if (ret && ('function' === typeof(ret.destroy))) {
-    if (!this.destroyables) this.destroyables = {};
-    this.destroyables[counter] = ret;
-    if(ret.destroyed){
-      this.createListener(counter+'destroyed',function(){
-        this.destroyListener(counter+'destroyed');
-        delete this.destroyables[counter];
-        if(cbrefs){
-          this.send('commandresult','DISCARD_GROUP',cbrefs);
+  this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
+};
+
+ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,obj){
+  if (obj && ('function' === typeof(obj.destroy))) {
+    if (!this.destroyables){
+      this.destroyables = {};
+      this.destroyablecount = 0;
+    }
+    this.destroyables[counter] = obj;
+    this.destroyablecount++;
+    //console.log('desctcnt',this.destroyablecount);
+    if(obj.destroyed){
+      obj.destroyed.attach((function(t,cnt){
+        return function(){
+          t.destroyablecount--;
+          //console.log('desctcnt',t.destroyablecount);
+          delete t.destroyables[cnt];
         }
-      },ret.destroyed);
+      })(this,counter));
     }
   }
 };

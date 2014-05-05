@@ -10,8 +10,8 @@ function CPReplicatorCommunication(data){
 CPReplicatorCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
   value:CPReplicatorCommunication,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 
 function Child(data){
@@ -21,8 +21,8 @@ function Child(data){
 Child.prototype = Object.create(CPReplicatorCommunication.prototype,{constructor:{
   value:Child,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 Child.prototype.destroy = function(){
   process.removeListener('message',this.messageHandler);
@@ -43,8 +43,8 @@ function Parent(data){
 Parent.prototype = Object.create(CPReplicatorCommunication.prototype,{constructor:{
   value:Parent,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 Parent.prototype.destroy = function(){
   if(this.cp){

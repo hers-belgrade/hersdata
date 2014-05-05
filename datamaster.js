@@ -754,7 +754,7 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
     return;
   }
 
-  console.log('closing replicatingClient',replicatorname,'and detaching',rc.listener);
+  console.log('closing replicatingClient',replicatorname);
   rc.destroy();
   delete this.replicatingClients[replicatorname];
   rc = null;
@@ -943,7 +943,7 @@ Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
   var w =  new Waiter(waiter,this,targetpath,cb);
   w.destroyed.attach(function(){
     cb('DISCARD_THIS');
-    console.log('Waiter dead',targetpath);
+    //console.log('Waiter dead',targetpath);
   });
   return w;
 };

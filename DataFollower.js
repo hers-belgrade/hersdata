@@ -29,6 +29,8 @@ function relocate(src,dest,el){
   addToArray(dest,el);
 }
 
+var __DataFollowerInstanceCount = 0;
+
 function DataFollower(data,createcb,cb,user,path){
   if(!data){ return; }
   if(!(user && typeof user.username === 'function' && typeof user.realmname === 'function')){
@@ -42,6 +44,7 @@ function DataFollower(data,createcb,cb,user,path){
     console.log('no user');
   }
   */
+  __DataFollowerInstanceCount++;
   Listener.call(this);
   //User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
@@ -70,12 +73,17 @@ for(var i in Listener.prototype){
 }
 */
 DataFollower.prototype.destroy = function(){
-  console.log('firing destroyed of DataFollower',this.path);
   for(var i in this.followers){
     this.followers[i].destroy();
+    delete this.followers[i];
   }
   this.destroyed.fire();
   Listener.prototype.destroy.call(this);
+  for(var i in this){
+    delete this[i];
+  }
+  __DataFollowerInstanceCount--;
+  //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
 }
 DataFollower.prototype.setStatus = function(stts){

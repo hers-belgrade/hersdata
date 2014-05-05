@@ -10,8 +10,8 @@ function Bridge(listener,data){
   if(!(listener&&data)){
     return;
   }
-  BC.inc();
-  //__BridgeInstanceCounter++;
+  //BC.inc();
+  __BridgeInstanceCounter++;
   //this.__counter = BC.toString();
   //__Bridges[this.__counter] = this;
   this.destroyed = new HookCollection();
@@ -22,27 +22,22 @@ function Bridge(listener,data){
 Bridge.prototype = Object.create(Listener.prototype,{constructor:{
   value:Bridge,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 Bridge.prototype.destroy = function(){
   //console.log(this.__counter,'destroyed');
   this.destroyed.fire();
   this.destroyed.destruct();
   //delete __Bridges[this.__counter];
-  //__BridgeInstanceCounter--;
-  //console.log(__BridgeInstanceCounter);
+  __BridgeInstanceCounter--;
+  //console.log('Bridge instance count',__BridgeInstanceCounter);
   Listener.prototype.destroy.call(this);
   for(var i in this){
     delete this[i];
   }
 }
 
-/*
- * Data_Element was intended to handle data element destruction.
- * However, it turned out that destruction is much better handled
- * from within filterer (see below)
- */
 function Data_Element(listener,scalar,cb){
   Bridge.call(this,listener,scalar);
   this._cb = cb;
@@ -50,8 +45,8 @@ function Data_Element(listener,scalar,cb){
 Data_Element.prototype = Object.create(Bridge.prototype,{constructor:{
   value:Data_Element,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 Data_Element.prototype.destroy = function(){
   /*
@@ -66,7 +61,6 @@ Data_Element.prototype.destroy = function(){
 function Data_Scalar(listener,scalar,cb,valueconstraint){
   if(!(listener&&scalar&&typeof cb === 'function')){return;}
   Data_Element.call(this,listener,scalar,cb);
-  //Bridge.call(this,listener,scalar);
   this.createListener('__scalarchanged',function(el,changedmap){
     if(!changedmap.private){return;}
     cb.call(this,listener.contains(el.access_level()) ? el.value() : el.public_value());
@@ -78,14 +72,12 @@ function Data_Scalar(listener,scalar,cb,valueconstraint){
     console.log('should have said',scalar.public_value(),'instead of',scalar.value(),'because',scalar.access_level());
   }
   */
-  //cb.call(this,scalar.value());
 };
 Data_Scalar.prototype = Object.create(Data_Element.prototype,{constructor:{
-//Data_Scalar.prototype = Object.create(Bridge.prototype,{constructor:{
   value:Data_Scalar,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 
 function typefilter(type){
@@ -111,41 +103,61 @@ function nameneqfilter(name){
 
 function waiter_callback(name,cb){
   var t = this;
-  if(!this.name){
-    return function(){
+  var _waiter_callback = !this.name ? 
+    function(){
+      if(!t){return;}
       var args = Array.prototype.slice.call(arguments,0);
       args.unshift(name);
       //console.log('applying',args);
       cb.apply(t,args);
-    };
-  }else{
-    return function(){
+    }
+  :
+    function(){
+      if(!t){return;}
       cb.apply(t,arguments);
     }
-  };
+  ;
+  this.destroyed.attach(function(){
+    t=null;
+    _waiter_callback = null;
+  });
+  return _waiter_callback;
 };
 
 function collectionhandler(path,cb){
   var t = this, _p = path, _cb = cb;
-  return function(name,el){
+  var _collectionhandler = function(name,el){
+    if(!t){return;}
     if(el && el.type()==='Collection'){
       new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
     }
   };
+  this.destroyed.attach(function(){
+    t=null;
+    _collectionhandler = null;
+  });
+  return _collectionhandler;
 };
 
 function scalarhandler(path,cb){
   var t = this, _cb = cb;
-  return function(name,el){
+  var _scalarhandler = function(name,el){
+    if(!t){return;}
     if(el && el.type()==='Scalar'){
       new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
     }
   };
+  this.destroyed.attach(function(){
+    t=null;
+    _scalarhandler = null;
+  });
+  return _scalarhandler;
 };
 
 function elementhandler(path,cb){
   var t = this, _p = path, _cb = cb;
-  return function(name,el){
+  var _elemhandler = function(name,el){
+    if(!t){return;}
     if(el){
      if(el.type()==='Scalar'){
       new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
@@ -158,12 +170,18 @@ function elementhandler(path,cb){
      }
     }
   };
+  this.destroyed.attach(function(){
+    t=null;
+    _elemhandler=null;
+  });
+  return _elemhandler;
 };
 
 function filterer(filters,cb){
   var ffs = filters;
   var t = this, _cb = cb;
-  return function(name,el){
+  var _filterer = function(name,el){
+    if(!t){return;}
     for(var i in ffs){
       var ff = ffs[i];
       if(!ff(name,el)){
@@ -178,6 +196,11 @@ function filterer(filters,cb){
       });
     }
   };
+  this.destroyed.attach(function(){
+    t=null;
+    _filterer = null;
+  });
+  return _filterer;
 };
 
 function Data_CollectionElementWaiter(listener,collection,path,cb){
@@ -194,7 +217,6 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
   }
   //console.log('new Waiter',path);
   Data_Element.call(this,listener,collection,cb);
-  //Bridge.call(this,listener,collection);
   this.contains = function(key){return listener.contains(key);};
   var fn = path[0],tofn = typeof fn;
   switch(tofn){
@@ -307,11 +329,10 @@ function Data_CollectionElementWaiter(listener,collection,path,cb){
   }
 };
 Data_CollectionElementWaiter.prototype = Object.create(Data_Element.prototype,{constructor:{
-//Data_CollectionElementWaiter.prototype = Object.create(Bridge.prototype,{constructor:{
   value:Data_CollectionElementWaiter,
   enumerable:false,
-  writable:true,
-  configurable:true
+  writable:false,
+  configurable:false
 }});
 
 module.exports = {
