@@ -403,7 +403,7 @@ Collection.prototype.resetTxns = function(){
 
 Collection.prototype.dump = function(forreplicatoken){
   var ret = {
-    data:this.toMasterPrimitives(),
+    //data:this.toMasterPrimitives(),
   };
   /*
   if(typeof forreplicatoken !== 'undefined'){
