@@ -17,6 +17,9 @@ function RemoteCollectionReplica(name,realmname,url,skipdcp){
 RemoteCollectionReplica.prototype = new CollectionReplica();
 RemoteCollectionReplica.prototype.constructor = RemoteCollectionReplica;
 RemoteCollectionReplica.prototype.go = function(cb){
+  if(this.status === 'connected'){
+    return;
+  }
   cb && cb(this.status);
   var t = this;
 
