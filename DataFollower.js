@@ -38,12 +38,6 @@ function DataFollower(data,createcb,cb,user,path){
     console.log(user,'?');
     process.exit(0);
   }
-  /*
-  if(!user.keys){
-    console.trace();
-    console.log('no user');
-  }
-  */
   __DataFollowerInstanceCount++;
   Listener.call(this);
   //User.call(this,user.username,user.realmname,user.roles);
@@ -122,6 +116,9 @@ DataFollower.prototype.huntTarget = function(data){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
       //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
+      listenForTarget.call(this,target,data,cursor);
+      if(!this.listeners){return;} //me ded after setStatus...
+      listenForDestructor.call(this,target,data,cursor);
       if(target.communication){
         var remotepath = this.path.slice(cursor);
         this.pathtocommunication = this.path.slice(0,cursor);
@@ -148,8 +145,6 @@ DataFollower.prototype.huntTarget = function(data){
         this.data = target;
         return;
       }else{
-        listenForTarget.call(this,target,data,cursor);
-        listenForDestructor.call(this,target,data,cursor);
         target = null;
       }
       break;
@@ -351,13 +346,15 @@ DataFollower.prototype.follow = function(path,cb,saycb){
     })(this);
   }
   var df = new DataFollower(this.data,cb,saycb,this,path);
-  this.followers[spath] = df;
-  df.destroyed.attach((function(fs,sp){
-    var _fs=fs,_sp = sp;
-    return function(){
-      delete _fs[_sp];
-    }
-  })(this.followers,spath));
+  if(df.destroyed){
+    this.followers[spath] = df;
+    df.destroyed.attach((function(fs,sp){
+      var _fs=fs,_sp = sp;
+      return function(){
+        delete _fs[_sp];
+      }
+    })(this.followers,spath));
+  }
   return df;
 };
 DataFollower.prototype.describe = function(cb){

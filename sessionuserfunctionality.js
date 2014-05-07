@@ -30,11 +30,21 @@ function _produceUser(paramobj,cb){
       if(user){
         map[user.username()] = user;
       }
+      user.destroyed.attach((function(m,u){
+        return function(){
+          delete m[u.username()];
+        };
+      })(map,user));
       cb(user);
     });
   }else{
     var ret = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
     this.self.userMap[ret.username()] = ret;
+    ret.destroyed.attach((function(m,u){
+      return function(){
+        delete m[u.username()];
+      };
+    })(map,ret));
     cb(ret);
   }
 }
