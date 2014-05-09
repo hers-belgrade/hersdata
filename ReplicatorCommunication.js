@@ -268,8 +268,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var di = input.destroy;
     var d = this.destroyables[di];
     if(d){
+      //console.log('destroying',di);
       d.destroy();
       //delete this.destroyables[di];
+    }else{
+      console.log('no destroyable on',di);
     }
   }
   if(input.userstatus) {

@@ -90,6 +90,7 @@ DataFollower.prototype.setStatus = function(stts){
   this.createcb && this.createcb.call(this,this._status);
 };
 function listenForTarget(target,data,cursor){
+  this.purgeListeners();
   this.createListener('newelementlistener',function(name,el){
     if(name===this.path[cursor]){
       this.huntTarget(data);

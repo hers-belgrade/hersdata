@@ -44,9 +44,11 @@ HookCollection.prototype.attach = function(cb){
 };
 HookCollection.prototype.detach = function(i){
   if(!this.collection){
+    /*
     console.trace();
     console.log('no listeners when',i,'should be detached');
     process.exit(0);
+    */
     return;
   }
 	delete this.collection[i];
