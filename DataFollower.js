@@ -149,7 +149,7 @@ DataFollower.prototype.huntTarget = function(data){
           }
         }
         this.pathtocommunication = this.path.slice(0,cursor);
-        target.communication.usersend(this.topSayer(),this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
+        target.communication.usersend(this,this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
           var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
@@ -172,8 +172,8 @@ DataFollower.prototype.huntTarget = function(data){
         }
         //console.log('to',this.remotepath);
         //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
-        console.log('with parents path',this._parent.path);
-        console.log('and path',this.path);
+        //console.log('with parents path',this._parent.path);
+        //console.log('and path',this.path);
         this.data = target;
         return;
       }else{
@@ -411,21 +411,22 @@ DataFollower.prototype.handleBid = function(reqname,cb){
 };
 DataFollower.prototype.handleOffer = function(reqname,cb){
   var op = ['__requirements',reqname,'offers'];
-  var opf,opdf,offerid;
-  function offerdatacb(item){
-    if(item && item[1] && item[1][0] === 'data' && item[1][1]){
-      opdf.destroyed && opdf.destroy();
-      if(cb(offerid,item[1][1])){
-        opf.destroyed && opf.destroy();
-      }
-    }
-  };
   var t = this;
-  opf = this.follow(op,function(){},function(item){
+  var opf = this.follow(op,function(){},function(item){
     if(item && item[1]){
-      offerid = parseInt(item[1][0]);
+      var offerid = parseInt(item[1][0]);
       if(offerid){
-        opdf = t.follow(op.concat([offerid]),function(){},offerdatacb);
+        var opdf = t.follow(op.concat([offerid]),function(){},
+          function offerdatacb(item){
+            if(item && item[1] && item[1][0] === 'data' && item[1][1]){
+              //console.log('offer item',item);
+              opdf.destroyed && opdf.destroy();
+              if(cb(offerid,item[1][1])){
+                opf.destroyed && opf.destroy();
+              }
+            }
+          }
+        );
       }
     }
   });

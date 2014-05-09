@@ -96,14 +96,15 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
         return;
       }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome||[]);
-    user.destroyed.attach((function(ss,replicationid){
-      var _ss = ss, _cnt = replicationid; 
+    user.destroyed.attach((function(t,replicationid){
+      var _t = t, _cnt = replicationid; 
       return function(){
         //console.trace();
         //console.log(user.fullname(),'destroyed on',_cnt);
-        delete _ss[_cnt];
+        _t.sendobj({destroy:_cnt});
+        delete _t.sayers[_cnt];
       };
-    })(this.sayers,replicationid));
+    })(this,replicationid));
   }
 };
 ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
