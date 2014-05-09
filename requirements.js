@@ -71,7 +71,7 @@ function startwoffer(requirementswoffers,cb,user){
     var r = requirementswoffers[i];
     var mr = this.self.requirements[i];
     var d = this.data;
-    console.log('attaching requirement on',i);
+    //console.log('attaching requirement on',i);
     var f = this.data.element([i]).attach('./requirement',{
       cbs:mr,
       notifyDone:(function(_i){
@@ -84,7 +84,7 @@ function startwoffer(requirementswoffers,cb,user){
     })(i)});
     f.setOffer(r.offer,function(){},user);
   }
-  console.log('requirementwoffer set',this.data.dataDebug());
+  //console.log('requirementwoffer set',this.data.dataDebug());
   cb('OK');
 }
 startwoffer.params = 'originalobj';

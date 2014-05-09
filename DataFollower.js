@@ -32,7 +32,6 @@ function relocate(src,dest,el){
 var __DataFollowerInstanceCount = 0;
 
 function DataFollower(data,createcb,cb,user,path){
-  if(!data){ return; }
   if(!(user && typeof user.username === 'function' && typeof user.realmname === 'function')){
     console.trace();
     console.log(user,'?');
@@ -76,6 +75,7 @@ DataFollower.prototype.destroy = function(){
   for(var i in this){
     delete this[i];
   }
+  this.setStatus('DISCARD_THIS');
   __DataFollowerInstanceCount--;
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
@@ -110,12 +110,17 @@ function listenForNew(target,data,cursor){
 }
 DataFollower.prototype.huntTarget = function(data){
   var target = data;
+  if(!(target&&target.element)){
+    this.destroy();
+    return;
+  }
   var cursor = 0;
   this.purgeListeners();
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
+      console.trace();
+      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       listenForTarget.call(this,target,data,cursor);
       if(!this.listeners){return;} //me ded after setStatus...
       listenForDestructor.call(this,target,data,cursor);
@@ -188,7 +193,6 @@ DataFollower.prototype.emitScalarValue = function(name,val,cb){
 };
 DataFollower.prototype.attachToScalar = function(name,el){
   if(!this.say){return;}
-  this.reportScalar(name,el,this.say);
   this.createListener(name+'_changed',function(el,changedmap){
     var priv = this.contains(el.access_level());
     var val = priv ? el.value() : el.public_value();
@@ -215,7 +219,11 @@ DataFollower.prototype.attachToScalar = function(name,el){
 DataFollower.prototype.attachToContents = function(){
   if(!this.data){return;}
   var t = this;
+  //console.log('this.say',this.say.toString());
   this.data.traverseElements(function(name,el){
+    if(t.say){
+      t.reportElement(name,el,t.say);
+    }
     switch(el.type()){
       case 'Scalar':
         t.attachToScalar(name,el);
@@ -331,7 +339,7 @@ DataFollower.prototype.follow = function(path,cb,saycb){
   if(this.followers){
     var f = this.followers[spath];
     if(f){
-      cb && cb.call(this,f._status);
+      cb && cb.call(f,f._status);
       return f;
     }
   }else{

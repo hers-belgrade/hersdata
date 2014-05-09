@@ -54,7 +54,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     }
     if(!timeoutcb){
       this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid){
-        console.log('timed out, should cancel the offer ...',oid);
+        //console.log('timed out, should cancel the offer ...',oid);
         t&&t.self && t.self.offer && t.self.offer({offerid:oid})
       },timeout,this,offerid)};
     }else{
