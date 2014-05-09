@@ -34,17 +34,23 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
   if(typeof data4json === 'object'){
     data4json = JSON.stringify(data4json);
   }
-  var actions = [];
-  var offersel = this.data.element(['offers']);
-  if(!offersel){
-    actions.push(['set',['offers']]);
-  }
   if(offerid===null){
     this.self.counter++;
     if(this.self.counter>1000000000){
       this.self.counter=1;
     }
     offerid = this.self.counter;
+  }
+  var actions = [];
+  var offersel = this.data.element(['offers']);
+  if(!offersel){
+    actions.push(['set',['offers']]);
+  }else{
+    if(offersel.element([offerid])){
+      console.trace();
+      console.log('duplicate offerid',offerid);
+      process.exit(0);
+    }
   }
   actions.push(['set',['offers',offerid]]);
   actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.fullname()]]);
@@ -130,6 +136,7 @@ function offer(paramobj,cb,user){
   }
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
+    console.log('no offerid',offerid,'on',this.data.element(['offers']).dataDebug());
     cb('INVALID_OFFER_ID',offerid);
     return;
   }
