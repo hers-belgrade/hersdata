@@ -323,10 +323,31 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var remotepath = input.user.remotepath;
     if(remotepath){
       if(typeof remotepath[0] === 'object'){
-        while(remotepath[0]){
-          u = u.follow(remotepath[0]);
-          remotepath.shift();
-        }
+        //console.log('going for',remotepath);
+        function fp(rp,u,t,counter,cbrefs,input){
+          //console.log('going for',remotepath);
+          u.follow(rp.shift(), function(stts){
+              if(stts==='OK'){
+                if(rp.length){
+                  Timeout.next(function(rp,u,t,counter,cbrefs,input){
+                    fp(rp,u,t,counter,cbrefs,input);
+                  },rp,this,t,counter,cbrefs,input);
+                }else{
+                  delete input.user;
+                  for(var i in input){
+                    var method = this[i];
+                    if(method){
+                      //console.log(this.username(),'applies',i);//,input[i]);
+                      t.handleDestroyable(counter,cbrefs,method.apply(this,input[i]));
+                    }
+                  }
+                }
+              }
+            }
+          );
+        };
+        fp(remotepath,u,this,counter,cbrefs,input);
+        return;
       }else{
         u = u.follow(remotepath);
       }
