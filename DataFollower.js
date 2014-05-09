@@ -119,8 +119,8 @@ DataFollower.prototype.huntTarget = function(data){
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
-      console.trace();
-      console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
+      //console.trace();
+      //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
       listenForTarget.call(this,target,data,cursor);
       if(!this.listeners){return;} //me ded after setStatus...
       listenForDestructor.call(this,target,data,cursor);
