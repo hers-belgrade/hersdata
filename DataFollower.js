@@ -162,7 +162,7 @@ DataFollower.prototype.huntTarget = function(data){
             t.setStatus(status);
           };
         })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
-        console.log('post usersend will change',this.remotepath);
+        //console.log('post usersend will change',this.remotepath);
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
@@ -170,7 +170,7 @@ DataFollower.prototype.huntTarget = function(data){
         }else{
           this.remotepath = remotepath;
         }
-        console.log('to',this.remotepath);
+        //console.log('to',this.remotepath);
         //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
         console.log('with parents path',this._parent.path);
         console.log('and path',this.path);
