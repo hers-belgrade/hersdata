@@ -50,7 +50,12 @@ function DataFollower(data,createcb,cb,user,path){
   this._parent = user;
   if(user.remotepath){
     //console.log('parent remotepath',user.remotepath);
-    this.remotepath = [user.remotepath];
+    if(typeof user.remotepath[0] === 'string'){
+      this.remotepath = [user.remotepath];
+    }else{
+      this.remotepath = user.remotepath.slice();
+    }
+    //console.log('my composite remotepath',this.remotepath);
   }
   this.huntTarget(data);
 }
@@ -116,6 +121,7 @@ DataFollower.prototype.huntTarget = function(data){
   }
   var cursor = 0;
   this.purgeListeners();
+  if(!this.path){return;}
   while(cursor<this.path.length){
     var ttarget = target.element([this.path[cursor]]);
     if(!ttarget){
@@ -126,6 +132,22 @@ DataFollower.prototype.huntTarget = function(data){
       listenForDestructor.call(this,target,data,cursor);
       if(target.communication){
         var remotepath = this.path.slice(cursor);
+        if(this.remotepath && typeof this.remotepath[0]==='object'){
+          var mylastp = this.remotepath[this.remotepath.length-1];
+          var subcursor=0;
+          while(mylastp[subcursor]===remotepath[subcursor]){
+            subcursor++;
+          }
+          if(subcursor){
+            console.log('now what?',remotepath,this._parent.remotepath,'parents followers',Object.keys(this._parent.followers));
+          }
+          if(subcursor===mylastp.length){
+            console.log('cutting',remotepath,'by',subcursor,'elements on parent rp',this._parent.remotepath);
+            remotepath.splice(0,subcursor);
+            console.trace();
+            console.log('real subpath is',remotepath,'on parent rp',this._parent.remotepath);
+          }
+        }
         this.pathtocommunication = this.path.slice(0,cursor);
         target.communication.usersend(this.topSayer(),this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
           var t = _t, d = _d, p = _p;
@@ -140,6 +162,7 @@ DataFollower.prototype.huntTarget = function(data){
             t.setStatus(status);
           };
         })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
+        //console.log('post usersend will change',this.remotepath);
         if(this.remotepath){
           //console.log('augmenting the remotepath',this.remotepath);
           this.remotepath.push(remotepath);
@@ -147,6 +170,10 @@ DataFollower.prototype.huntTarget = function(data){
         }else{
           this.remotepath = remotepath;
         }
+        //console.log('to',this.remotepath);
+        //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
+        console.log('with parents path',this._parent.path);
+        console.log('and path',this.path);
         this.data = target;
         return;
       }else{
@@ -349,7 +376,7 @@ DataFollower.prototype.follow = function(path,cb,saycb){
     saycb = (function(t){
       var _t = t;
       return function(){
-        _t.say.apply(_t,arguments);
+        _t.say && _t.say.apply(_t,arguments);
       };
     })(this);
   }
@@ -373,6 +400,36 @@ DataFollower.prototype.describe = function(cb){
     ret.push(item);
   });
   cb && cb.call(this,ret);
+};
+DataFollower.prototype.handleBid = function(reqname,cb){
+  var bf = this.follow(['__requirements',reqname],function(stts){
+    if(stts==='OK'){
+      bf.destroy();
+      cb();
+    }
+  });
+};
+DataFollower.prototype.handleOffer = function(reqname,cb){
+  var op = ['__requirements',reqname,'offers'];
+  var opf,opdf,offerid;
+  function offerdatacb(item){
+    if(item && item[1] && item[1][0] === 'data' && item[1][1]){
+      opdf.destroyed && opdf.destroy();
+      if(cb(offerid,item[1][1])){
+        opf.destroyed && opf.destroy();
+      }
+    }
+  };
+  var t = this;
+  opf = this.follow(op,function(){},function(item){
+    if(item && item[1]){
+      offerid = parseInt(item[1][0]);
+      if(offerid){
+        opdf = t.follow(op.concat([offerid]),function(){},offerdatacb);
+      }
+    }
+  });
+  return opf;
 };
 
 module.exports = DataFollower;
