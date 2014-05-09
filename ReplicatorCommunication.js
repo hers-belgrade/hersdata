@@ -99,8 +99,8 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
     user.destroyed.attach((function(ss,replicationid){
       var _ss = ss, _cnt = replicationid; 
       return function(){
-        console.trace();
-        console.log(user.fullname(),'destroyed on',_cnt);
+        //console.trace();
+        //console.log(user.fullname(),'destroyed on',_cnt);
         delete _ss[_cnt];
       };
     })(this.sayers,replicationid));
@@ -125,13 +125,12 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
     console.log('no replicationid on the sending side');
     process.exit(0);
   }
-  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath}};
+  var sendobj = {counter:cnt,user:{_id:user.replicators[this._id],username:user.username(),realmname:user.realmname(),remotepath:remotepath?JSON.parse(JSON.stringify(remotepath)):remotepath}};
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,code);
-  //console.log('sending',sendobj);
-  Timeout.next(function(t){t.sendobj(sendobj);},this);
+  Timeout.next(function(t,so){t.sendobj(so);},this,sendobj);
   var t = this;
   return {
     destroy:function(){
