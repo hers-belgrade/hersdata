@@ -80,29 +80,11 @@ function Collection(a_l){
     }
   };
 
-  this.destroy = function(){
+  this._destroyData = function(){
     for(var i in data){
       this.remove(i);
-      //data[i].destroy();
     }
-    this.destroyed.fire();
     data = null;
-    this.onNewTransaction.destruct();
-    this.accessLevelChanged.destruct();
-    this.txnBegins.destruct();
-    this.txnEnds.destruct();
-    this.newReplica.destruct();
-    this.replicationInitiated.destruct();
-    this.destroyed.destruct();
-    this.newElement.destruct();
-    for(var i in this.functionalities){
-      //console.log('__DESTROY__ing',i);
-      this.functionalities[i].f.__DESTROY__();
-    }
-    for(var i in this){
-      delete this[i];
-    }
-    __CollectionCount--;
   };
 
   this.element = function(path,startindex,endindex){
@@ -201,6 +183,27 @@ function Collection(a_l){
       //console.log(txnc.toString(),'fire done');
     };
   })(this,txnCounter);
+};
+
+Collection.prototype.destroy = function(){
+  this.destroyed.fire(this);
+  this._destroyData();
+  this.onNewTransaction.destruct();
+  this.accessLevelChanged.destruct();
+  this.txnBegins.destruct();
+  this.txnEnds.destruct();
+  this.newReplica.destruct();
+  this.replicationInitiated.destruct();
+  this.destroyed.destruct();
+  this.newElement.destruct();
+  for(var i in this.functionalities){
+    //console.log('__DESTROY__ing',i);
+    this.functionalities[i].f.__DESTROY__();
+  }
+  for(var i in this){
+    delete this[i];
+  }
+  __CollectionCount--;
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
