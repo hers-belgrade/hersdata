@@ -1,4 +1,4 @@
-var KeyRing = require('./keyring'),
+var KeyRing = require('./KeyRing'),
   HookCollection = require('./hookcollection'),
   Timeout = require('herstimeout');
 

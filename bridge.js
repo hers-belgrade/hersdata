@@ -1,4 +1,4 @@
-var Listener = require('./listener'),
+var Listener = require('./Listener'),
   BigCounter = require('./BigCounter'),
   HookCollection = require('./hookcollection');
 

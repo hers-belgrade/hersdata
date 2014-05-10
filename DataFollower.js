@@ -1,5 +1,5 @@
 var User = require('./User'),
-  Listener = require('./listener'),
+  Listener = require('./Listener'),
   HookCollection = require('./hookcollection');
 
 function removeFromArray(ar,el){

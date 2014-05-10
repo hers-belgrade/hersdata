@@ -31,7 +31,7 @@ module.exports = {
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
   HookCollection: HookCollection,
-  Listener: require('./listener'),
+  Listener: require('./Listener'),
   Bridge: require('./bridge'),
   SessionUser: require('./SessionUser'),
   DataUser: require('./DataUser'),
