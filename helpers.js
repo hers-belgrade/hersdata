@@ -35,8 +35,44 @@ function public_hash_txn (hash, path_prefix, do_not_remove_path_prefix) {
 
 	return txn;
 }
+
+function throw_if_invalid_scalar(val) {
+  var tov = typeof val;
+  if (('string' !== tov)&&('number' !== tov)){
+    console.trace();
+    throw val+' can be nothing but a string or a number (found '+tov+')' ;
+  }
+}
+
+function throw_if_invalid_scalar_or_undefined(val){
+  var tov = typeof val;
+  if (('undefined' !== tov)&&('string' !== tov)&&('number' !== tov)&&('boolean' !== tov)){
+    console.trace();
+    throw val+' can be nothing but a string or a number ';
+  }
+}
+
+function throw_if_any_invalid (rv,pv,al) {
+  throw_if_invalid_scalar_or_undefined (rv);
+  throw_if_invalid_scalar_or_undefined (pv);
+  throw_if_invalid_scalar_or_undefined (al);
+}
+
+function equals(a,b){
+  if(typeof a === 'undefined' && typeof b === 'undefined'){
+    return true;
+  }
+  return a===b;
+}
+
+function nullconversion(a){
+  return (a===null) ? undefined : a;
+}
+
+
 module.exports = {
 	reset:reset,
 	public_hash_txn:public_hash_txn,
-	readScalar : readScalar
+	readScalar : readScalar,
+  throw_if_invalid_scalar: throw_if_invalid_scalar
 }

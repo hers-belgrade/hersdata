@@ -1,13 +1,17 @@
-var datamaster = require('./datamaster'),
+var Collection = require('./Collection'),
   SuperUser = require('./SuperUser'),
   HookCollection = require('./hookcollection');
 
 function DataMaster(){
-  datamaster.Collection.call(this);
+  Collection.call(this);
   this.superUserCreated = new HookCollection();
 };
-DataMaster.prototype = new (datamaster.Collection)();
-DataMaster.prototype.constructor = DataMaster;
+DataMaster.prototype = Object.create(Collection.prototype,{constructor:{
+  value:DataMaster,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}})
 DataMaster.prototype.createSuperUser = function(username,realmname){
   if(this.superUser){return;}
   this.superUser = new SuperUser(this,function () {}, function(){},username,realmname);

@@ -1,4 +1,4 @@
-var Collection = require('./datamaster').Collection;
+var Collection = require('./Collection');
 
 function CollectionReplica(name,realmname,skipdcp){
   if(!name){return;}
