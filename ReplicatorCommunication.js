@@ -327,6 +327,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var remotepath = input.user.remotepath;
     if(remotepath){
       if(typeof remotepath[0] === 'object'){
+        /*
         //console.log('going for',remotepath);
         function fp(rp,u,t,counter,cbrefs,input){
           //console.log('going for',remotepath);
@@ -352,6 +353,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
         };
         fp(remotepath,u,this,counter,cbrefs,input);
         return;
+        */
+        while(remotepath.length){
+          u = u.follow(remotepath.shift());
+        }
       }else{
         u = u.follow(remotepath);
       }

@@ -2,33 +2,6 @@ var User = require('./User'),
   Listener = require('./Listener'),
   HookCollection = require('./hookcollection');
 
-function removeFromArray(ar,el){
-  if(!ar){return;}
-  var ind = ar.indexOf(el);
-  if(ind>=0){
-    ar.splice(ind,1);
-    return true;
-  }
-  ind = ar.indexOf(el);
-  if(ind>=0){
-    console.log('Element was duplicated in array');
-    process.exit(0);
-  }
-}
-function addToArray(ar,el){
-  var ind = ar.indexOf(el);
-  if(ind<0){
-    ar.push(el);
-    return true;
-  }/*else{
-    console.log(ar,'already has',el)
-  }*/
-};
-function relocate(src,dest,el){
-  removeFromArray(src,el);
-  addToArray(dest,el);
-}
-
 var __DataFollowerInstanceCount = 0;
 
 function DataFollower(data,createcb,cb,user,path){
@@ -39,7 +12,6 @@ function DataFollower(data,createcb,cb,user,path){
   }
   __DataFollowerInstanceCount++;
   Listener.call(this);
-  //User.call(this,user.username,user.realmname,user.roles);
   path = path || [];
   this.path = path;
   if(cb){
@@ -65,11 +37,6 @@ DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-/*
-for(var i in Listener.prototype){
-  DataFollower.prototype[i] = Listener.prototype[i];
-}
-*/
 DataFollower.prototype.destroy = function(){
   for(var i in this.followers){
     this.followers[i].destroy();
@@ -117,9 +84,10 @@ function listenForNew(target,data,cursor){
 DataFollower.prototype.huntTarget = function(data){
   var target = data;
   if(!(target&&target.element)){
-    this.destroy();
+    this.stalled = true;
     return;
   }
+  delete this.stalled;
   var cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}
@@ -154,7 +122,6 @@ DataFollower.prototype.huntTarget = function(data){
           var t = _t, d = _d, p = _p;
           return function(status){
             if (status === 'DISCARD_THIS') {
-              //console.log('GOT DISCARD THIS');
               t.remotepath = p;
               t.huntTarget(d);
               return;
@@ -193,6 +160,12 @@ DataFollower.prototype.huntTarget = function(data){
     this.setStatus('OK');
     //this.cb && this.explain();
     this.attachToContents();
+    for(var i in this.followers){
+      var f = this.followers[i];
+      if(f.stalled){
+        f.huntTarget(this.data);
+      }
+    }
   }
 }
 DataFollower.prototype.followerFor = function(name){
@@ -245,7 +218,10 @@ DataFollower.prototype.attachToScalar = function(name,el){
   },el.destroyed);
 };
 DataFollower.prototype.attachToContents = function(){
-  if(!this.data){return;}
+  if(!this.data){
+    this.stalled = true;
+    return;
+  }
   var t = this;
   //console.log('this.say',this.say.toString());
   this.data.traverseElements(function(name,el){
@@ -261,8 +237,7 @@ DataFollower.prototype.attachToContents = function(){
     }
   });
   this.createListener('newEl',function(name,el){
-    //console.log('newEl',name,el.type());
-      el.type() === 'Scalar' && this.attachToScalar(name,el);
+    el.type() === 'Scalar' && this.attachToScalar(name,el);
   },this.data.newElement);
 };
 DataFollower.prototype.reportCollection = function(name,el,cb){
