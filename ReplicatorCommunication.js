@@ -194,9 +194,9 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
           }
         }
       }
-    }/*else{
+    }else{
       console.log('no cb to invoke for',cbref,commandresult);
-    }*/
+    }
   }
 };
 ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
