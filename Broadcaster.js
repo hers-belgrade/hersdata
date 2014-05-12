@@ -14,32 +14,22 @@ function PathTranslator(path,replaceleading){
     };
   };
   this.hook = new HookCollection();
-  this.cb = this.translate((function(h){
+  this.fire = this.translate((function(h){
     var _h = h;
     return function(item){
       //console.log('hook firing',item);
+      if(!_h.counter){
+        return;
+      }
       _h.fire(item);
     }
   })(this.hook));
-  
-  //cb);
-  this.count = 0;
 };
 PathTranslator.prototype.attach = function(cb){
-  this.count++;
   return this.hook.attach(cb);
 };
 PathTranslator.prototype.detach = function(cbid){
-  this.count--;
   this.hook.detach(cbid);
-};
-PathTranslator.prototype.fire = function(item){
-  if(!this.count){
-    return;
-  }
-  //console.log('outer fire',item);
-  this.cb(item);
-  //this.hook.fire(this.cb(item));
 };
 
 function Broadcaster(data,createcb,username,realmname,roles){
