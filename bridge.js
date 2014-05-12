@@ -105,7 +105,6 @@ function waiter_callback(name,cb){
   var t = this;
   var _waiter_callback = !this.name ? 
     function(){
-      if(!t){return;}
       var args = Array.prototype.slice.call(arguments,0);
       args.unshift(name);
       //console.log('applying',args);
@@ -113,7 +112,6 @@ function waiter_callback(name,cb){
     }
   :
     function(){
-      if(!t){return;}
       cb.apply(t,arguments);
     }
   ;
@@ -163,9 +161,6 @@ function elementhandler(path,cb){
       new Data_Scalar(t,el,waiter_callback.call(t,name,_cb));
      }
      if(el.type()==='Collection'){
-       if(name==='clear'){
-         console.log('path is',_p);
-       }
       new Data_CollectionElementWaiter(t,el,_p,waiter_callback.call(t,name,_cb));
      }
     }
@@ -181,7 +176,6 @@ function filterer(filters,cb){
   var ffs = filters;
   var t = this, _cb = cb;
   var _filterer = function(name,el){
-    if(!t){return;}
     for(var i in ffs){
       var ff = ffs[i];
       if(!ff(name,el)){
