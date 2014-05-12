@@ -303,6 +303,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
         s(us[1]);
       }else{
         console.log('no sayer for',us[0],'to usersay',us[1], input);
+        this.send({destroy:us[0]});
       }
     }
     return;

@@ -29,6 +29,9 @@ DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   configurable:false
 }});
 DataFollower.prototype.destroy = function(){
+  if(!this.destroyed){//ded already
+    return;
+  }
   for(var i in this.followers){
     this.followers[i].destroy();
     delete this.followers[i];
@@ -73,6 +76,10 @@ function listenForNew(target,data,cursor){
   },target.newElement);
 }
 DataFollower.prototype.huntTarget = function(data){
+  if(!this._parent){
+    this.destroy();
+    return;
+  }
   var target = data;
   if(!(target&&target.element)){
     this.stalled = true;
@@ -270,7 +277,7 @@ DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
   if(!this.data.access_level){
     console.trace();
-    console.log('DataFollower missed the destruction');
+    console.log('DataFollower',this.path,'missed the destruction');
     return;
   }
   if(this.remotepath){
@@ -401,11 +408,15 @@ DataFollower.prototype.handleOffer = function(reqname,cb){
     if(item && item[1]){
       var offerid = parseInt(item[1][0]);
       if(offerid){
-        var opdf = t.follow(op.concat([offerid]),function(){},
+        var opdf = t.follow(op.concat([offerid]),function(stts){
+            if(opdf && opdf.called && stts!=='OK'){
+              cb(offerid);
+              opdf.destroyed && opdf.destroy();
+            }
+          },
           function offerdatacb(item){
             if(item && item[1] && item[1][0] === 'data' && item[1][1]){
-              //console.log('offer item',item);
-              opdf.destroyed && opdf.destroy();
+              opdf.called = true;
               if(cb(offerid,item[1][1])){
                 opf.destroyed && opf.destroy();
               }
