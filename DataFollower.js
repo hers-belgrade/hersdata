@@ -1,6 +1,7 @@
 var User = require('./User'),
   Listener = require('./Listener'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('./hookcollection'),
+  Timeout = require('herstimeout');
 
 var __DataFollowerInstanceCount = 0;
 
@@ -64,10 +65,11 @@ function listenForDestructor(target,data,cursor){
     delete this.data;
     cursor--;
     if(cursor<0){
-      this.destroy();
+      Timeout.next(function(t){t.destroy();},this);
       return;
     }
-    this.huntTarget(data);
+    this.setStatus('RETREATING');
+    Timeout.next(function(t){t.huntTarget(data);},this);
   },target.destroyed);
 }
 function listenForNew(target,data,cursor){
@@ -222,7 +224,7 @@ DataFollower.prototype.attachToScalar = function(name,el){
     }
   },el.changed);
   this.createListener(name+'_destroyed',function(){
-    this.say.call(this,[this.path,[name]]);
+    this.say([this.path,[name]]);
     this.destroyListener(name+'_changed');
     this.destroyListener(name+'_destroyed');
   },el.destroyed);
