@@ -40,6 +40,7 @@ module.exports = {
   SessionUser: require('./SessionUser'),
   DataUser: require('./DataUser'),
   DataFollower: require('./DataFollower'),
+  DeStreamer: require('./DeStreamer'),
   Broadcaster: require('./Broadcaster'),
   BroadcasterGroup: require('./BroadcasterGroup'),
   BroadcastingChannel: require('./BroadcastingChannel')

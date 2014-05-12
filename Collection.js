@@ -87,26 +87,10 @@ function Collection(a_l){
     data = null;
   };
 
-  this.element = function(path,startindex,endindex){
-    if(!data){return;}
-    if(utils.isArray(path)){
-      if(typeof startindex === 'undefined'){startindex=0;}
-      if(typeof endindex === 'undefined'){endindex=path.length-1;}
-      if(startindex>endindex){
-        return this;
-      }
-      if(startindex===endindex){
-        return data[path[startindex]];
-      }
-      if(data[path[startindex]]){
-        return (data[path[startindex]]).element(path,startindex+1,endindex);
-      }
-    }else{
-      console.trace();
-      console.log('invalid path',path);
-      throw "Path has to be an array";
-    }
+  this.elementRaw = function(elemname){
+    return data[elemname];
   };
+
   this.toMasterPrimitives = function(path){
     path = path || [];
     var ret = [['set',path,access_level]];
@@ -128,7 +112,7 @@ function Collection(a_l){
       data[key].destroy();
     }
     data[key] = entity;
-    this.newElement.fire(key,entity);
+    this.handleNewElement(key,entity);
     var toe = entity.type();
     if(toe==='Collection'){
       entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
@@ -214,8 +198,34 @@ Collection.prototype.type = function(){
   return 'Collection';
 };
 
+Collection.prototype.element = function(path,startindex,endindex){
+  if(!this.destroyed){return;}
+  if(utils.isArray(path)){
+    if(typeof startindex === 'undefined'){startindex=0;}
+    if(typeof endindex === 'undefined'){endindex=path.length-1;}
+    if(startindex>endindex){
+      return this;
+    }
+    var d = this.elementRaw(path[startindex]);
+    if(startindex===endindex){
+      return d;
+    }
+    if(d){
+      return d.element(path,startindex+1,endindex);
+    }
+  }else{
+    console.trace();
+    console.log('invalid path',path);
+    throw "Path has to be an array";
+  }
+};
+
 Collection.prototype.handleAccessLevelChanged = function(access_level){
   this.accessLevelChanged.fire(access_level);
+};
+
+Collection.prototype.handleNewElement = function(elname,el){
+  this.newElement.fire(elname,el);
 };
 
 Collection.prototype.instanceCounts = function(){
