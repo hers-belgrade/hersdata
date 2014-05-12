@@ -20,15 +20,6 @@ function DataFollower(data,createcb,cb,user,path){
   this.createcb = createcb;
   this.destroyed = new HookCollection();
   this._parent = user;
-  if(user.remotepath){
-    //console.log('parent remotepath',user.remotepath);
-    if(typeof user.remotepath[0] === 'string'){
-      this.remotepath = [user.remotepath];
-    }else{
-      this.remotepath = user.remotepath.slice();
-    }
-    //console.log('my composite remotepath',this.remotepath);
-  }
   this.huntTarget(data);
 }
 DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
@@ -119,6 +110,15 @@ DataFollower.prototype.huntTarget = function(data){
     return;
   }
   delete this.stalled;
+  if(this._parent.remotepath){
+    //console.log('parent remotepath',user.remotepath);
+    if(typeof this._parent.remotepath[0] === 'string'){
+      this.remotepath = [this._parent.remotepath];
+    }else{
+      this.remotepath = this._parent.remotepath.slice();
+    }
+    //console.log('my composite remotepath',this.remotepath);
+  }
   var cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}
@@ -194,7 +194,10 @@ DataFollower.prototype.huntTarget = function(data){
     for(var i in this.followers){
       var f = this.followers[i];
       if(f.stalled){
+        console.log('awakening',i);
         f.huntTarget(this.data);
+      }else{
+        console.log(i,'is awake');
       }
     }
   }
@@ -254,7 +257,8 @@ DataFollower.prototype.attachToContents = function(){
     return;
   }
   var t = this;
-  //console.log('this.say',this.say.toString());
+  //console.log(this.path,'got the Target, this.say',this.say.toString());
+  //console.log(this.path,'got the Target');
   this.data.traverseElements(function(name,el){
     if(t.say){
       t.reportElement(name,el,t.say);
@@ -311,7 +315,9 @@ DataFollower.prototype.explain = function(cb){
   });
   if(this.followers){
     for(var i in this.followers){
-      this.followers[i].explain(cb);
+      this.followers[i].explain(function(item){
+        cb([t.path.concat(item[0]),item[1]]);
+      });
     }
   }
 };
