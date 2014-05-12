@@ -391,8 +391,8 @@ DataFollower.prototype.follow = function(path,cb,saycb){
   if(typeof saycb === 'undefined'){
     saycb = (function(t){
       var _t = t;
-      return function(){
-        _t.say && _t.say.apply(_t,arguments);
+      return function(item){
+        _t.say && _t.say([_t.path.concat(item[0]),item[1]]);
       };
     })(this);
   }
