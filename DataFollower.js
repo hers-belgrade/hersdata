@@ -1,6 +1,7 @@
 var User = require('./User'),
   Listener = require('./Listener'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('./hookcollection'),
+  Timeout = require('herstimeout');
 
 var __DataFollowerInstanceCount = 0;
 
@@ -43,37 +44,6 @@ DataFollower.prototype.destroy = function(){
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
 };
-DataFollower.prototype.deStream = function(elemnamearry){
-  var ds = new (require('./DeStreamer'))(elemnamearry);
-  if(!this.destreamers){
-    this.destreamers = [];
-  }
-  var dsindex = 0;
-  for(var i in this.destreamers){
-    if(!this.destreamers[i]){
-      break;
-    }
-    dsindex++;
-  }
-  if(dsindex===this.destreamers.length){
-    this.destreamers.push(ds);
-  }else{
-    this.destreamers[dsindex] = ds;
-  }
-  ds._index = dsindex;
-  ds.destroyed.attach((function(dss){
-    return function(){
-      var dsi = this._index;
-      dss[dsi] = null;
-      if(dsi<dss.length-1){
-        var ds = dss.pop();
-        dss[dsi] = ds;
-        ds._index = dsi;
-      }
-    };
-  })(this.destreamers));
-  return ds;
-};
 DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
   this.createcb && this.createcb.call(this,this._status);
@@ -92,10 +62,11 @@ function listenForDestructor(target,data,cursor){
     delete this.data;
     cursor--;
     if(cursor<0){
-      this.destroy();
+      Timeout.next(function(t){t.destroy();},this);
       return;
     }
-    this.huntTarget(data);
+    this.setStatus('RETREATING');
+    Timeout.next(function(t){t.huntTarget(data);},this);
   },target.destroyed);
 }
 function listenForNew(target,data,cursor){
@@ -246,7 +217,7 @@ DataFollower.prototype.attachToScalar = function(name,el){
     }
   },el.changed);
   this.createListener(name+'_destroyed',function(){
-    this.say.call(this,[this.path,[name]]);
+    this.say([this.path,[name]]);
     this.destroyListener(name+'_changed');
     this.destroyListener(name+'_destroyed');
   },el.destroyed);
