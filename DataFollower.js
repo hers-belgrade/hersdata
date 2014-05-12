@@ -295,11 +295,14 @@ DataFollower.prototype.reportElement = function(name,el,cb){
 };
 DataFollower.prototype.explain = function(cb){
   if(!this.data){return;}
+  if(!this.data.access_level){
+    console.trace();
+    console.log('DataFollower missed the destruction');
+    return;
+  }
   if(this.remotepath){
     var t = this;
-    this.data.communication.usersend(this.topSayer(),this.pathtocommunication,this.remotepath,'explain',function(item){
-      cb.call(t,[t.path,item[1]]);
-    },'__persistmycb');
+    this.data.communication.usersend(this,this.pathtocommunication,this.remotepath,'explain',cb,'__persistmycb');
     return;
   }
   if(!this.contains(this.data.access_level())){
