@@ -170,8 +170,8 @@ function Collection(a_l){
 };
 
 Collection.prototype.destroy = function(){
-  this.destroyed.fire(this);
   this._destroyData();
+  this.destroyed.fire(this);
   this.onNewTransaction.destruct();
   this.accessLevelChanged.destruct();
   this.txnBegins.destruct();

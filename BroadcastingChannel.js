@@ -25,8 +25,13 @@ BroadcastingChannel.prototype.switchTo = function(broadcaster,translatorname){
     return;
   }
   this.deactivate();
-  this.bcaster = broadcaster;
-  this.translatorname = translatorname;
+  if(typeof broadcaster === 'object'){
+    this.bcaster = broadcaster;
+    this.translatorname = translatorname;
+  }else{
+    delete this.bcaster;
+    delete this.translatorname;
+  }
 };
 BroadcastingChannel.prototype.describe = function(cb){
   if(this.bcaster){
