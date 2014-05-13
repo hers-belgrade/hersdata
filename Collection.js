@@ -170,8 +170,8 @@ function Collection(a_l){
 };
 
 Collection.prototype.destroy = function(){
-  this.destroyed.fire(this);
   this._destroyData();
+  this.destroyed.fire(this);
   this.onNewTransaction.destruct();
   this.accessLevelChanged.destruct();
   this.txnBegins.destruct();
@@ -566,7 +566,8 @@ Collection.prototype.attach = function(functionalityname, config, key){
               var pd = _p.defaults||{};
               var _ps = _p.params;
               if(typeof obj !== 'object'){
-                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',');
+                console.trace();
+                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',')
               }
               for(var i=0; i<_ps.length; i++){
                 var __p = obj[_ps[i]];

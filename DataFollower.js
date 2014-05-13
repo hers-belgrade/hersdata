@@ -53,9 +53,14 @@ DataFollower.prototype.setStatus = function(stts){
 };
 function listenForTarget(target,data,cursor){
   this.purgeListeners();
+  //console.trace();
+  //console.log('waiting for',this.path[cursor],'to appear on',this.path);
   this.createListener('newelementlistener',function(name,el){
     if(name===this.path[cursor]){
-      this.huntTarget(data);
+      //console.log('time has come for',this.path[cursor],'on',this.path);
+      Timeout.next(function(t){t.huntTarget(data);},this);
+    }else{
+      //console.log('no can do',name,'<>',this.path[cursor],'on',this.path);
     }
   },target.newElement);
   this.setStatus('LATER');
@@ -167,7 +172,6 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.setStatus('OK');
-    //this.cb && this.explain();
     this.attachToContents();
     for(var i in this.followers){
       var f = this.followers[i];
@@ -191,7 +195,7 @@ DataFollower.prototype.followerFor = function(name){
   }
 };
 DataFollower.prototype.attachToCollection = function(name,el){
-  this.reportCollection(name,el,this.say);
+  if(!this.say){return;}
   this.createListener(name+'_destroyed',function(){
     this.say.call(this,[this.path,[name]]);
   },el.destroyed);
@@ -229,33 +233,31 @@ DataFollower.prototype.attachToScalar = function(name,el){
     this.destroyListener(name+'_destroyed');
   },el.destroyed);
 };
+DataFollower.prototype.attachAppropriately = function(name,el){
+  switch(el.type()) {
+    case 'Scalar': return this.attachToScalar(name,el);
+    case 'Collection': return this.attachToCollection(name, el);
+  }
+};
 DataFollower.prototype.attachToContents = function(){
   if(!this.data){
     this.stalled = true;
     return;
   }
   var t = this;
-  //console.log(this.path,'got the Target, this.say',this.say.toString());
-  //console.log(this.path,'got the Target');
   this.data.traverseElements(function(name,el){
     if(t.say){
       t.reportElement(name,el,t.say);
     }
-    switch(el.type()){
-      case 'Scalar':
-        t.attachToScalar(name,el);
-        break;
-      case 'Collection':
-        break;
-    }
+    t.attachAppropriately(name,el);
   });
   this.createListener('newEl',function(name,el){
-    el.type() === 'Scalar' && this.attachToScalar(name,el);
+    this.attachAppropriately(name,el);
   },this.data.newElement);
 };
 DataFollower.prototype.reportCollection = function(name,el,cb){
   if(this.contains(el.access_level())){
-    cb.call(this,[this.path,[name,null]]);
+    cb && cb.call(this,[this.path,[name,null]]);
   }
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
