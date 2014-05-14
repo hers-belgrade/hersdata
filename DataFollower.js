@@ -462,7 +462,7 @@ OfferHandler.prototype.handleSay = function(item){
     //console.log('but no follower');
     return;
   }
-  if(item && item[1]){
+  if(item && item[1] && item[1][1]===null){
     this.offerid = item[1][0];
     if(typeof this.offerid!== 'undefined'){
       //console.log('offerbranch on',this.offerid,'is ok, going for',[this.offerid]);
