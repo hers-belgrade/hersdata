@@ -12,6 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
+  this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
   this.path = path;
@@ -37,12 +38,15 @@ DataFollower.prototype.destroy = function(){
     this.followers[i].destroy();
     delete this.followers[i];
   }
-  this.destroyed.fire();
+  //block reentrance
+  var dh = this.destroyed;
+  delete this.destroyed;
+  dh.fire();
+  this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
   for(var i in this){
     delete this[i];
   }
-  this.setStatus('DISCARD_THIS');
   __DataFollowerInstanceCount--;
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
@@ -90,6 +94,8 @@ DataFollower.prototype.huntTarget = function(data){
   var target = data;
   if(!(target&&target.element)){
     this.stalled = true;
+    console.trace();
+    this.setStatus('STALLED');
     return;
   }
   delete this.stalled;
@@ -344,7 +350,6 @@ DataFollower.prototype.waitForever = function(queryarry,cb){
     if(!u){return;}
     u.waitFor(t.data,queryarry,function(discard){
       if(discard==='DISCARD_THIS'){
-        console.log('waitFor again',wfFunc);
         wfFunc && wfFunc();
         return;
       }
@@ -376,12 +381,21 @@ DataFollower.prototype.follow = function(path,cb,saycb){
       };
     })(this);
   }
+  if(!this.data){
+    console.trace();
+    console.log('no data on parent');
+  }
+  if(!this._parent){
+    console.trace();
+    console.log('parent destroyed');
+  }
   var df = new DataFollower(this.data,cb,saycb,this,path);
   if(df.destroyed){
     this.followers[spath] = df;
     df.destroyed.attach((function(fs,sp){
       var _fs=fs,_sp = sp;
       return function(){
+        //console.log('parent follower removing',_sp);
         delete _fs[_sp];
       }
     })(this.followers,spath));
@@ -405,32 +419,95 @@ DataFollower.prototype.handleBid = function(reqname,cb){
     }
   });
 };
-DataFollower.prototype.handleOffer = function(reqname,cb){
-  var op = ['__requirements',reqname,'offers'];
-  var t = this;
-  var opf = this.follow(op,function(){},function(item){
-    if(item && item[1]){
-      var offerid = parseInt(item[1][0]);
-      if(offerid){
-        var opdf = t.follow(op.concat([offerid]),function(stts){
-            if(opdf && opdf.called && stts!=='OK'){
-              cb(offerid);
-              opdf.destroyed && opdf.destroy();
-            }
-          },
-          function offerdatacb(item){
-            if(item && item[1] && item[1][0] === 'data' && item[1][1]){
-              opdf.called = true;
-              if(cb(offerid,item[1][1])){
-                opf.destroyed && opf.destroy();
-              }
-            }
-          }
-        );
-      }
+function OfferHandler(df,reqname,cb){
+  this.cb = cb;
+  this.follower = df.follow(['__requirements',reqname,'offers'],(function(t){
+    return function(stts){
+      t.handleStatus(stts);
+    };
+  })(this),(function(t){
+    return function(item){
+      t.handleSay(item);
     }
-  });
-  return opf;
+  }(this)));
+  this.follower.destroyed.attach((function(t){
+    return function(){
+      t.destroy();
+    };
+  })(this));
+}
+OfferHandler.prototype.handleStatus = function(stts){
+  //console.log('offer branch status',stts);
+};
+OfferHandler.prototype.handleSay = function(item){
+  if(item==='DISCARD_THIS'){
+    return;
+  }
+  /*
+  console.log(
+    this.follower._parent._parent.path,
+    this.follower._parent.path,
+    this.follower.path,
+    'item',item);
+  */
+  if(!this.follower){
+    //console.log('but no follower');
+    return;
+  }
+  if(item && item[1]){
+    this.offerid = item[1][0];
+    if(typeof this.offerid!== 'undefined'){
+      //console.log('offerbranch on',this.offerid,'is ok, going for',[this.offerid]);
+      this.subfollower = this.follower.follow([this.offerid],(function(t){
+        return function(stts){
+          t.handleSubStatus(stts);
+        };
+      })(this),(function(t){
+        return function(item){
+          t.handleSubSay(item);
+        };
+      })(this));
+    }
+  }
+};
+OfferHandler.prototype.handleSubStatus = function(stts){
+  if(this.cb && this.subfollower && this.subfollower.called && stts!=='OK'){
+    //console.log('subfollower will be destroyed');
+    this.cb(this.offerid);
+    var sf = this.subfollower;
+    delete this.subfollower;
+    sf.destroyed && sf.destroy();
+  }
+};
+OfferHandler.prototype.handleSubSay = function(item){
+  if(this.cb && item && item[1] && item[1][0] === 'data' && item[1][1]){
+    /*
+    console.log(
+    this.follower._parent._parent.path,
+    this.follower._parent.path,
+    this.follower.path,
+    this.subfollower.path,
+    'going for',this.offerid,item[1][1]);
+    */
+    this.subfollower.called = true;
+    if(this.cb(this.offerid,item[1][1])){
+      //console.trace();
+      //console.log('offer handler will be destroyed');
+      this.destroy();
+    }
+  }
+};
+OfferHandler.prototype.destroy = function(){
+  delete this.cb;
+  if(!this.follower){return;}
+  this.follower.destroyed && this.follower.destroy();
+  delete this.follower;
+  if(!this.subfollower){return;}
+  this.subfollower.destroyed && this.subfollower.destroy();
+  delete this.subfollower;
+};
+DataFollower.prototype.handleOffer = function(reqname,cb){
+  return new OfferHandler(this,reqname,cb);
 };
 
 module.exports = DataFollower;
