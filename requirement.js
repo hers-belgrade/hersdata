@@ -59,10 +59,10 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
       this.self.offertimeouts = {};
     }
     if(!timeoutcb){
-      this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid){
+      this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid, tuser){
         //console.log('timed out, should cancel the offer ...',oid);
-        t&&t.self && t.self.offer && t.self.offer({offerid:oid})
-      },timeout,this,offerid)};
+        t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, tuser)
+      },timeout,this,offerid,user)};
     }else{
       offerTickOut(this,timeout,offerid,timeoutcb);
     }
