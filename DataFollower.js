@@ -98,7 +98,7 @@ DataFollower.prototype.huntTarget = function(data){
     return;
   }
   var target = data;
-  if(!(target&&target.element)){
+  if(!(target&&target.newElement)){
     this.stalled = true;
     console.trace();
     this.setStatus('STALLED');
