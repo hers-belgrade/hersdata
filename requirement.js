@@ -20,14 +20,14 @@ function init(){
   this.self.counter = 0;
 };
 
-function offerTickOut(t,to,oid,tocb){
+function offerTickOut(t,to,oid,tocb, user){
   tocb(to);
   if(to){
     to--;
     t.self.offertimeouts[oid] = {timeout:Timeout.set(offerTickOut,1000,t,to,oid,tocb),cb:tocb};
   }else{
     tocb();
-    t&&t.self && t.self.offer && t.self.offer({offerid:oid});
+    t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, user);
   }
 };
 
@@ -68,7 +68,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
         t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, tuser)
       },timeout,this,offerid,user)};
     }else{
-      offerTickOut(this,timeout,offerid,timeoutcb);
+      offerTickOut(this,timeout,offerid,timeoutcb, user);
     }
   }
   this.data.commit('set_offer',actions);
