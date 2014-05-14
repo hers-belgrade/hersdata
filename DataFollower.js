@@ -34,6 +34,8 @@ DataFollower.prototype.destroy = function(){
   if(!this.destroyed){//ded already
     return;
   }
+  //var p = this.path;
+  //console.log(this.path,'dying');
   for(var i in this.followers){
     this.followers[i].destroy();
     delete this.followers[i];
@@ -48,6 +50,7 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
+  //console.log(p,'died totally',this);
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
 };
@@ -64,6 +67,9 @@ function listenForTarget(target,data,cursor){
       //console.log('time has come for',this.path[cursor],'on',this.path);
       Timeout.next(function(t){t.huntTarget(data);},this);
     }else{
+      if(name==this.path[cursor]){
+        console.log(typeof name, typeof this.path[cursor]);
+      }
       //console.log('no can do',name,'<>',this.path[cursor],'on',this.path);
     }
   },target.newElement);
@@ -169,6 +175,7 @@ DataFollower.prototype.huntTarget = function(data){
       }
       break;
     }else{
+      //console.log('target ok on',this.path[cursor],'on',ttarget.dataDebug());
       target = ttarget;
     }
     cursor++;
@@ -277,9 +284,7 @@ DataFollower.prototype.reportElement = function(name,el,cb){
       this.reportScalar(name,el,cb);
       break;
     case 'Collection':
-      if(this.contains(el.access_level())){
-        cb.call(this,[this.path,[name,null]]);
-      }
+      this.reportCollection(name,el,cb);
       break;
   }
 };
@@ -364,9 +369,11 @@ DataFollower.prototype.waitForever = function(queryarry,cb){
 DataFollower.prototype.follow = function(path,cb,saycb){
   path = path || [];
   var spath = path.join('/') || '.';
+  //console.log('about to follow',spath);
   if(this.followers){
     var f = this.followers[spath];
     if(f){
+      //console.log('already have follower for',spath);
       cb && cb.call(f,f._status);
       return f;
     }
@@ -400,6 +407,7 @@ DataFollower.prototype.follow = function(path,cb,saycb){
       }
     })(this.followers,spath));
   }
+  //console.log('returning new df');
   return df;
 };
 DataFollower.prototype.describe = function(cb){

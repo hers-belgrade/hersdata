@@ -394,6 +394,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
 
 ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,obj){
   if (obj && ('function' === typeof(obj.destroy))) {
+    //console.log('putting destroyable to',counter);
     if (!this.destroyables){
       this.destroyables = {};
       this.destroyablecount = 0;
@@ -406,6 +407,7 @@ ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,ob
         return function(){
           t.destroyablecount--;
           //console.log('desctcnt',t.destroyablecount);
+          //console.log('removing destroyable',cnt);
           delete t.destroyables[cnt];
         }
       })(this,counter));
