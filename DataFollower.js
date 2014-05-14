@@ -12,6 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
+  this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
   this.path = path;
@@ -33,17 +34,23 @@ DataFollower.prototype.destroy = function(){
   if(!this.destroyed){//ded already
     return;
   }
+  //var p = this.path;
+  //console.log(this.path,'dying');
   for(var i in this.followers){
     this.followers[i].destroy();
     delete this.followers[i];
   }
-  this.destroyed.fire();
+  //block reentrance
+  var dh = this.destroyed;
+  delete this.destroyed;
+  dh.fire();
+  this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
   for(var i in this){
     delete this[i];
   }
-  this.setStatus('DISCARD_THIS');
   __DataFollowerInstanceCount--;
+  //console.log(p,'died totally',this);
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
 };
@@ -60,6 +67,9 @@ function listenForTarget(target,data,cursor){
       //console.log('time has come for',this.path[cursor],'on',this.path);
       Timeout.next(function(t){t.huntTarget(data);},this);
     }else{
+      if(name==this.path[cursor]){
+        console.log(typeof name, typeof this.path[cursor]);
+      }
       //console.log('no can do',name,'<>',this.path[cursor],'on',this.path);
     }
   },target.newElement);
@@ -90,6 +100,8 @@ DataFollower.prototype.huntTarget = function(data){
   var target = data;
   if(!(target&&target.element)){
     this.stalled = true;
+    console.trace();
+    this.setStatus('STALLED');
     return;
   }
   delete this.stalled;
@@ -163,6 +175,7 @@ DataFollower.prototype.huntTarget = function(data){
       }
       break;
     }else{
+      //console.log('target ok on',this.path[cursor],'on',ttarget.dataDebug());
       target = ttarget;
     }
     cursor++;
@@ -271,9 +284,7 @@ DataFollower.prototype.reportElement = function(name,el,cb){
       this.reportScalar(name,el,cb);
       break;
     case 'Collection':
-      if(this.contains(el.access_level())){
-        cb.call(this,[this.path,[name,null]]);
-      }
+      this.reportCollection(name,el,cb);
       break;
   }
 };
@@ -344,7 +355,6 @@ DataFollower.prototype.waitForever = function(queryarry,cb){
     if(!u){return;}
     u.waitFor(t.data,queryarry,function(discard){
       if(discard==='DISCARD_THIS'){
-        console.log('waitFor again',wfFunc);
         wfFunc && wfFunc();
         return;
       }
@@ -359,9 +369,11 @@ DataFollower.prototype.waitForever = function(queryarry,cb){
 DataFollower.prototype.follow = function(path,cb,saycb){
   path = path || [];
   var spath = path.join('/') || '.';
+  //console.log('about to follow',spath);
   if(this.followers){
     var f = this.followers[spath];
     if(f){
+      //console.log('already have follower for',spath);
       cb && cb.call(f,f._status);
       return f;
     }
@@ -376,16 +388,26 @@ DataFollower.prototype.follow = function(path,cb,saycb){
       };
     })(this);
   }
+  if(!this.data){
+    console.trace();
+    console.log('no data on parent');
+  }
+  if(!this._parent){
+    console.trace();
+    console.log('parent destroyed');
+  }
   var df = new DataFollower(this.data,cb,saycb,this,path);
   if(df.destroyed){
     this.followers[spath] = df;
     df.destroyed.attach((function(fs,sp){
       var _fs=fs,_sp = sp;
       return function(){
+        //console.log('parent follower removing',_sp);
         delete _fs[_sp];
       }
     })(this.followers,spath));
   }
+  //console.log('returning new df');
   return df;
 };
 DataFollower.prototype.describe = function(cb){
@@ -405,39 +427,95 @@ DataFollower.prototype.handleBid = function(reqname,cb){
     }
   });
 };
-DataFollower.prototype.handleOffer = function(reqname,cb){
-  var op = ['__requirements',reqname,'offers'];
-  var t = this;
-  var opf = this.follow(op,function(stts){
-      if(reqname==='save'){
-        console.log('opf status',stts);
-      }
-    },function(item){
-    if(item && item[1]){
-      var offerid = parseInt(item[1][0]);
-      if(offerid){
-        var opdf = t.follow(op.concat([offerid]),function(stts){
-          if(reqname==='save'){
-            console.log('opdf status',stts);
-          }
-          if(opdf && opdf.called && stts!=='OK'){
-            cb(offerid);
-            opdf.destroyed && opdf.destroy();
-          }
-          },
-          function offerdatacb(item){
-            if(item && item[1] && item[1][0] === 'data' && item[1][1]){
-              opdf.called = true;
-              if(cb(offerid,item[1][1])){
-                opf.destroyed && opf.destroy();
-              }
-            }
-          }
-        );
-      }
+function OfferHandler(df,reqname,cb){
+  this.cb = cb;
+  this.follower = df.follow(['__requirements',reqname,'offers'],(function(t){
+    return function(stts){
+      t.handleStatus(stts);
+    };
+  })(this),(function(t){
+    return function(item){
+      t.handleSay(item);
     }
-  });
-  return opf;
+  }(this)));
+  this.follower.destroyed.attach((function(t){
+    return function(){
+      t.destroy();
+    };
+  })(this));
+}
+OfferHandler.prototype.handleStatus = function(stts){
+  //console.log('offer branch status',stts);
+};
+OfferHandler.prototype.handleSay = function(item){
+  if(item==='DISCARD_THIS'){
+    return;
+  }
+  /*
+  console.log(
+    this.follower._parent._parent.path,
+    this.follower._parent.path,
+    this.follower.path,
+    'item',item);
+  */
+  if(!this.follower){
+    //console.log('but no follower');
+    return;
+  }
+  if(item && item[1]){
+    this.offerid = item[1][0];
+    if(typeof this.offerid!== 'undefined'){
+      //console.log('offerbranch on',this.offerid,'is ok, going for',[this.offerid]);
+      this.subfollower = this.follower.follow([this.offerid],(function(t){
+        return function(stts){
+          t.handleSubStatus(stts);
+        };
+      })(this),(function(t){
+        return function(item){
+          t.handleSubSay(item);
+        };
+      })(this));
+    }
+  }
+};
+OfferHandler.prototype.handleSubStatus = function(stts){
+  if(this.cb && this.subfollower && this.subfollower.called && stts!=='OK'){
+    //console.log('subfollower will be destroyed');
+    this.cb(this.offerid);
+    var sf = this.subfollower;
+    delete this.subfollower;
+    sf.destroyed && sf.destroy();
+  }
+};
+OfferHandler.prototype.handleSubSay = function(item){
+  if(this.cb && item && item[1] && item[1][0] === 'data' && item[1][1]){
+    /*
+    console.log(
+    this.follower._parent._parent.path,
+    this.follower._parent.path,
+    this.follower.path,
+    this.subfollower.path,
+    'going for',this.offerid,item[1][1]);
+    */
+    this.subfollower.called = true;
+    if(this.cb(this.offerid,item[1][1])){
+      //console.trace();
+      //console.log('offer handler will be destroyed');
+      this.destroy();
+    }
+  }
+};
+OfferHandler.prototype.destroy = function(){
+  delete this.cb;
+  if(!this.follower){return;}
+  this.follower.destroyed && this.follower.destroy();
+  delete this.follower;
+  if(!this.subfollower){return;}
+  this.subfollower.destroyed && this.subfollower.destroy();
+  delete this.subfollower;
+};
+DataFollower.prototype.handleOffer = function(reqname,cb){
+  return new OfferHandler(this,reqname,cb);
 };
 
 module.exports = DataFollower;

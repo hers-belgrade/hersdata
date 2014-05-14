@@ -5,6 +5,7 @@ var errors = {
   'NO_BIDDING_ON_THIS_REQUIREMENT':{message:'This requirement does not support bidding'},
   'NO_OFFERS_ON_THIS_REQUIREMENT':{message:'This requirement does not support offers'},
   'INTERNAL_ERROR':{message:'An internal error has occured: [error]. Please contact the software vendor'},
+  'DUPLICATE_OFFER_ID': {message:'Offer could not be set, there is already offer [offerid] pending',params:['offerid']},
   'BID_REFUSED':{message:'Your bid has been refused'},
   'OFFER_REFUSED':{message:'Your offer has been refused'},
   'DO_OFFER':{message:'Give your final offer on [offerid]',params:['offerid']},
@@ -47,12 +48,15 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     actions.push(['set',['offers']]);
   }else{
     if(offersel.element([offerid])){
+      cb('DUPLICATE_OFFER_ID',offerid);
+      return;
       console.trace();
+      console.log(offersel.dataDebug());
       console.log('duplicate offerid',offerid);
       process.exit(0);
     }
   }
-  actions.push(['set',['offers',offerid]]);
+  actions.push(['set',['offers',offerid],user.fullname()]);
   actions.push(['set',['offers',offerid,'data'],[data4json,undefined,user.fullname()]]);
   if(timeout>0){
     if(!this.self.offertimeouts){
@@ -94,7 +98,6 @@ function doCall(callname,cb, id, user){
     }
     cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
   },function dooffer(offerobj){
-    var u = user;
     t.self.setOffer(offerobj,function(errc,errp){
       if(errc==='OFFER_SET'){
         cb('DO_OFFER',errp[0]);
@@ -136,8 +139,9 @@ function offer(paramobj,cb,user){
   }
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
-    console.log('no offerid',offerid,'on',this.data.element(['offers']).dataDebug());
+    console.log('no offerid',offerid,'on',this.data.element(['offers']).dataDebug(),'for',user.fullname(),this.self.counter);
     cb('INVALID_OFFER_ID',offerid);
+    process.exit(0);
     return;
   }
   delete paramobj.offerid;

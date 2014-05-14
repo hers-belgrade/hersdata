@@ -80,15 +80,23 @@ ReplicatorCommunication.prototype.send = function(code){
   this.counter.inc();
   var cnt = this.counter.toString();
   var sendobj = {counter:cnt};
-  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false,code);
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false);
   this.sendobj(sendobj);
 };
 ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pathtome){
   if(!user.replicators){
     user.replicators = {};
   }
+  if(!user.replicatorcbs){
+    user.replicatorcbs = {};
+  }
   if(!user.replicators[this._id]){
+    if(typeof replicationid === 'undefined'){
+      this.counter.inc();
+      replicationid = this.counter.toString();
+    }
     user.replicators[this._id] = replicationid;
+    user.replicatorcbs[this._id] = [];
     this.sayers[replicationid] = (function(u,p){
       var _u = u, _p = p;
       return function(item){if(!_u.say){
@@ -96,15 +104,24 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
         return;
       }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome||[]);
-    user.destroyed.attach((function(t,replicationid){
-      var _t = t, _cnt = replicationid; 
+    user.destroyed.attach((function(t,replicationid,user){
+      var _t = t, _cnt = replicationid,_u = user; 
       return function(){
         //console.trace();
-        //console.log(user.fullname(),'destroyed on',_cnt);
+        //console.log(_u.fullname(),'destroyed on',_cnt);
+        var mycbrefs = _u.replicatorcbs[_t._id];
+        if(mycbrefs){
+          for(var i in mycbrefs){
+            var mcbr = mycbrefs[i];
+            //console.log('clearing cbref',mcbr);
+            delete _t.cbs[mcbr];
+            delete _t.persist[mcbr];
+          }
+        }
         _t.sendobj({destroy:_cnt});
         delete _t.sayers[_cnt];
       };
-    })(this,replicationid));
+    })(this,replicationid,user));
   }
 };
 ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
@@ -119,8 +136,8 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
     process.exit(0);
   }
   this.counter.inc();
+  this.addToSenders(user,undefined,pathtome);
   var cnt = this.counter.toString();
-  this.addToSenders(user,cnt,pathtome);
   if(!user.replicators[this._id]){
     console.trace();
     console.log('no replicationid on the sending side');
@@ -130,7 +147,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
   if(!(this.users && this.users[user.fullname()])){
     sendobj.user.roles = user.roles();
   }
-  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,code);
+  sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,user);
   Timeout.next(function(t,so){t.sendobj(so);},this,sendobj);
   var t = this;
   return {
@@ -141,10 +158,10 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
     }
   }
 };
-ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
+ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist,user){
   if(ca[ca.length-1]==='__persistmycb'){
     ca.pop();
-    return this.prepareCallParams(ca,true);
+    return this.prepareCallParams(ca,true,user);
   }
   for(var i in ca){
     cb = ca[i];
@@ -159,6 +176,7 @@ ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist){
           this.persist = {};
         }
         this.persist[cts] = 1;
+        user.replicatorcbs[this._id].push(cts);
       }
       ca[i] = cs;
     }
@@ -194,8 +212,6 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
           }
         }
       }
-    }else{
-      console.log('no cb to invoke for',cbref,commandresult);
     }
   }
 };
@@ -378,6 +394,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
 
 ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,obj){
   if (obj && ('function' === typeof(obj.destroy))) {
+    //console.log('putting destroyable to',counter);
     if (!this.destroyables){
       this.destroyables = {};
       this.destroyablecount = 0;
@@ -390,6 +407,7 @@ ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,ob
         return function(){
           t.destroyablecount--;
           //console.log('desctcnt',t.destroyablecount);
+          //console.log('removing destroyable',cnt);
           delete t.destroyables[cnt];
         }
       })(this,counter));

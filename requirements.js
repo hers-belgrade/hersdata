@@ -2,7 +2,9 @@ var errors = {
   'OK' : {message:'OK'},
   'INVALID_REQUIREMENTNAMES' : {message:'Requirements to start may be a string, commadelimited string or an array'},
   'REQUIREMENT_NOT_RECOGNIZED' : {message:'Requirement [requirement] cannot be started because it is not in the initial map', params:['requirement']},
-  'REQUIREMENT_ALREADY_PENDING' : {message:'Requirement [requirement] is already pending', params:['requirement']}
+  'REQUIREMENT_ALREADY_PENDING' : {message:'Requirement [requirement] is already pending', params:['requirement']},
+  'OFFER_SET':{message:'Offer set at [offerid]',params:['offerid']},
+  'DUPLICATE_OFFER_ID': {message:'Offer could not be set, there is already offer [offerid] pending',params:['offerid']}
 };
 
 function init(){
@@ -82,10 +84,11 @@ function startwoffer(requirementswoffers,cb,user){
         ]);
       };
     })(i)});
-    f.setOffer(r.offer,function(){},user);
+    f.setOffer(r.offer,function(){
+      cb.apply(null,[arguments[0]].concat(arguments[1]));
+    },user);
   }
   //console.log('requirementwoffer set',this.data.dataDebug());
-  cb('OK');
 }
 startwoffer.params = 'originalobj';
 
