@@ -417,15 +417,22 @@ DataFollower.prototype.handleBid = function(reqname,cb){
 DataFollower.prototype.handleOffer = function(reqname,cb){
   var op = ['__requirements',reqname,'offers'];
   var t = this;
-  var opf = this.follow(op,function(){},function(item){
+  var opf = this.follow(op,function(stts){
+      if(reqname==='save'){
+        console.log('opf status',stts);
+      }
+    },function(item){
     if(item && item[1]){
       var offerid = parseInt(item[1][0]);
       if(offerid){
         var opdf = t.follow(op.concat([offerid]),function(stts){
-            if(opdf && opdf.called && stts!=='OK'){
-              cb(offerid);
-              opdf.destroyed && opdf.destroy();
-            }
+          if(reqname==='save'){
+            console.log('opdf status',stts);
+          }
+          if(opdf && opdf.called && stts!=='OK'){
+            cb(offerid);
+            opdf.destroyed && opdf.destroy();
+          }
           },
           function offerdatacb(item){
             if(item && item[1] && item[1][0] === 'data' && item[1][1]){
