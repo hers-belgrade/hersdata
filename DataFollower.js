@@ -215,6 +215,8 @@ DataFollower.prototype.attachToCollection = function(name,el){
 };
 DataFollower.prototype.emitScalarValue = function(name,val,cb){
   if(!cb){return;}
+    cb.call(this,[this.path,[name,val]]);
+    return;
   if(typeof val === 'undefined'){
     cb.call(this,[this.path,[name]]);
   }else{
@@ -241,6 +243,9 @@ DataFollower.prototype.attachToScalar = function(name,el){
     }
   },el.changed);
   this.createListener(name+'_destroyed',function(){
+    if(name==='remaining'){
+      console.log('destroyed',this.path,name);
+    }
     this.say([this.path,[name]]);
     this.destroyListener(name+'_changed');
     this.destroyListener(name+'_destroyed');
@@ -274,7 +279,7 @@ DataFollower.prototype.reportCollection = function(name,el,cb){
   }
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
-  cb.call(this,[this.path,[name,this.contains(el.access_level()) ? el.value() : el.public_value()]]);
+  this.emitScalarValue(name,this.contains(el.access_level()) ? el.value() : el.public_value(),cb);
 };
 DataFollower.prototype.reportElement = function(name,el,cb){
   cb = cb || this.say;
