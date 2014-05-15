@@ -106,7 +106,7 @@ DeStreamer.prototype.processItemData = function(itemdata){
       if(this.destreamerpos && this.destreamerdepth){
         c = new DeStreamer('*',{from:this.destreamerpos+1,depth:this.destreamerdepth-1});
       }else{
-        console.log('no child DeStreamer for',itemdata[0],this.destreamerpos,this.destreamerdepth);
+        //console.log('no child DeStreamer for',itemdata[0],this.destreamerpos,this.destreamerdepth);
         c = new Collection();
       }
       this.add(itemdata[0],c);
