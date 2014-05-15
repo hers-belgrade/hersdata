@@ -24,6 +24,7 @@ function PathTranslator(path,replaceleading){
       _h.fire(item);
     }
   })(this.hook));
+  this.replacementpath = path.slice();
 };
 PathTranslator.prototype.attach = function(cb){
   return this.hook.attach(cb);
