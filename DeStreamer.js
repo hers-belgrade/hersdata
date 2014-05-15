@@ -44,10 +44,14 @@ ElementWaiter.prototype.destroy = function(){
   }
 };
 
-function DeStreamer(elemnamearry){
-  this.elemnames = {};
-  for(var i in elemnamearry){
-    this.elemnames[elemnamearry[i]] = 1;
+function DeStreamer(elemnamearry,options){
+  this.destreamerpos = options.from;
+  this.destreamerdepth = options.depth||0;
+  if(typeof elemnamearry==='object' && elemnamearry instanceof Array){
+    this.elemnames = {};
+    for(var i in elemnamearry){
+      this.elemnames[elemnamearry[i]] = 1;
+    }
   }
   Collection.call(this);
 }
@@ -59,8 +63,34 @@ DeStreamer.prototype = Object.create(Collection.prototype,{constructor:{
 }});
 DeStreamer.prototype.destream = function(item){
   //console.log('destreaming',item);
-  if(item && item[1] && item[1][0] in this.elemnames){
-    //console.log('PROCESSING',item[1]);
+  if(!item){
+    return;
+  }
+  if(typeof item[0] === 'undefined'){
+    return;
+  }
+  var p = item[0],pl = p.length,dd = typeof this.destreamerpos === 'undefined' ? pl-1 : this.destreamerpos+1;
+  if(pl<dd){
+    return;
+  }
+  if(pl>dd){
+    var n = p[dd];
+    //console.log('looking for',n);
+    var el = this.elementRaw(n);
+    if(el && el.destream){
+      //console.log('data destreamer at',n,'destreaming');
+      el.destream(item);
+    }
+    return;
+  }
+  //console.log('finally',item[1]);
+  if(this.elemnames){
+    if(item[1] && item[1][0] in this.elemnames){
+      //console.log('PROCESSING',item[1]);
+      this.processItemData(item[1]);
+    }
+  }else{
+    //console.log('destreaming',item);
     this.processItemData(item[1]);
   }
 };
@@ -72,7 +102,14 @@ DeStreamer.prototype.processItemData = function(itemdata){
   var d = this.elementRaw(itemdata[0]);
   if(!d){
     if(itemdata[1] === null){
-      this.add(itemdata[0],new Collection());
+      var c;
+      if(this.destreamerpos && this.destreamerdepth){
+        c = new DeStreamer('*',{from:this.destreamerpos+1,depth:this.destreamerdepth-1});
+      }else{
+        console.log('no child DeStreamer for',itemdata[0],this.destreamerpos,this.destreamerdepth);
+        c = new Collection();
+      }
+      this.add(itemdata[0],c);
       return;
     }
     this.add(itemdata[0],new Scalar(itemdata[1]));
@@ -131,6 +168,23 @@ DeStreamer.prototype.handleNewElement = function(elname,el){
       this.attachWaitertoScalar(wss[i],el,elv);
     }
   }
+};
+DeStreamer.prototype.toStream = function(cb,path){
+  path = path || [];
+  console.log('toStream',this.dataDebug());
+  this.traverseElements(function(name,elem){
+    switch(elem.type()){
+      case 'Scalar':
+        cb([path,[name,elem.value()]]);
+        break;
+      case 'Collection':
+        cb([path,[name,null]]);
+        if(elem && elem.toStream){
+          elem.toStream(cb,path.concat([name]));
+        }
+        break;
+    }
+  });
 };
 
 module.exports = DeStreamer;
