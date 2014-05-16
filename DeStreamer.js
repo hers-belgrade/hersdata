@@ -171,7 +171,7 @@ DeStreamer.prototype.handleNewElement = function(elname,el){
 };
 DeStreamer.prototype.toStream = function(cb,path){
   path = path || [];
-  console.log('toStream',this.dataDebug());
+  //console.log('toStream',this.dataDebug());
   this.traverseElements(function(name,elem){
     switch(elem.type()){
       case 'Scalar':
