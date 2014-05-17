@@ -109,7 +109,7 @@ Broadcaster.prototype.describe = function(cb,translatorname){
       cb = t.translate(cb);
     }
   }
-  cb([undefined,[':reset',[]]]);
+  //cb([undefined,[':reset',[]]]);
   if(this.remotepath){
     this.describeElem(this.dcptree,cb);
   }else{
