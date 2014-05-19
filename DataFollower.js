@@ -100,7 +100,6 @@ DataFollower.prototype.huntTarget = function(data){
   var target = data;
   if(!(target&&target.newElement)){
     this.stalled = true;
-    console.trace();
     this.setStatus('STALLED');
     return;
   }
@@ -427,8 +426,9 @@ DataFollower.prototype.describe = function(cb){
 DataFollower.prototype.handleBid = function(reqname,cb){
   var bf = this.follow(['__requirements',reqname],function(stts){
     if(stts==='OK'){
-      bf.destroy();
-      cb();
+      if(cb()){
+        bf.destroy();
+      }
     }
   });
 };

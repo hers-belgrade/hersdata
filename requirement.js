@@ -141,7 +141,7 @@ function offer(paramobj,cb,user){
   if(!offerel){
     console.log('no offerid',offerid,'on',this.data.element(['offers']).dataDebug(),'for',user.fullname(),this.self.counter);
     cb('INVALID_OFFER_ID',offerid);
-    process.exit(0);
+    //process.exit(0);
     return;
   }
   delete paramobj.offerid;

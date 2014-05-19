@@ -29,6 +29,10 @@ User.prototype.contains = function(key){
   return KeyRing.prototype.contains.call(this,key);
 };
 User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb,remotepath){
+  if(!data){
+    cb && cb('DISCARD_THIS');
+    return;
+  }
   if(typeof path === 'string'){
     if(!path){
       cb && cb('INVALID_DATA_PATH');
