@@ -63,6 +63,7 @@ DeStreamer.prototype = Object.create(Collection.prototype,{constructor:{
 }});
 DeStreamer.prototype.destream = function(item){
   //console.log('destreaming',item);
+  if(!this.elementRaw){return;} //me ded
   if(!item){
     return;
   }
