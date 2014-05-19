@@ -19,6 +19,12 @@ BroadcasterGroup.prototype.add = function(bcastername,data,username,realmname,ro
   makeupcb && makeupcb(b);
   this.bcasters[bcastername] = b;
   this.newBroadcaster.fire(bcastername,b);
+  var t = this;
+  b.destroyed.attach(function(){
+    console.log(bcastername,'gone from BroadcasterGroup');
+    t.newBroadcaster.fire(bcastername);
+    delete t.bcasters[bcastername];
+  });
   return b;
 };
 BroadcasterGroup.prototype.traverse = function(cb,ctx){

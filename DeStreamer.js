@@ -63,6 +63,7 @@ DeStreamer.prototype = Object.create(Collection.prototype,{constructor:{
 }});
 DeStreamer.prototype.destream = function(item){
   //console.log('destreaming',item);
+  if(!this.elementRaw){return;} //me ded
   if(!item){
     return;
   }
@@ -171,7 +172,7 @@ DeStreamer.prototype.handleNewElement = function(elname,el){
 };
 DeStreamer.prototype.toStream = function(cb,path){
   path = path || [];
-  console.log('toStream',this.dataDebug());
+  //console.log('toStream',this.dataDebug());
   this.traverseElements(function(name,elem){
     switch(elem.type()){
       case 'Scalar':
