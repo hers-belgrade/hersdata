@@ -117,7 +117,7 @@ DataFollower.prototype.huntTarget = function(data){
   this.purgeListeners();
   if(!this.path){return;}
   while(cursor<this.path.length){
-    var ttarget = target.element([this.path[cursor]]);
+    var ttarget = target.elementRaw(this.path[cursor]);
     if(!ttarget){
       //console.trace();
       //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
@@ -188,11 +188,11 @@ DataFollower.prototype.huntTarget = function(data){
     for(var i in this.followers){
       var f = this.followers[i];
       if(f.stalled){
-        console.log('awakening',i);
+        //console.log('awakening',i);
         f.huntTarget(this.data);
-      }else{
-        console.log(i,'is awake');
-      }
+      }/*else{
+        //console.log(i,'is awake');
+      }*/
     }
   }
 }

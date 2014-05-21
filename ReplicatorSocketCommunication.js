@@ -5,6 +5,7 @@ var ReplicatorCommunication = require('./ReplicatorCommunication'),
 function ReplicatorSocketCommunication(data){
   ReplicatorCommunication.call(this,data);
 
+  this.bufferizingthreshold=100;
   this.lenBuf = new Buffer(4);
   this.lenBufread = 0;
   this.bytesToRead = -1;
@@ -75,8 +76,8 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     return;
   }
   var sl = this.sendingQueue.length;
-  if(sl>101){ //so that we leave at least on element in the queue
-    sl=100;
+  if(sl>this.bufferizingthreshold+1){ //so that we leave at least on element in the queue
+    sl=this.bufferizingthreshold;
   }
   var sq = this.sendingQueue.splice(0,sl);
   this.start = Timeout.now();
@@ -105,7 +106,19 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
 ReplicatorSocketCommunication.prototype.bufferize = function(sq){
   var sqb = new Buffer(JSON.stringify(sq),'utf8');
   var lb = new Buffer(4);
-  lb.writeUInt32LE(sqb.length,0);
+  var sqbl = sqb.length;
+  if(sqbl>64*1024){
+    this.bufferizingthreshold--;
+  }else{
+    this.bufferizingthreshold++;
+  }
+  if(this.bufferizingthreshold>200){
+    this.bufferizingthreshold=200;
+  }
+  if(this.bufferizingthreshold<50){
+    this.bufferizingthreshold=50;
+  }
+  lb.writeUInt32LE(sqbl,0);
   this.sendingBuffs.push(lb);
   this.sendingBuffs.push(sqb);
 }
