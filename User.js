@@ -96,14 +96,14 @@ User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
   }
 };
 User.prototype.invoke = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('invoke',data,path,2,'run',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
+  Timeout.next(this,'perform','invoke',data,path,2,'run',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
 };
 User.prototype.bid = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
+  Timeout.next(this,'perform','bid',data,path,1,'takeBid',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
   //this.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);
 };
 User.prototype.offer = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(function(t,data,path,paramobj,cb,remotepath){t.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);},this,data,path,paramobj,cb,remotepath);
+  Timeout.next(this,'perform','offer',data,path,1,'takeOffer',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
   //this.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
 };
 

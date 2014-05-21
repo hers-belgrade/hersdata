@@ -65,7 +65,7 @@ function listenForTarget(target,data,cursor){
   this.createListener('newelementlistener',function(name,el){
     if(name===this.path[cursor]){
       //console.log('time has come for',this.path[cursor],'on',this.path);
-      Timeout.next(function(t){t.huntTarget(data);},this);
+      Timeout.next(this,'huntTarget',data);
     }else{
       if(name==this.path[cursor]){
         console.log(typeof name, typeof this.path[cursor]);
@@ -80,11 +80,11 @@ function listenForDestructor(target,data,cursor){
     delete this.data;
     cursor--;
     if(cursor<0){
-      Timeout.next(function(t){t.destroy();},this);
+      Timeout.next(this,'destroy');
       return;
     }
     this.setStatus('RETREATING');
-    Timeout.next(function(t){t.huntTarget(data);},this);
+    Timeout.next(this,'huntTarget',data);
   },target.destroyed);
 }
 function listenForNew(target,data,cursor){
@@ -338,7 +338,7 @@ DataFollower.prototype.topSayer = function(){
   return this._parent.say ? this._parent : this;
 };
 DataFollower.prototype.contains = function(key){
-  return this._parent.contains(key);
+  return this._parent ? this._parent.contains(key) : false;
 };
 DataFollower.prototype.invoke = function(path,paramobj,cb){
   return this.user().invoke(this.data,path,paramobj,cb,this.remotepath);

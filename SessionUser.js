@@ -13,6 +13,8 @@ function ConsumerSession(u,session){
 };
 ConsumerSession.initTxn = JSON.stringify([JSON.stringify([]),JSON.stringify([null,'init'])]);
 ConsumerSession.prototype.destroy = function(){
+  if(!this.user){return;}
+  this.user.sessionDown(this);
   for(var i in this){
     delete this[i];
   }
@@ -33,6 +35,7 @@ ConsumerSession.prototype.setSocketIO = function(sock){
   var t = this;
   sock.on('disconnect',function(){
     delete t.sockio;
+    //t.destroy();
   });
   while(this.queue.length){
     //console.log('dumping q',this.queue);
@@ -40,6 +43,7 @@ ConsumerSession.prototype.setSocketIO = function(sock){
   }
 };
 ConsumerSession.prototype.say = function(item){
+  if(!this.session){return;}
   var n = Timeout.now();
   if(this.sockio){
     //console.log('emitting',item);
@@ -61,6 +65,7 @@ ConsumerSession.prototype.say = function(item){
 
 function SessionUser(data,username,realmname,roles){
   sessions = {};
+  this.sessioncount=0;
   var t = this;
   DataUser.call(this,data,function(){},function(item){
     //console.log(t.username,'<=',item);
@@ -89,6 +94,33 @@ SessionUser.prototype.makeSession = function(sess){
   }
   if(this.sessions[sess]){return;}
   this.sessions[sess] = new ConsumerSession(this,sess);
+  this.sessioncount++;
+  if(this.dieTimeout){
+    Timeout.clear(this.dieTimeout);
+    delete this.dieTimeout;
+  }
 };
+SessionUser.prototype.sessionDown = function(sess){
+  delete this.sessions[sess.session];
+  this.sessioncount--;
+  console.log(this.username(),'session',sess.session,'down',this.sessioncount,'left');
+  if(this.sessioncount<1){
+    if(this.dieTimeout){
+      Timeout.clear(this.dieTimeout);
+    }
+    this.dieTimeout = Timeout.set(this,3000,'destroy');
+  }
+};
+SessionUser.prototype.destroy = function(){
+  console.log(this.username(),'destroying');
+  for(var i in this.sessions){
+    //destroy mechanism of ConsumerSession is too complicated, so
+    var s = this.sessions[i];
+    for(var i in s){
+      delete s[i];
+    }
+  }
+  DataUser.prototype.destroy.call(this);
+}
 
 module.exports = SessionUser;

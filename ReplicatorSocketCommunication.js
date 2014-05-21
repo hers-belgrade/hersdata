@@ -47,23 +47,24 @@ ReplicatorSocketCommunication.prototype.createUnzip = function(){
     t.dataRead+=chunk.toString('utf8');
   });
   this.unzip.on('end',function(){
-    Timeout.next(function(t){
-      if(t.dataRead){
-        var eq = JSON.parse(t.dataRead);
-        t.dataRead = '';
-        Array.prototype.push.apply(t.execQueue,eq);
-        //console.log(t.execQueue);
-        t.maybeExec();
-      }
-      t.createUnzip();
-      t.processData(t.currentData,t.dataCursor);
-    },t);
+    Timeout.next(t,'handleUnzipEnd');
   });
   this.unzip.on('error',function(){
     console.log('unzip error',arguments);
     process.exit(0);
   });
   //console.log('new unzip created');
+};
+ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
+  if(this.dataRead){
+    var eq = JSON.parse(this.dataRead);
+    this.dataRead = '';
+    Array.prototype.push.apply(this.execQueue,eq);
+    //console.log(this.execQueue);
+    this.maybeExec();
+  }
+  this.createUnzip();
+  this.processData(this.currentData,this.dataCursor);
 };
 ReplicatorSocketCommunication.prototype._internalSend = function(buf){
   if(!this.socket){return;}
@@ -88,20 +89,21 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     t.sendingBuffs && t.sendingBuffs.push(chunk);
   });
   zip.on('end',function(){
-    Timeout.next(function(t){
-      if(!t.sendingBuffs){return;}
-      var tl = 0;
-      for (var i in t.sendingBuffs){
-        tl+=t.sendingBuffs[i].length;
-      }
-      var lb = new Buffer(4);
-      lb.writeUInt32LE(tl,0);
-      t.sendingBuffs.unshift(lb);
-      t.sendMore();
-    },t);
+    Timeout.next(t,'handleZipEnd');
   });
   zip.write(sqb);
   zip.end();
+};
+ReplicatorSocketCommunication.prototype.handleZipEnd = function(){
+  if(!this.sendingBuffs){return;}
+  var tl = 0;
+  for (var i in this.sendingBuffs){
+    tl+=this.sendingBuffs[i].length;
+  }
+  var lb = new Buffer(4);
+  lb.writeUInt32LE(tl,0);
+  this.sendingBuffs.unshift(lb);
+  this.sendMore();
 };
 ReplicatorSocketCommunication.prototype.sendobj = function(obj){
   if(!this.sendingQueue){return;}
@@ -133,9 +135,7 @@ ReplicatorSocketCommunication.prototype.sendingDoneHandler = function(){
   ReplicatorSocketCommunication.output -= this.sendingLength;
   //console.log(this.sendingLength/elaps);
   //console.log(this.__id,'drain',this.sendingBuffer.length);
-  Timeout.next(function(t){
-    t.sendMore();
-  },this);
+  Timeout.next(this,'sendMore');
 };
 
 
@@ -155,7 +155,7 @@ ReplicatorSocketCommunication.prototype.listenTo = function(socket){
   this.socket.setNoDelay(true);
   socket.on('data',function(data){
     //console.log(t.__id,'data');
-    Timeout.next(function(t){t.processData(data);},t);
+    Timeout.next(t,'processData',data);
   });
   socket.on('drain',function(){t.sendingDoneHandler()});
   this._internalSend();
@@ -242,7 +242,7 @@ ReplicatorSocketCommunication.prototype.exec = function(){
 };
 ReplicatorSocketCommunication.prototype.maybeExec = function(){
   if(this.execQueue && this.execQueue.length){
-    Timeout.next(function(t){t.exec();},this);
+    Timeout.next(this,'exec');
   }
 };
 

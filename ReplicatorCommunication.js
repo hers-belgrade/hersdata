@@ -148,7 +148,7 @@ ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,c
     sendobj.user.roles = user.roles();
   }
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,4),false,user);
-  Timeout.next(function(t,so){t.sendobj(so);},this,sendobj);
+  Timeout.next(this,'sendobj',sendobj);
   var t = this;
   return {
     destroy:function(){
