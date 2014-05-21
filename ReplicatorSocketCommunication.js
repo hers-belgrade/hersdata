@@ -76,10 +76,14 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     //console.log(this.__id,'got out because I am already sending');
     return;
   }
+  var sl = this.sendingQueue.length;
+  if(sl>100){
+    sl=100;
+  }
+  var sq = this.sendingQueue.splice(0,sl);
   this.sending = true;
   this.start = Timeout.now();
-  var sqb = new Buffer(JSON.stringify(this.sendingQueue),'utf8');
-  this.sendingQueue = [];
+  var sqb = new Buffer(JSON.stringify(sq),'utf8');
   this.originalSize = sqb.length;
   /*
   var zip = zlib.createGzip({
