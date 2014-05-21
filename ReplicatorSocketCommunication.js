@@ -81,6 +81,7 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
   var sqb = new Buffer(JSON.stringify(this.sendingQueue),'utf8');
   this.sendingQueue = [];
   this.originalSize = sqb.length;
+  /*
   var zip = zlib.createGzip({
     level:9
   });
@@ -93,6 +94,12 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
   });
   zip.write(sqb);
   zip.end();
+  */
+  var lb = new Buffer(4);
+  lb.writeUInt32LE(sqb.length,0);
+  this.sendingBuffs.push(lb);
+  this.sendingBuffs.push(sqb);
+  this.sendMore();
 };
 ReplicatorSocketCommunication.prototype.handleZipEnd = function(){
   if(!this.sendingBuffs){return;}
@@ -196,15 +203,16 @@ ReplicatorSocketCommunication.prototype.processData = function(data,offset){
   if(canread>this.bytesToRead){
     canread=this.bytesToRead;
   }
-  //this.dataRead+=data.toString('utf8',i,i+canread);
-  this.unzip.write(data.slice(i,i+canread));
+  this.dataRead+=data.toString('utf8',i,i+canread);
+  //this.unzip.write(data.slice(i,i+canread));
   this.bytesToRead-=canread;
   i+=canread;
   this.dataCursor = i;
   if(this.bytesToRead===0){
     this.bytesToRead=-1;
     this.lenBufread=0;
-    this.unzip.end();
+    this.handleUnzipEnd();
+    //this.unzip.end();
   }else{
     //console.log('at',i,'data is',data.length,'long, now what?');
     if(i===data.length){
