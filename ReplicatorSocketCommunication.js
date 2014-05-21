@@ -57,11 +57,13 @@ ReplicatorSocketCommunication.prototype.createUnzip = function(){
 };
 ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
   if(this.dataRead){
+    //var n = Timeout.now();
     var eq = JSON.parse(this.dataRead);
     this.dataRead = '';
     Array.prototype.push.apply(this.execQueue,eq);
     //console.log(this.execQueue);
     this.maybeExec();
+    //console.log('exec time',Timeout.now()-n);
   }
   this.createUnzip();
   this.processData(this.currentData,this.dataCursor);
