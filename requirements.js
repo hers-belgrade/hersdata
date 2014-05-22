@@ -13,6 +13,11 @@ function init(){
   this.data.commit('requirements_init',actions);
   */
 };
+function _close(requirement, cb) {
+  this.data.commit ('close_bid', [
+    ['remove', [requirement]]
+  ]);
+}
 
 function start(requirements,cb){
   var createactions = [];
@@ -97,5 +102,6 @@ module.exports = {
   errors:errors,
   init:init,
   start:start,
+  _close:_close,
   startwoffer:startwoffer
 };
