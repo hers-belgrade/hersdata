@@ -73,7 +73,7 @@ function _produceSession(user,paramobj,scb,nextcb){
   var sessid = paramobj[this.self.fingerprint];
   if(!sessid){
     sessid = user.sessionForAddress(paramobj.address);
-    console.log('session for address',paramobj.address,'is',sessid);
+    //console.log('session for address',paramobj.address,'is',sessid);
     if(sessid === null){
       scb('NO_SESSIONS_ALLOWED',paramobj.address);
       return;

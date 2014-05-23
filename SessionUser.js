@@ -82,6 +82,7 @@ function SessionUser(data,username,realmname,roles){
   this.sessions = sessions;
   this.sessionsperaddress = {};
 }
+var maxsessionsperaddress = 10;
 SessionUser.prototype = Object.create(DataUser.prototype,{constructor:{
   value:SessionUser,
   enumerable:false,
@@ -89,7 +90,7 @@ SessionUser.prototype = Object.create(DataUser.prototype,{constructor:{
   configurable:true
 }});
 SessionUser.prototype.sessionForAddress = function(address){
-  if(address&&!(this.sessionsperaddress&&this.sessionsperaddress[address]>3)){
+  if(address&&!(this.sessionsperaddress&&this.sessionsperaddress[address]>maxsessionsperaddress)){
     return; //may be new one
   }
   for(var i in this.sessions){
@@ -102,7 +103,7 @@ SessionUser.prototype.sessionForAddress = function(address){
   return null;
 };
 SessionUser.prototype.makeSession = function(sess,address){
-  if(this.sessionsperaddress && this.sessionsperaddress[address]>3){
+  if(this.sessionsperaddress && this.sessionsperaddress[address]>maxsessionsperaddress){
     return;
   }
   if(!sess){
