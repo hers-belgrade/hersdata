@@ -2,6 +2,7 @@ var Collection = require('./Collection');
 
 function CollectionReplica(name,realmname,skipdcp){
   if(!name){return;}
+  skipdcp = true;
   this.replicaToken = {name:name,realmname:realmname,skipdcp:skipdcp};
   var t = this;
   function going_down(){

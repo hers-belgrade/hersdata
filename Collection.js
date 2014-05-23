@@ -515,7 +515,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     }
   } 
 
-  var my_mod = {},req,off,reqs;
+  var my_mod = {},req,off,reqs, close;
   if (m.requirements) {
     if(!self.element(['__requirements'])){
       self.commit('requirements_create',[
@@ -528,8 +528,9 @@ Collection.prototype.attach = function(functionalityname, config, key){
     var rf = re.functionalities.requirements.f;
     req = rf.start;
     off = rf.startwoffer;
+    close = rf._close;
   }
-  var SELF = (function(s,r,m,su,rq,off){var _s=s,_r=r,_m=m, _su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, require:_req, offer:_offer};}})(self,ret,my_mod,new SuperUser(self,function() {}, function(){},fqnname,'dcp'),req,off);
+  var SELF = (function(s,r,m,su,rq,off, close){var _close = close,_s=s,_r=r,_m=m, _su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,my_mod,new SuperUser(self,function() {}, function(){},fqnname,'dcp'),req,off, close);
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
@@ -710,14 +711,9 @@ Collection.prototype.startHTTP = function(port,root,name,modulename){
     this.attach('./system',{});
   }
   var cp = new (require('./ReplicatorChildProcessCommunication').Parent)(this);
-  cp.listenTo(child_process.fork(__dirname+'/webserver.js',[port,root,name,modulename]));
+  cp.listenTo(child_process.fork(__dirname+'/WebServer.js',[port,root,name,modulename]));
   if (!this.processes) this.processes = [];
   this.processes.push (cp);
-  /*
-  this.onNewTransaction.attach(function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-    cp.send({rpc:[0,'_commit',txnalias,txnprimitives,txnid,chldcollectionpath]});
-  });
-  */
 };
 
 Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
