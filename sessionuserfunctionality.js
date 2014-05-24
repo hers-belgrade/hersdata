@@ -54,7 +54,8 @@ function _produceUser(paramobj,cb,nextcb){
     });
   }else{
     var u = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
-    this.self.userMap[ret.username()] = ret;
+    this.self.userMap[u.username()] = u;
+    console.log('new SessionUser',u.username());
     u.destroyed.attach((function(m,u){
       return function(){
         delete m[u.username()];
@@ -174,6 +175,7 @@ function userExecutor(session,user,paramobj,statuscb){
 };
 
 function executeOnUser(user,session,commands,cb){
+  console.log('executeOnUser',user.username(),commands);
   userExecutor.call(this,session,user,{commands:commands,dontparse:true},cb);
 };
 executeOnUser.params=['user','session','commands'];
