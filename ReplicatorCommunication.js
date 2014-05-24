@@ -126,11 +126,13 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
 };
 ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
   if(!(user.username()&&user.realmname())){
+    return;
     console.trace();
     console.log('user no good',user);
     process.exit(0);
   }
   if(typeof pathtome !== 'object'){
+    return;
     console.trace();
     console.log('pathtome is missing');
     process.exit(0);
