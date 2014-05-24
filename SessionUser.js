@@ -1,6 +1,10 @@
 var Timeout = require('herstimeout');
 var DataUser = require('./DataUser');
 
+var maxsessionsperaddress = 10,
+  maxsessionstotal = 50,
+  nosessionsgraceperiod = 3000;
+
 function ConsumerSession(u,session,address){
   this.user = u;
   this.session = session;
@@ -82,7 +86,6 @@ function SessionUser(data,username,realmname,roles){
   this.sessions = sessions;
   this.sessionsperaddress = {};
 }
-var maxsessionsperaddress = 10;
 SessionUser.prototype = Object.create(DataUser.prototype,{constructor:{
   value:SessionUser,
   enumerable:false,
@@ -112,7 +115,7 @@ SessionUser.prototype.makeSession = function(sess,address){
     process.exit(0);
   }
   if(this.sessions[sess]){return;}
-  if(this.sessioncount>20){return;}
+  if(this.sessioncount>maxsessionstotal){return;}
   this.sessions[sess] = new ConsumerSession(this,sess,address);
   this.sessioncount++;
   if(!this.sessionsperaddress[address]){
@@ -134,19 +137,16 @@ SessionUser.prototype.sessionDown = function(sess){
     if(this.dieTimeout){
       Timeout.clear(this.dieTimeout);
     }
-    this.dieTimeout = Timeout.set(this,3000,'destroy');
+    this.dieTimeout = Timeout.set(this,nosessionsgraceperiod,'destroy');
   }
 };
 SessionUser.prototype.destroy = function(){
   console.log(this.username(),'destroying');
-  for(var i in this.sessions){
-    //destroy mechanism of ConsumerSession is too complicated, so
-    var s = this.sessions[i];
-    for(var i in s){
-      delete s[i];
-    }
+  if(this.sessioncount){
+    console.log('not yet, there are still',this.sessioncount,'connected');
+    return;
   }
   DataUser.prototype.destroy.call(this);
-}
+};
 
 module.exports = SessionUser;
