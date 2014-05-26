@@ -5,27 +5,41 @@ var SessionUser = require('./SessionUser');
 
 var errors = {
   'OK':{message:'OK'},
+  'NO_NAME':{message:'No name was specified in the request'},
   'NO_SESSION':{message:'Session [session] does not exist',params:['session']},
   'NO_USER':{message:'No username was defined in request'},
-  'NO_COMMANDS':{message:'No commands to execute'}
+  'NO_COMMANDS':{message:'No commands to execute'},
+  'NO_ADDRESS':{message:'No remote address given'},
+  'NO_SESSIONS_ALLOWED':{message:'No sessions allowed from [address]',params:['address']},
+  'TOO_MANY_SESSIONS':{message:'Too many session'}
 };
 
 function _findUser(username){
   return this.self.userMap[username];
 }
 
-function _produceUser(paramobj,cb){
+function _produceUser(paramobj,cb,nextcb){
   if(!paramobj.name){
-    cb();
+    cb('NO_NAME');
     return;
   }
+  if(typeof cb === 'object'){
+    console.trace();
+    console.log('paramobj is an array');
+    process.exit(0);
+  }
+  var params = Array.prototype.slice.call(arguments,3);
+  params.unshift(cb);
+  params.unshift(paramobj);
   var u = this.self._findUser(paramobj.name);
   if(u){
-    cb(u);
+    params.unshift(u);
+    nextcb.apply(this,params);
     return;
   }
   if(this.self.userFactory){
     var map = this.self.userMap;
+    var t = this;
     this.self.userFactory(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
       if(user){
         map[user.username()] = user;
@@ -35,48 +49,65 @@ function _produceUser(paramobj,cb){
           delete m[u.username()];
         };
       })(map,user));
-      cb(user);
+      params.unshift(user);
+      nextcb.apply(t,params);
     });
   }else{
-    var ret = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
-    this.self.userMap[ret.username()] = ret;
-    ret.destroyed.attach((function(m,u){
+    var u = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
+    this.self.userMap[u.username()] = u;
+    u.destroyed.attach((function(m,u){
       return function(){
         delete m[u.username()];
       };
-    })(map,ret));
-    cb(ret);
+    })(map,u));
+    params.unshift(u);
+    nextcb.apply(this,params);
   }
 }
 
-function userDumper(slf,po,scb){
-  var self = slf, paramobj = po, statuscb = scb;
-  return function(user){
-    if(!user){
-      statuscb('NO_USER');
+function _produceSession(user,paramobj,scb,nextcb){
+  if(!user){
+    scb('NO_USER');
+    return;
+  }
+  var sessid = paramobj[this.self.fingerprint];
+  if(!sessid){
+    sessid = user.sessionForAddress(paramobj.address);
+    //console.log('session for address',paramobj.address,'is',sessid);
+    if(sessid === null){
+      scb('NO_SESSIONS_ALLOWED',paramobj.address);
       return;
     }
-    var sessid = paramobj[self.fingerprint];
     if(!sessid){
-      sessid=self.newSession();
-      console.log('created',sessid,'on',user.username(),'because',self.fingerprint,'was not found in',paramobj);
+      sessid=this.self.newSession();
+      console.log('created',sessid,'on',user.username(),'with',user.sessioncount,'because',this.self.fingerprint,'was not found in',paramobj);
     }
-    //console.log(user.sessions);
-    user.makeSession(sessid);
-    var session = {};
-    session[self.fingerprint]=sessid;
-    statuscb('OK', {
-      username:user.username(),
-      realmname:user.realmname(),
-      roles:paramobj.roles,
-      session:session,
-      data:user.sessions[sessid] ? user.sessions[sessid].retrieveQueue() : []
-    });
-  };
+  }
+  //console.log(user.sessions);
+  var params = Array.prototype.slice.call(arguments,4);
+  params.unshift(scb);
+  params.unshift(paramobj);
+  params.unshift(user);
+  user.makeSession(sessid,paramobj.address);
+  params.unshift(sessid);
+  nextcb.apply(this,params);
+};
+
+function userDumper(sessid,user,paramobj,scb){
+  var session = {};
+  session[this.self.fingerprint]=sessid;
+  scb('OK', {
+    username:user.username(),
+    realmname:user.realmname(),
+    roles:paramobj.roles,
+    session:session,
+    data:user.sessions[sessid] ? user.sessions[sessid].retrieveQueue() : []
+  });
 }
 
 function dumpData(paramobj,statuscb) {
-  var user = _produceUser.call(this,paramobj,userDumper(this.self,paramobj,statuscb));
+  //var user = _produceUser.call(this,paramobj,userDumper(this.self,paramobj,statuscb));
+  _produceUser.call(this,paramobj,statuscb,_produceSession,userDumper);
 };
 dumpData.params = 'originalobj';
 
@@ -101,7 +132,8 @@ function executeOneOnUser(user,command,params,cb){
   user.invoke(command,params,cb); //this is data
 }
 
-function executeOnUser(user,session,commands,statuscb){
+function userExecutor(session,user,paramobj,statuscb){
+  var commands = paramobj.dontparse ? paramobj.commands : JSON.parse(paramobj.commands);
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;
   var ret = {username:user.username(),realmnname:user.realmname(),roles:user.roles(),session:sessionobj};
@@ -123,10 +155,11 @@ function executeOnUser(user,session,commands,statuscb){
         }
         ret.results[_i] = [errcode,errparams,errmessage];
         cmdsdone++;
+        //console.log(cmdsdone,'cmds done out of',cmdstodo);
         if(cmdsdone===cmdstodo){
           var s = user.sessions[session];
           if(!s){
-            console.log('NO_SESSION',session,user.sessions);
+            //console.log('NO_SESSION',session,user.sessions);
             _scb('NO_SESSION',session);
             return;
           }
@@ -139,29 +172,20 @@ function executeOnUser(user,session,commands,statuscb){
     })(i));
   }
 };
-executeOnUser.params = ['user','session','commands'];
 
-function produceAndExecute(/*user,session,commands,res*/paramobj,statuscb){
-  var session = paramobj[this.self.fingerprint];
-  if(!session){
-    //console.log('no session in',paramobj);
-    statuscb('NO_SESSION','');
-    return;
-  }
+function executeOnUser(user,session,commands,cb){
+  userExecutor.call(this,session,user,{commands:commands,dontparse:true},cb);
+};
+executeOnUser.params=['user','session','commands'];
+
+function produceAndExecute(paramobj,statuscb){
   var commands = paramobj.commands;
   if(!commands){
     statuscb('NO_COMMANDS');
     return;
   }
-  if(typeof commands === 'string'){
-    try{
-      commands = JSON.parse(commands);
-    }
-    catch(e){
-      statuscb('NO_COMMANDS');
-      return;
-    }
-  }
+  _produceUser.call(this,paramobj,statuscb,_produceSession,userExecutor);
+  return;
   var self = this.self;
   _produceUser.call(this,paramobj,function(user){
     //console.log('recognized',user.username(),user.realmname(),user.keys);
@@ -179,6 +203,7 @@ produceAndExecute.params='originalobj';
 
 function init(){
   this.self.fingerprint = RandomBytes(12).toString('hex');
+  console.log('sessionuserfunctionality started',this.self.fingerprint);
   this.self.userMap = {};
   var counter = new BigCounter();
   this.self.newSession = function(){

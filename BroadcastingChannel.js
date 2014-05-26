@@ -9,6 +9,12 @@ function BroadcastingChannel(sayer){
   console.log('new BroadcastingChannel');
   */
 };
+BroadcastingChannel.prototype.destroy = function(){
+  this.deactivate();
+  for(var i in this){
+    delete this[i];
+  }
+};
 BroadcastingChannel.prototype.activate = function(){
   if(this.subscription){return;}
   if(!this.bcaster){return;}

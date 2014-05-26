@@ -46,6 +46,7 @@ DataFollower.prototype.destroy = function(){
   dh.fire();
   this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
+  this.finalizer();
   for(var i in this){
     delete this[i];
   }
@@ -53,6 +54,8 @@ DataFollower.prototype.destroy = function(){
   //console.log(p,'died totally',this);
   //console.log('DataFollower instance count',__DataFollowerInstanceCount);
   //User.prototype.destroy.call(this);
+};
+DataFollower.prototype.finalizer = function(){
 };
 DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
