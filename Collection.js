@@ -829,6 +829,9 @@ Collection.prototype.processInput = function(sender,input){
 };
 
 Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
+  console.trace();
+  console.log('no waitFor');
+  process.exit(0);
   waiter = waiter||this;
   startindex = startindex||0;
   var el = this.element([querypath[startindex]]);

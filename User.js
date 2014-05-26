@@ -70,6 +70,9 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
   }
 };
 User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
+  console.trace();
+  console.log('no waitFor');
+  process.exit(0);
   if(!data){cb('DISCARD_THIS');}
   var target = data;
   var cursor = 0;
