@@ -33,15 +33,6 @@ function Collection(a_l){
     console.log(caption,utils.inspect(data,false,null,true));
   };
 
-  this.dataDebug = function () {
-    var ret = {_key:access_level};
-    for(var i in data){
-      var _d = data[i];
-      ret[i] = (_d.type() === 'Scalar') ? _d.debugValue() : _d.dataDebug();
-    }
-    return ret;
-  }
-
   this.access_level = function(){
     return access_level;
   };
@@ -91,15 +82,6 @@ function Collection(a_l){
     return data[elemname];
   };
 
-  this.toMasterPrimitives = function(path){
-    path = path || [];
-    var ret = [['set',path,access_level]];
-    for(var i in data){
-      var p = path.concat(i);
-      Array.prototype.push.apply(ret,data[i].toMasterPrimitives(p));
-    }
-    return ret;
-  };
   var txnCounter = new BigCounter();
   this.txnCounterValue = function(){
     return txnCounter.value();
@@ -196,6 +178,24 @@ Collection.prototype.commit = function(txnalias,txnprimitives){
 
 Collection.prototype.type = function(){
   return 'Collection';
+};
+
+Collection.prototype.dataDebug = function () {
+  var ret = {_key:this.access_level()};
+  this.traverseElements(function(name,el){
+    ret[name] = (el.type() === 'Scalar') ? el.debugValue() : el.dataDebug();
+  });
+  return ret;
+};
+
+Collection.prototype.toMasterPrimitives = function(path){
+  path = path || [];
+  var ret = [['set',path,access_level]];
+  this.traverseElements(function(name,el){
+    var p = path.concat(name);
+    Array.prototype.push.apply(ret,el.toMasterPrimitives(p));
+  })
+  return ret;
 };
 
 Collection.prototype.element = function(path,startindex,endindex){

@@ -74,7 +74,7 @@ DeStreamer.prototype.destream = function(item){
   if(pl<dd){
     return;
   }
-  if(pl>dd){
+  if(pl && pl>dd){
     var n = p[dd];
     //console.log('looking for',n);
     var el = this.elementRaw(n);
@@ -88,11 +88,13 @@ DeStreamer.prototype.destream = function(item){
   if(this.elemnames){
     if(item[1] && item[1][0] in this.elemnames){
       //console.log('PROCESSING',item[1]);
-      this.processItemData(item[1]);
+      //this.processItemData(item[1]);
+      DeStreamer.prototype.processItemData.call(this,item[1]);
     }
   }else{
     //console.log('destreaming',item);
-    this.processItemData(item[1]);
+    //this.processItemData(item[1]);
+    DeStreamer.prototype.processItemData.call(this,item[1]);
   }
 };
 DeStreamer.prototype.processItemData = function(itemdata){
