@@ -125,49 +125,7 @@ DataFollower.prototype.huntTarget = function(data){
       if(!this.listeners){return;} //me ded after setStatus...
       listenForDestructor.call(this,target,data,cursor);
       if(target.communication){
-        var remotepath = this.path.slice(cursor);
-        if(this.remotepath && typeof this.remotepath[0]==='object'){
-          var mylastp = this.remotepath[this.remotepath.length-1];
-          var subcursor=0;
-          while(mylastp[subcursor]===remotepath[subcursor]){
-            subcursor++;
-          }
-          if(subcursor){
-            console.log('now what?',remotepath,this._parent.remotepath,'parents followers',Object.keys(this._parent.followers));
-          }
-          if(subcursor===mylastp.length){
-            console.log('cutting',remotepath,'by',subcursor,'elements on parent rp',this._parent.remotepath);
-            remotepath.splice(0,subcursor);
-            console.trace();
-            console.log('real subpath is',remotepath,'on parent rp',this._parent.remotepath);
-          }
-        }
-        this.pathtocommunication = this.path.slice(0,cursor);
-        target.communication.usersend(this,this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
-          var t = _t, d = _d, p = _p;
-          return function(status){
-            if (status === 'DISCARD_THIS') {
-              t.remotepath = p;
-              t.huntTarget(d);
-              return;
-            }
-            //console.log('remote follow said',arguments);
-            t.setStatus(status);
-          };
-        })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
-        //console.log('post usersend will change',this.remotepath);
-        if(this.remotepath){
-          //console.log('augmenting the remotepath',this.remotepath);
-          this.remotepath.push(remotepath);
-          //console.log('to',this.remotepath);
-        }else{
-          this.remotepath = remotepath;
-        }
-        //console.log('to',this.remotepath);
-        //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
-        //console.log('with parents path',this._parent.path);
-        //console.log('and path',this.path);
-        this.data = target;
+        this.remoteAttach(data,target,cursor);
         return;
       }else{
         target = null;
@@ -184,7 +142,7 @@ DataFollower.prototype.huntTarget = function(data){
     listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.setStatus('OK');
-    this.attachToContents();
+    this.attachToContents(data,cursor);
     for(var i in this.followers){
       var f = this.followers[i];
       if(f.stalled){
@@ -195,6 +153,53 @@ DataFollower.prototype.huntTarget = function(data){
       }*/
     }
   }
+}
+
+DataFollower.prototype.remoteAttach = function (data,target,cursor) {
+  var remotepath = this.path.slice(cursor);
+  if(this.remotepath && typeof this.remotepath[0]==='object'){
+    var mylastp = this.remotepath[this.remotepath.length-1];
+    var subcursor=0;
+    while(mylastp[subcursor]===remotepath[subcursor]){
+      subcursor++;
+    }
+    if(subcursor){
+      console.log('now what?',remotepath,this._parent.remotepath,'parents followers',Object.keys(this._parent.followers));
+    }
+    if(subcursor===mylastp.length){
+      console.log('cutting',remotepath,'by',subcursor,'elements on parent rp',this._parent.remotepath);
+      remotepath.splice(0,subcursor);
+      console.trace();
+      console.log('real subpath is',remotepath,'on parent rp',this._parent.remotepath);
+    }
+  }
+  this.pathtocommunication = this.path.slice(0,cursor);
+  target.communication.usersend(this,this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
+    var t = _t, d = _d, p = _p;
+    return function(status){
+      if (status === 'DISCARD_THIS') {
+        t.remotepath = p;
+        t.huntTarget(d);
+        return;
+      }
+      //console.log('remote follow said',arguments);
+      t.setStatus(status);
+    };
+  })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
+  //console.log('post usersend will change',this.remotepath);
+  if(this.remotepath){
+    //console.log('augmenting the remotepath',this.remotepath);
+    this.remotepath.push(remotepath);
+    //console.log('to',this.remotepath);
+  }else{
+    this.remotepath = remotepath;
+  }
+  //console.log('to',this.remotepath);
+  //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
+  //console.log('with parents path',this._parent.path);
+  //console.log('and path',this.path);
+  this.data = target;
+
 }
 DataFollower.prototype.followerFor = function(name){
   var fn,fs;
@@ -256,11 +261,18 @@ DataFollower.prototype.attachAppropriately = function(name,el){
     case 'Collection': return this.attachToCollection(name, el);
   }
 };
-DataFollower.prototype.attachToContents = function(){
+DataFollower.prototype.attachToContents = function(data,cursor){
   if(!this.data){
     this.stalled = true;
     return;
   }
+
+  if (this.data.communication) {
+    this.remoteAttach(data, this.data, cursor);
+    return;
+  }
+
+
   var t = this;
   this.data.traverseElements(function(name,el){
     if(t.say){
