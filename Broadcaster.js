@@ -39,7 +39,6 @@ function Broadcaster(data,createcb,username,realmname,roles){
     return;
   }
   this.broadcast = new HookCollection();
-  //this.dcptree = {};
   DataUser.call(this,data,createcb,undefined,username,realmname,roles);
 }
 Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{
@@ -50,46 +49,12 @@ Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{
 }});
 Broadcaster.prototype.say = function(item){
   if(!this.broadcast){return;}
-  if(this.remotepath){
-    this.commit(item);
-  }
   this.broadcast.fire(item);
   if(this.translators){
     for(var i in this.translators){
       this.translators[i].fire(item);
     }
   }
-};
-Broadcaster.prototype.commit = function(item){
-  console.log('commit');
-  var path = item[0], data = item[1];
-  var elem = this.findelem(path);
-  if(!elem){return;}
-  switch(data.length){
-    case 1:
-      delete elem[data[0]];
-      break;
-    case 2:
-      elem[data[0]] = data[1];
-      break;
-  }
-};
-Broadcaster.prototype.findelem = function(path,cursor,elem){
-  cursor = cursor || 0;
-  elem = elem || this.dcptree;
-  if(cursor>=path.length){
-    return;
-  }
-  var pe = path[cursor];
-  var ret = elem[pe];
-  if(!ret){
-    ret = {};
-    elem[pe] = ret;
-  }
-  if(cursor===path.length-1){
-    return ret;
-  }
-  return this.findelem(path,cursor+1,elem);
 };
 Broadcaster.prototype.describeElem = function(elem,cb){
   for(var i in elem){
@@ -109,12 +74,7 @@ Broadcaster.prototype.describe = function(cb,translatorname){
       cb = t.translate(cb);
     }
   }
-  //cb([undefined,[':reset',[]]]);
-  if(this.remotepath){
-    this.describeElem(this.dcptree,cb);
-  }else{
-    DataUser.prototype.describe.call(this,cb);
-  }
+  DataUser.prototype.describe.call(this,cb);
 };
 Broadcaster.prototype.attach = function(cb,translatorname){
   this.describe(cb,translatorname);

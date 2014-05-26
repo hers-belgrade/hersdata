@@ -188,7 +188,12 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
       //console.log('remote follow said',arguments);
       t.setStatus(status);
     };
-  })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),this.say,'__persistmycb');
+  })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),(function(t){
+    var _t = t;
+    return function(item){
+      _t.say && _t.say([_t.pathtocommunication.concat(item[0]),item[1]]);
+    };
+  })(this),'__persistmycb');
   //console.log('post usersend will change',this.remotepath);
   if(this.remotepath){
     //console.log('augmenting the remotepath',this.remotepath);
@@ -274,8 +279,7 @@ DataFollower.prototype.attachToContents = function(data,cursor){
     this.remoteAttach(data, this.data, cursor);
     return;
   }
-
-
+  
   var t = this;
   this.data.traverseElements(function(name,el){
     if(t.say){
