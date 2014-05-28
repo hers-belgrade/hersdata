@@ -1,15 +1,16 @@
 var Connect = require ('connect');
 var Url = require('url');
 var Path = require('path');
-var Collection = require('./Collection');
+var ChildProcessCollectionReplica = require('./ChildProcessCollectionReplica');
 var Timeout = require('herstimeout');
 var http = require('http');
 
 
-function WebServer (root, realm, usermodule) {
-  this.data = new Collection();
-  this.data.attach('./sessionuserfunctionality',{realmName:realm});
-  usermodule !== 'undefined' && this.data.attach(usermodule,{realmName:realm});
+function WebServer (root, realm, userFactoryModule) {
+  this.data = new ChildProcessCollectionReplica(realm);
+  this.data.go();
+  var module = this.data.attach(userFactoryModule);
+  this.data.attach('./sessionuserfunctionality',{realmName:realm, userFactory:module._userFactory});
 	this.root = root;
   this.realm = realm;
 }
@@ -37,6 +38,7 @@ WebServer.prototype.connectionCountChanged = function(delta){
 
 
 WebServer.prototype.startSocketIO = function(app) {
+  var dataMaster = this.data;
   var io = require('socket.io').listen(app, { log: false });
   console.log('socket.io listening');
   io.set('authorization', function(handshakeData, callback){
@@ -94,6 +96,10 @@ WebServer.prototype.start = function (port) {
     }
 		//var data = ((req.method == 'GET') ? purl.query : req.body) || {};
     res.connection.setTimeout(0);
+
+    ///TODO: HARDCODED !!!!
+    purl.query.address = '127.0.0.1';
+
     self.data.functionalities.sessionuserfunctionality.f[urlpath](purl.query,function(errcb,errparams,errmessage){
       if(errcb==='OK'){
         res.write(JSON.stringify(errparams[0]));
