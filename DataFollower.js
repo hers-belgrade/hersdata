@@ -90,11 +90,6 @@ function listenForDestructor(target,data,cursor){
     Timeout.next(this,'huntTarget',data);
   },target.destroyed);
 }
-function listenForNew(target,data,cursor){
-  this.createListener('newelementlistener',function(name,el){
-    this.reportElement(name,el);
-  },target.newElement);
-}
 DataFollower.prototype.huntTarget = function(data){
   if(!this._parent){
     this.destroy();
@@ -142,7 +137,6 @@ DataFollower.prototype.huntTarget = function(data){
   }
   if(target){
     this.data = target;
-    listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.setStatus('OK');
     this.attachToContents(data,cursor);
@@ -288,6 +282,7 @@ DataFollower.prototype.attachToContents = function(data,cursor){
     t.attachAppropriately(name,el);
   });
   this.createListener('newEl',function(name,el){
+    this.reportElement(name,el);
     this.attachAppropriately(name,el);
   },this.data.newElement);
 };
