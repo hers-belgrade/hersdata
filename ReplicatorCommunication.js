@@ -294,9 +294,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
       console.log('no destroyable on',di);
     }
   }
+  if(input.mastersay){
+    this.masterSays.fire(input.mastersay[1]);
+  }
+  if(input.slavesay){
+    this.slaveSays.fire(input.slavesay[1]);
+  }
   if(input.userstatus) {
     var us = input.userstatus;
-
     if(this.statii){
       var s = this.statii[us[0]];
       if(s){
@@ -306,12 +311,6 @@ ReplicatorCommunication.prototype.handOver = function(input){
       }
     }
     return;
-  }
-  if(input.mastersay){
-    this.masterSays.fire(input.mastersay[1]);
-  }
-  if(input.slavesay){
-    this.slaveSays.fire(input.slavesay[1]);
   }
   if(input.usersay){
     var us = input.usersay;
