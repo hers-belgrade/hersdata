@@ -51,9 +51,6 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
-  //console.log(p,'died totally',this);
-  //console.log('DataFollower instance count',__DataFollowerInstanceCount);
-  //User.prototype.destroy.call(this);
 };
 DataFollower.prototype.finalizer = function(){
 };
@@ -332,6 +329,9 @@ DataFollower.prototype.explain = function(cb){
       });
     }
   }
+};
+DataFollower.prototype.engaged = function(){
+  return this._parent.engaged();
 };
 DataFollower.prototype.username = function(){
   return this._parent.username();

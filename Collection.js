@@ -9,6 +9,7 @@ var HookCollection = require('./hookcollection');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
 var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
+var User = require('./User');
 var __CollectionCount = 0;
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
@@ -771,7 +772,15 @@ Collection.prototype.processInput = function(sender,input){
         }
         sender.createSuperUser(sender.replicaToken);
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
+        var rtn = sender.replicaToken.name;
         ret.token = sender.replicaToken;
+        var reviv = [];
+        User.Traverse(function(u){
+          if(u.server === rtn){
+            reviv.push({username:u.username(),realmname:u.realmname(),roles:u.roles()});
+          }
+        });
+        ret.revive = reviv;
         sender.send('internal','initDCPreplica',ret);
         if(dodcp){
           sender.createListener('dataTxn',function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){

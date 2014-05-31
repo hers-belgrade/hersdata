@@ -2,12 +2,17 @@ var KeyRing = require('./KeyRing'),
   HookCollection = require('./hookcollection'),
   Timeout = require('herstimeout');
 
+var __Instances = {};
+
 function User(username,realmname,roles){
   if(!username){return;}
   KeyRing.call(this,roles);
 	this._username = username;
 	this._realmname = realmname;
   this.addKey(this.fullname());
+  this.destroyed.attach(function(){
+    delete __Instances[username+'@'+realmname];
+  });
 }
 User.prototype = Object.create(KeyRing.prototype,{constructor:{
   value:User,
@@ -69,45 +74,32 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
 };
-User.prototype.waitFor = function(data,queryarry,cb,remotepath) {
-  console.trace();
-  console.log('no waitFor');
-  process.exit(0);
-  if(!data){cb('DISCARD_THIS');}
-  var target = data;
-  var cursor = 0;
-  while(cursor<queryarry.length){
-    var ttarget = target.element([queryarry[cursor]]);
-    if(!ttarget){
-      break;
-    }else{
-      if(ttarget.type()==='Collection'){
-        target = ttarget;
-      }else{
-        break;
-      }
-    }
-    cursor++;
-  }
-  if(target.communication){
-    if(!(target&&target.communication)){
-      return;
-    }
-    return target.communication.usersend(this,queryarry.slice(0,cursor),remotepath,'waitFor',queryarry.slice(cursor),cb,'__persistmycb');
-  }else{
-    return target.waitFor(queryarry.slice(cursor),cb,this);
-  }
-};
 User.prototype.invoke = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(this,'perform','invoke',data,path,2,'run',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
+  Timeout.next(this,'perform','invoke',data,path,2,'run',paramobj,cb,remotepath);
 };
 User.prototype.bid = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(this,'perform','bid',data,path,1,'takeBid',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
-  //this.perform('bid',data,path,1,'takeBid',paramobj,cb,remotepath);
+  Timeout.next(this,'perform','bid',data,path,1,'takeBid',paramobj,cb,remotepath);
 };
 User.prototype.offer = function(data,path,paramobj,cb,remotepath) {
-  Timeout.next(this,'perform','offer',data,path,1,'takeOffer',paramobj,cb,remotepath);//},this,data,path,paramobj,cb,remotepath);
-  //this.perform('offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
+  Timeout.next(this,'perform','offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
+};
+
+User.Create = function(username,realmname,roles,ctor){
+  var fn = username+'@'+realmname;
+  var u = __Instances[fn];
+  if(u){
+    return u;
+  }
+  u = new ctor(username,realmname,roles);
+  __Instances[fn] = u;
+  return u;
+};
+
+User.Traverse = function(cb){
+  for(var i in __Instances){
+    var cbr = cb(__Instances[i]);
+    if(cbr){return;}
+  }
 };
 
 module.exports = User;
