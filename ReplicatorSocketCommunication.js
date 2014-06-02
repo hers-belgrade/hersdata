@@ -58,6 +58,7 @@ ReplicatorSocketCommunication.prototype.createUnzip = function(){
 };
 ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
   if(this.dataRead){
+    try{
     //var n = Timeout.now();
     var eq = JSON.parse(this.dataRead);
     this.dataRead = '';
@@ -65,6 +66,10 @@ ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
     //console.log(this.execQueue);
     this.maybeExec();
     //console.log('exec time',Timeout.now()-n);
+    }catch(e){
+      console.log('could not read',this.dataRead,'from socket');
+      process.exit(0);
+    }
   }
   this.createUnzip();
   this.processData(this.currentData,this.dataCursor);
