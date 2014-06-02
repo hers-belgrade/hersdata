@@ -20,4 +20,14 @@ UserEngagement.prototype.destroy = function(){
   }
 };
 
+UserEngagement.prototype.dumpEngagementInfo = function(){
+  var ret = {};
+  for(var i in this){
+    if(i !== '__id' && i !== '__engager'){
+      ret[i] = this[i];
+    }
+  }
+  return ret;
+}
+
 module.exports = UserEngagement;
