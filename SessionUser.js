@@ -146,6 +146,7 @@ SessionUser.prototype.destroy = function(){
     console.log('not yet, there are still',this.sessioncount,'connected');
     return;
   }
+  console.log('really');
   DataUser.prototype.destroy.call(this);
 };
 
