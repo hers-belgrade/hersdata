@@ -6,8 +6,12 @@ function ChildProcessCollectionReplica(realm,skipdcp){
   this.communication = new ReplicatorChildProcessCommunication(this);
   CollectionReplica.call(this,realm,realm,skipdcp);
 }
-ChildProcessCollectionReplica.prototype = new CollectionReplica();
-ChildProcessCollectionReplica.prototype.constructor = ChildProcessCollectionReplica;
+ChildProcessCollectionReplica.prototype = Object.create(CollectionReplica.prototype,{constructor:{
+  value: ChildProcessCollectionReplica,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
 ChildProcessCollectionReplica.prototype.destroy = function(){
   CollectionReplica.prototype.destroy.call(this);
   process.exit();

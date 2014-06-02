@@ -9,6 +9,7 @@ var HookCollection = require('./hookcollection');
 var Waiter = require('./bridge').Data_CollectionElementWaiter;
 var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
+var User = require('./User');
 var __CollectionCount = 0;
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
@@ -771,7 +772,21 @@ Collection.prototype.processInput = function(sender,input){
         }
         sender.createSuperUser(sender.replicaToken);
         var ret = dodcp ? this.dump(sender.replicaToken) : {};
+        var rtn = sender.replicaToken.name;
         ret.token = sender.replicaToken;
+        var reviv = [];
+        User.Traverse(function(u){
+          if(u.server === rtn){
+            var ud = {username:u.username(),realmname:u.realmname(),roles:u.roles()};
+            var engs = [];
+            for(var i in u.engagements){
+              engs.push(u.engagements[i].dumpEngagementInfo());
+            }
+            ud.engagements = engs;
+            reviv.push(ud);
+          }
+        });
+        ret.revive = reviv;
         sender.send('internal','initDCPreplica',ret);
         if(dodcp){
           sender.createListener('dataTxn',function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
@@ -783,6 +798,9 @@ Collection.prototype.processInput = function(sender,input){
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);
         this.replicatingUser = sender.createSuperUser(this.replicaToken,true);
+        if(internal[1].revive){
+          this.replicatingUser.revive = internal[1].revive;
+        }
         console.log('superuser replicationid',this.replicatingUser._replicationid);
         this.replicationInitiated.fire(this.replicatingUser);
         break;

@@ -10,6 +10,7 @@ var __id = 0;
 function userStatus(replicatorcommunication){
   var rc = replicatorcommunication;
   return function(item){
+    if(!rc.counter){return;} //rc ded
     rc.send('userstatus',this.fullname(),item);
   }
 }
@@ -18,12 +19,6 @@ function userSayer(replicatorcommunication,sendcode){
   var rc = replicatorcommunication;
   var sc = sendcode || 'usersay';
   return function(item){
-    /*
-    if(this._replicationid==='0.0.0.0'){
-      console.trace();
-      console.log('<=',sc,this._replicationid,item);
-    }
-      */
     Timeout.next(function(sc,rc,item,t){
       if(!rc.counter){return;} //rc ded
       rc.send(sc,t._replicationid,item);
@@ -260,7 +255,14 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   var u =  new SuperUser(this.data,this.userStatus,sayer,token.name,token.realmname);
   u._replicationid = '0.0.0.0';
   u.replicators = {};
-  this.users[u.fullname()] = u;
+  var fullname = u.fullname();
+  this.users[fullname] = u;
+  u.destroyed.attach((function(_us,_fn){
+    var us=_us,fn=_fn
+    return function(){
+      delete us[fn];
+    }
+  })(this.users,fullname));
   this._fullname = u.fullname();
   this.addToSenders(u,'0.0.0.0');
   return u;
@@ -282,10 +284,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
   if(commandresult){
     delete input.commandresult;
     this.execute(commandresult);
+    return;
   }
   if(input.destroy){
     var di = input.destroy;
-    var d = this.destroyables[di];
+    var d = this.destroyables ? this.destroyables[di] : null;
     if(d){
       //console.log('destroying',di);
       d.destroy();
@@ -293,10 +296,18 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }else{
       console.log('no destroyable on',di);
     }
+    return;
+  }
+  if(input.mastersay){
+    this.masterSays.fire(input.mastersay[1]);
+    return;
+  }
+  if(input.slavesay){
+    this.slaveSays.fire(input.slavesay[1]);
+    return;
   }
   if(input.userstatus) {
     var us = input.userstatus;
-
     if(this.statii){
       var s = this.statii[us[0]];
       if(s){
@@ -306,12 +317,6 @@ ReplicatorCommunication.prototype.handOver = function(input){
       }
     }
     return;
-  }
-  if(input.mastersay){
-    this.masterSays.fire(input.mastersay[1]);
-  }
-  if(input.slavesay){
-    this.slaveSays.fire(input.slavesay[1]);
   }
   if(input.usersay){
     var us = input.usersay;
@@ -338,7 +343,14 @@ ReplicatorCommunication.prototype.handOver = function(input){
         process.exit(0);
       }
       u =  new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
+      u.user().server = this.replicaToken.name;
       u._replicationid = input.user._id;
+      u.destroyed.attach((function(_us,_fn){
+        var us=_us,fn=_fn
+        return function(){
+          delete us[fn];
+        }
+      })(this.users,fullname));
       this.users[fullname] = u;
     }else{
       u = this.users[fullname];
@@ -346,33 +358,6 @@ ReplicatorCommunication.prototype.handOver = function(input){
     var remotepath = input.user.remotepath;
     if(remotepath){
       if(typeof remotepath[0] === 'object'){
-        /*
-        //console.log('going for',remotepath);
-        function fp(rp,u,t,counter,cbrefs,input){
-          //console.log('going for',remotepath);
-          u.follow(rp.shift(), function(stts){
-              if(stts==='OK'){
-                if(rp.length){
-                  Timeout.next(function(rp,u,t,counter,cbrefs,input){
-                    fp(rp,u,t,counter,cbrefs,input);
-                  },rp,this,t,counter,cbrefs,input);
-                }else{
-                  delete input.user;
-                  for(var i in input){
-                    var method = this[i];
-                    if(method){
-                      //console.log(this.username(),'applies',i);//,input[i]);
-                      t.handleDestroyable(counter,cbrefs,method.apply(this,input[i]));
-                    }
-                  }
-                }
-              }
-            }
-          );
-        };
-        fp(remotepath,u,this,counter,cbrefs,input);
-        return;
-        */
         while(remotepath.length){
           u = u.follow(remotepath.shift());
         }

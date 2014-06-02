@@ -1,4 +1,4 @@
-var DataFollower = require('./DataFollower'),
+var DataUser = require('./DataUser'),
   User = require('./User');
 
 function SuperUser(username,realmname){
@@ -15,18 +15,13 @@ SuperUser.prototype.contains = function(){
 };
 
 function DataSuperUser(data,statuscb, cb,username,realmname){
-  DataFollower.call(this,data,statuscb,cb,new SuperUser(username,realmname));
+  DataUser.call(this,data,statuscb,cb,username,realmname,'',SuperUser);
 }
-DataSuperUser.prototype = Object.create(DataFollower.prototype,{constructor:{
+DataSuperUser.prototype = Object.create(DataUser.prototype,{constructor:{
   value:DataSuperUser,
   enumerable:false,
   writable:false,
   configurable:false
 }});
-DataSuperUser.prototype.destroy = function(){
-  var p = this._parent;
-  DataFollower.prototype.destroy.call(this);
-  p.destroy();
-};
 
 module.exports = DataSuperUser;

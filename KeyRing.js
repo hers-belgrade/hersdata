@@ -16,6 +16,23 @@ function KeyRing(roles){
 KeyRing.prototype.roles = function(){
   return this._roles;
 };
+KeyRing.prototype.engage = function(engagement){
+  if(!this.engagements){
+    this.engagements={};
+  }
+  this.engagements[engagement.__id] = engagement;
+};
+KeyRing.prototype.dismiss = function(engagement){
+  delete this.engagements[engagement.__id];
+  this.destroy();
+};
+KeyRing.prototype.engaged = function(){
+  if(!this.engagements){return false;}
+  for(var i in this.engagements){
+    return true;
+  }
+  return false;
+};
 KeyRing.prototype.containsKeyRing = function(keyring){
   for(var k in keyring.keys){
     if(typeof this.keys[k] === 'undefined'){
@@ -55,6 +72,9 @@ KeyRing.prototype.removeKey = function(key){
 };
 KeyRing.prototype.destroy = function(){
   if(!this.destroyed){return;}
+  if(this.engaged()){
+    return;
+  }
   this.destroyed.fire();
   this.newKey.destruct();
   this.keyRemoved.destruct();

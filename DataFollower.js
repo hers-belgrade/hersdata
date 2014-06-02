@@ -51,9 +51,6 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
-  //console.log(p,'died totally',this);
-  //console.log('DataFollower instance count',__DataFollowerInstanceCount);
-  //User.prototype.destroy.call(this);
 };
 DataFollower.prototype.finalizer = function(){
 };
@@ -89,11 +86,6 @@ function listenForDestructor(target,data,cursor){
     this.setStatus('RETREATING');
     Timeout.next(this,'huntTarget',data);
   },target.destroyed);
-}
-function listenForNew(target,data,cursor){
-  this.createListener('newelementlistener',function(name,el){
-    this.reportElement(name,el);
-  },target.newElement);
 }
 DataFollower.prototype.huntTarget = function(data){
   if(!this._parent){
@@ -142,7 +134,6 @@ DataFollower.prototype.huntTarget = function(data){
   }
   if(target){
     this.data = target;
-    listenForNew.call(this,this.data,data,cursor);
     listenForDestructor.call(this,this.data,data,cursor);
     this.setStatus('OK');
     this.attachToContents(data,cursor);
@@ -288,6 +279,7 @@ DataFollower.prototype.attachToContents = function(data,cursor){
     t.attachAppropriately(name,el);
   });
   this.createListener('newEl',function(name,el){
+    this.reportElement(name,el);
     this.attachAppropriately(name,el);
   },this.data.newElement);
 };
@@ -337,6 +329,9 @@ DataFollower.prototype.explain = function(cb){
       });
     }
   }
+};
+DataFollower.prototype.engaged = function(){
+  return this._parent.engaged();
 };
 DataFollower.prototype.username = function(){
   return this._parent.username();
