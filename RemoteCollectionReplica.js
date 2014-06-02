@@ -30,8 +30,8 @@ RemoteCollectionReplica.prototype.go = function(cb){
     t.communication.listenTo(this);
     console.log('reconnecting');
     CollectionReplica.prototype.go.call(t);
-  }).on('error', function () {
-    ///due to stupidity of error handler ...
+  }).on('error', function (err) {
+    console.log('socket error',err);
   }).on('close',function(err){
     if(t.status === 'connected'){
       t.communication.purge();

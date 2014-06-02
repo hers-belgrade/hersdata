@@ -777,7 +777,13 @@ Collection.prototype.processInput = function(sender,input){
         var reviv = [];
         User.Traverse(function(u){
           if(u.server === rtn){
-            reviv.push({username:u.username(),realmname:u.realmname(),roles:u.roles()});
+            var ud = {username:u.username(),realmname:u.realmname(),roles:u.roles()};
+            var engs = [];
+            for(var i in u.engagements){
+              engs.push(u.engagements[i].dumpEngagementInfo());
+            }
+            ud.engagements = engs;
+            reviv.push(ud);
           }
         });
         ret.revive = reviv;
