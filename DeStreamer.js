@@ -81,6 +81,8 @@ DeStreamer.prototype.destream = function(item){
     if(el && el.destream){
       //console.log('data destreamer at',n,'destreaming');
       el.destream(item);
+    }else{
+      console.log('no',n,'at',this.dataDebug(),'but',el);
     }
     return;
   }
@@ -106,7 +108,7 @@ DeStreamer.prototype.processItemData = function(itemdata){
   if(!d){
     if(itemdata[1] === null){
       var c;
-      if(this.destreamerpos && this.destreamerdepth){
+      if(typeof this.destreamerpos !== 'undefined' && this.destreamerdepth){
         c = new DeStreamer('*',{from:this.destreamerpos+1,depth:this.destreamerdepth-1});
       }else{
         //console.log('no child DeStreamer for',itemdata[0],this.destreamerpos,this.destreamerdepth);
