@@ -5,11 +5,13 @@ function PathTranslator(path,replaceleading){
   this.translate = typeof replaceleading === 'undefined' ? function(cb){
     var _cb = cb,mypath = path;
     return function(item){
+      if(!(typeof item === 'object')){return;}
       _cb([mypath,item[1]]);
     };
   } : function(cb){
     var _cb = cb,mypath = path;
     return function(item){
+      if(!(typeof item === 'object' && item[0] && item[0].length>=replaceleading)){return;}
       _cb([item[0] && item[0].slice ? mypath.concat(item[0].slice(replaceleading)) : mypath,item[1]]);
     };
   };

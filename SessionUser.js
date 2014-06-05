@@ -42,9 +42,11 @@ ConsumerSession.prototype.setSocketIO = function(sock){
     delete t.sockio;
     //t.destroy();
   });
-  while(this.queue.length){
-    //console.log('dumping q',this.queue);
-    sock.emit('_',this.queue.shift());
+  if(this.queue){
+    while(this.queue.length){
+      //console.log('dumping q',this.queue);
+      sock.emit('_',this.queue.shift());
+    }
   }
 };
 ConsumerSession.prototype.say = function(item){

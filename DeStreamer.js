@@ -37,7 +37,8 @@ ElementWaiter.prototype.attachTo = function(el){
   });
 };
 ElementWaiter.prototype.destroy = function(){
-  this.parent.destroyed.detach(this.parentDestroyed);
+  if(!this.parent){return;}
+  this.parent && this.parent.destroyed && this.parent.destroyed.detach(this.parentDestroyed);
   this.detach();
   for(var i in this){
     delete this[i];
@@ -65,6 +66,10 @@ DeStreamer.prototype.destream = function(item){
   //console.log('destreaming',item);
   if(!this.elementRaw){return;} //me ded
   if(!item){
+    return;
+  }
+  if(item==='DISCARD_THIS'){
+    this.destroy();
     return;
   }
   if(typeof item[0] === 'undefined'){
