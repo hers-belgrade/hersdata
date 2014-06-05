@@ -212,14 +212,13 @@ DataFollower.prototype.followerFor = function(name){
 };
 DataFollower.prototype.attachToCollection = function(name,el){
   if(!this.say){return;}
+  if(name.charAt(0)==='_'){return;}
   this.createListener(name+'_destroyed',function(){
     this.say.call(this,[this.path,[name]]);
   },el.destroyed);
 };
 DataFollower.prototype.emitScalarValue = function(name,val,cb){
   if(!cb){return;}
-    cb.call(this,[this.path,[name,val]]);
-    return;
   if(typeof val === 'undefined'){
     cb.call(this,[this.path,[name]]);
   }else{
@@ -284,6 +283,7 @@ DataFollower.prototype.attachToContents = function(data,cursor){
   },this.data.newElement);
 };
 DataFollower.prototype.reportCollection = function(name,el,cb){
+  if(name.charAt(0)==='_'){return;}
   if(this.contains(el.access_level())){
     cb && cb.call(this,[this.path,[name,null]]);
   }
