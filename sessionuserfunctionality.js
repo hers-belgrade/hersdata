@@ -79,7 +79,7 @@ function _produceSession(user,paramobj,scb,nextcb){
       return;
     }
     if(!sessid){
-      sessid=this.self.newSession();
+      sessid=this.self.newSessionId();
       console.log('created',sessid,'on',user.username(),'with',user.sessioncount,'because',this.self.fingerprint,'was not found in',paramobj);
     }
   }
@@ -206,7 +206,7 @@ function init(){
   console.log('sessionuserfunctionality started',this.self.fingerprint);
   this.self.userMap = {};
   var counter = new BigCounter();
-  this.self.newSession = function(){
+  this.self.newSessionId = function(){
     counter.inc();
     return RandomBytes(12).toString('hex')+'.'+counter.toString();
   };

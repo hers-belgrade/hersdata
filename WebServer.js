@@ -98,7 +98,7 @@ WebServer.prototype.start = function (port) {
     res.connection.setTimeout(0);
 
     ///TODO: HARDCODED !!!!
-    purl.query.address = '127.0.0.1';
+    purl.query.address = req.connection.remoteAddress;//'127.0.0.1';
 
     self.data.functionalities.sessionuserfunctionality.f[urlpath](purl.query,function(errcb,errparams,errmessage){
       if(errcb==='OK'){
@@ -129,7 +129,9 @@ WebServer.prototype.start = function (port) {
 //module.exports = WebServer;
 
 var serv = new WebServer(process.argv[3],process.argv[4],process.argv[5]);
-serv.start(process.argv[2]);
+serv.data.replicationInitiated.attach(function(){
+  serv.start(process.argv[2]);
+});
 
 //console.log(process.argv);
 process.on ('message', function (m) {
