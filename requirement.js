@@ -21,12 +21,18 @@ function init(){
 };
 
 function offerTickOut(t,to,oid,tocb, user){
-  tocb(to);
+  if(tocb(to)){
+    removeOffer(oid);
+    return;
+  }
   if(to){
     to--;
     t.self.offertimeouts[oid] = {timeout:Timeout.set(offerTickOut,1000,t,to,oid,tocb),cb:tocb};
   }else{
-    tocb();
+    if(tocb()){
+      removeOffer(oid);
+      return;
+    }
     t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, user);
   }
 };

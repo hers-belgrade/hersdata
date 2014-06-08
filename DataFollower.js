@@ -245,9 +245,6 @@ DataFollower.prototype.attachToScalar = function(name,el){
     }
   },el.changed);
   this.createListener(name+'_destroyed',function(){
-    if(name==='remaining'){
-      console.log('destroyed',this.path,name);
-    }
     this.say([this.path,[name]]);
     this.destroyListener(name+'_changed');
     this.destroyListener(name+'_destroyed');
