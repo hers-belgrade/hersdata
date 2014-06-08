@@ -440,7 +440,12 @@ DataFollower.prototype.describe = function(cb){
 DataFollower.prototype.handleBid = function(reqname,cb){
   var bf = this.follow(['__requirements',reqname],function(stts){
     if(stts==='OK'){
-      if(cb()){
+      if(cb(true)){
+        bf.destroy();
+      }
+    }
+    if(stts==='RETREATING'){
+      if(cb(false)){
         bf.destroy();
       }
     }

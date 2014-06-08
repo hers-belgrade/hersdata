@@ -153,6 +153,7 @@ function Collection(a_l){
 };
 
 Collection.prototype.destroy = function(){
+  if(!this._destroyData){return;}
   this._destroyData();
   this.destroyed.fire(this);
   this.onNewTransaction.destruct();
