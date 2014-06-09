@@ -43,6 +43,7 @@ module.exports = {
   DataFollower: require('./DataFollower'),
   DeStreamer: require('./DeStreamer'),
   Broadcaster: require('./Broadcaster'),
+  AutoBroadcaster: require('./AutoBroadcaster'),
   BroadcasterGroup: require('./BroadcasterGroup'),
   BroadcastingChannel: require('./BroadcastingChannel')
 };

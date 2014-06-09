@@ -381,7 +381,7 @@ DataFollower.prototype.waitForever = function(queryarry,cb){
   });
   wfFunc();
 };
-DataFollower.prototype.follow = function(path,cb,saycb){
+DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   path = path || [];
   var spath = path.join('/') || '.';
   //console.log('about to follow',spath);
@@ -411,7 +411,7 @@ DataFollower.prototype.follow = function(path,cb,saycb){
     console.trace();
     console.log('parent destroyed');
   }
-  var df = new DataFollower(this.data,cb,saycb,this,path);
+  var df = new (ctor||DataFollower)(this.data,cb,saycb,this,path,options);
   if(df.destroyed){
     this.followers[spath] = df;
     df.destroyed.attach((function(fs,sp){
