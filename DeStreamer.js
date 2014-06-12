@@ -81,7 +81,7 @@ DeStreamer.prototype.destream = function(item){
   }
   if(pl && pl>dd){
     var n = p[dd];
-    //console.log('looking for',n);
+    //console.log('looking for',n,'in',p);
     var el = this.elementRaw(n);
     if(el && el.destream){
       //console.log('data destreamer at',n,'destreaming');

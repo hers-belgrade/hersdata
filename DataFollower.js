@@ -182,7 +182,7 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
   })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),(function(t){
     var _t = t;
     return function(item){
-      _t.say && _t.say([_t.pathtocommunication.concat(item[0]),item[1]]);
+      typeof item === 'object' && item instanceof Array && _t.say && _t.say([_t.pathtocommunication.concat(item[0]),item[1]]);
     };
   })(this),'__persistmycb');
   //console.log('post usersend will change',this.remotepath);

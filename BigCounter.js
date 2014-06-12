@@ -6,16 +6,16 @@ function BigCounter(other){
   }
 }
 BigCounter.prototype.inc = function(){
-  var level = 0;
   var cnts = this.counters;
+  var level = cnts.length-1;
   function inc(){
-    if(level>=cnts.length){
+    if(level<0){
       throw "counter overflow";
     }
     cnts[level]++;
-    if(cnts[level]>1000000000){
+    if(cnts[level]>999999999){
       cnts[level] = 0;
-      level++;
+      level--;
       inc();
     }
   }
@@ -26,6 +26,14 @@ BigCounter.prototype.value = function(){
 };
 BigCounter.prototype.toString = function(){
   return this.counters.join('.');
+};
+BigCounter.prototype.toSortableString = function(){
+  var ss = '';
+  for(var i in this.counters){
+    if(ss.length){ss+='.';}
+    ss += ('00000000'+this.counters[i]).substr(-9);
+  }
+  return ss;
 };
 BigCounter.prototype.isPredecessorOf = function(other){
   var temp = new BigCounter(this);
@@ -45,6 +53,29 @@ BigCounter.prototype.clone = function(){
 };
 BigCounter.prototype.reset = function(){
   this.counters = [0,0,0,0];
+};
+BigCounter.fromSortableString = function(ss){
+  var cnts = ss.split('.');
+  var ret = new BigCounter();
+  if(cnts.length!==4){
+    return ret;
+  }
+  for(var i in cnts){
+    var n = cnts[i];
+    while(n.charAt(0)==='0'){
+      if(n.length===1){
+        break;
+      }
+      n = n.substr(1);
+    }
+    n = parseInt(n);
+    if(isNaN(n)){
+      return ret;
+    }
+    cnts[i] = n;
+  }
+  ret.counters = cnts;
+  return ret;
 };
 
 module.exports = BigCounter;

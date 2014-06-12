@@ -847,23 +847,17 @@ Collection.prototype.processInput = function(sender,input){
   }
 };
 
-Collection.prototype.waitFor = function(querypath,cb,waiter,startindex){
-  console.trace();
-  console.log('no waitFor');
-  process.exit(0);
-  waiter = waiter||this;
-  startindex = startindex||0;
-  var el = this.element([querypath[startindex]]);
-  if(el && el.type() === 'Collection'){
-    return el.waitFor(querypath,cb,waiter,startindex+1);
+Collection.prototype.startFifo = function(size,idfieldname){
+  this.attach('./fifofunctionality',{size:size||10,idname:idfieldname});
+};
+
+Collection.prototype.addToFifo = function(item){
+  var f = this.functionalities.fifofunctionality.f;
+  if(!f){
+    this.startFifo();
+    f = this.functionalities.fifofunctionality.f;
   }
-  var targetpath = startindex ? querypath.splice(startindex) : querypath;
-  var w =  new Waiter(waiter,this,targetpath,cb);
-  w.destroyed.attach(function(){
-    cb('DISCARD_THIS');
-    //console.log('Waiter dead',targetpath);
-  });
-  return w;
+  f.add(item);
 };
 
 module.exports = Collection;

@@ -44,5 +44,8 @@ BroadcastingChannel.prototype.describe = function(cb){
     this.bcaster.describe(cb,this.translatorname);
   }
 };
+BroadcastingChannel.prototype.active = function(){
+  return !!this.subscription;
+};
 
 module.exports = BroadcastingChannel;
