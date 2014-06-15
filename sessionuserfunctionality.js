@@ -165,7 +165,9 @@ function userExecutor(session,user,paramobj,statuscb){
           }
           var so = {};
           so[fp] = session;
-          ret.data=s ? s.retrieveQueue() : [];
+          if(!s.sockio){
+            ret.data=s ? s.retrieveQueue() : [];
+          }
           _scb('OK',ret);
         }
       };

@@ -1,6 +1,39 @@
 var Timeout = require('herstimeout');
 var DataUser = require('./DataUser');
 
+var __socketIOSessions = [];
+
+function __socketIOHeartBeat(cursor){
+  var n = Timeout.now();
+  var cursor = cursor||0;
+  while(cursor<__socketIOSessions.length){
+    var s = __socketIOSessions[cursor];
+    if(!s.sockio){
+      __socketIOSessions.splice(cursor,1);
+      __socketIOHeartBeat(cursor);
+      return;
+    }
+    if(s.queue.length){
+      var rq = s.retrieveQueue();
+      for(var i in rq){
+        var qi = rq[i];
+        if(qi && qi[1] && qi[1][0]==='botcount'){
+          console.log(s.session,'emmiting',qi);
+        }
+      }
+      if(s.hasbotcount){
+        console.log(s.session,'=>',rq);
+        delete s.hasbotcount;
+      }
+      s.sockio.emit('_',rq);
+    }
+    cursor++;
+  }
+  Timeout.set(__socketIOHeartBeat,100);
+};
+
+__socketIOHeartBeat();
+
 var maxsessionsperaddress = 10,
   maxsessionstotal = 50,
   nosessionsgraceperiod = 3000;
@@ -25,10 +58,18 @@ ConsumerSession.prototype.destroy = function(){
   }
 };
 ConsumerSession.prototype.retrieveQueue = function(){
-  this.lastAccess = Timeout.now();
+  if(!this.sockio){
+    this.lastAccess = Timeout.now();
+  }
   if(this.queue && this.queue.length){
     //console.log(this.session,'splicing',this.queue.length);
-    return this.queue.splice(0);
+    var rq = this.queue;
+    if(this.hasbotcount){
+      console.trace();
+      console.log(rq);
+    }
+    this.queue = [];
+    return rq;
   }else{
     //console.log('empty q');
     return [];
@@ -36,36 +77,39 @@ ConsumerSession.prototype.retrieveQueue = function(){
 };
 ConsumerSession.prototype.setSocketIO = function(sock){
   //console.log('setSocketIO, queue len',this.queue.length);
+  if(!this.sockio){
+    __socketIOSessions.push(this);
+    delete this.lastAccess;
+  }
   this.sockio = sock;
   var t = this;
   sock.on('disconnect',function(){
     delete t.sockio;
-    //t.destroy();
+    t.destroy();
   });
-  if(this.queue){
-    while(this.queue.length){
-      //console.log('dumping q',this.queue);
-      sock.emit('_',this.queue.shift());
-    }
+  /*
+  if(this.queue && this.queue.length){
+    sock.emit('_',this.retrieveQueue());
   }
+  */
 };
 ConsumerSession.prototype.say = function(item){
   if(!this.session){return;}
-  var n = Timeout.now();
-  if(this.sockio){
-    //console.log('emitting',item);
-    this.lastAccess = n;
-    this.sockio.emit('_',item);
-  }else{
+  if(!this.sockio){
+    var n = Timeout.now();
     if(n-this.lastAccess>10000){
       this.destroy();
       return false;
     }
-    if(!this.queue){
-      return false;
-    }
-    this.queue.push(item);
-    //console.log(this.user.username(),this.session,'queue len',this.queue.length);
+  }
+  if(!this.queue){
+    return false;
+  }
+  this.queue.push(item);
+  if(item && item[1] && item[1][0]==='botcount'){
+    console.log(this.session,'pushing',item);
+    console.log(this.queue);
+    this.hasbotcount=true;
   }
   return true;
 };

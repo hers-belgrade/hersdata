@@ -180,6 +180,7 @@ DeStreamer.prototype.handleNewElement = function(elname,el){
   }
 };
 DeStreamer.prototype.toStream = function(cb,path){
+  if(!this.traverseElements){return;}
   path = path || [];
   //console.log('toStream',this.dataDebug());
   this.traverseElements(function(name,elem){
