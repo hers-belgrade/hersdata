@@ -21,10 +21,6 @@ function __socketIOHeartBeat(cursor){
           console.log(s.session,'emmiting',qi);
         }
       }
-      if(s.hasbotcount){
-        console.log(s.session,'=>',rq);
-        delete s.hasbotcount;
-      }
       s.sockio.emit('_',rq);
     }
     cursor++;
@@ -64,10 +60,6 @@ ConsumerSession.prototype.retrieveQueue = function(){
   if(this.queue && this.queue.length){
     //console.log(this.session,'splicing',this.queue.length);
     var rq = this.queue;
-    if(this.hasbotcount){
-      console.trace();
-      console.log(rq);
-    }
     this.queue = [];
     return rq;
   }else{
@@ -106,11 +98,6 @@ ConsumerSession.prototype.say = function(item){
     return false;
   }
   this.queue.push(item);
-  if(item && item[1] && item[1][0]==='botcount'){
-    console.log(this.session,'pushing',item);
-    console.log(this.queue);
-    this.hasbotcount=true;
-  }
   return true;
 };
 
