@@ -49,6 +49,12 @@ Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+Broadcaster.prototype.destroy = function(){
+  if(!this.broadcast){return;}
+  this.broadcast.destruct();
+  delete this.broadcast;
+  DataUser.prototype.destroy.call(this);
+};
 Broadcaster.prototype.say = function(item){
   if(!this.broadcast){return;}
   this.broadcast.fire(item);

@@ -12,6 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
+  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
   this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
@@ -51,6 +52,7 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
+  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
 };
 DataFollower.prototype.finalizer = function(){
 };
