@@ -3,7 +3,12 @@ var Collection = require('./Collection'),
  
 function ElementWaiter(parnt,cb,ctx){
   this.parent = parnt;
-  this.parentDestroyed = parnt.destroyed.attach(this.destroy);
+  this.parentDestroyed = parnt.destroyed.attach((function(t){
+    var _t = t;
+    return function(){
+      t.destroy();
+    };
+  })(this));
   this.ctx = ctx;
   this.cb = cb;
 };
@@ -40,6 +45,7 @@ ElementWaiter.prototype.destroy = function(){
   if(!this.parent){return;}
   this.parent && this.parent.destroyed && this.parent.destroyed.detach(this.parentDestroyed);
   this.detach();
+  console.log('ElementWaiter dying');
   for(var i in this){
     delete this[i];
   }

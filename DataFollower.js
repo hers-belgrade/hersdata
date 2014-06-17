@@ -12,7 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
-  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
   this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
@@ -52,7 +52,7 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
-  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
 };
 DataFollower.prototype.finalizer = function(){
 };
@@ -453,8 +453,9 @@ DataFollower.prototype.handleBid = function(reqname,cb){
 function OfferHandler(parnt,offerid,offershandler,cb){
   if(!parnt.follower){return;}
   this.parentDestructionFollower = parnt.follower.destroyed.attach((function(t){
+    var _t = t;
     return function(){
-      t.destroy();
+      _t.destroy();
     }
   })(this));
   this._parent = parnt;
@@ -513,8 +514,9 @@ function OffersHandler(df,reqname,cb){
     }
   }(this)));
   this.follower.destroyed.attach((function(t){
+    var _t = t;
     return function(){
-      t.destroy();
+      _t.destroy();
     };
   })(this));
 }

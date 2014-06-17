@@ -99,6 +99,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
         return;
       }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
     })(user,pathtome||[]);
+    //console.log(Object.keys(this.sayers).length,'sayers when',user.fullname(),user.path);
     user.destroyed.attach((function(t,replicationid,user){
       var _t = t, _cnt = replicationid,_u = user; 
       return function(){
@@ -106,6 +107,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
         //console.log(_u.fullname(),'destroyed on',_cnt);
         var mycbrefs = _u.replicatorcbs[_t._id];
         if(mycbrefs){
+          delete _u.replicatorcbs[_t._id];
           for(var i in mycbrefs){
             var mcbr = mycbrefs[i];
             //console.log('clearing cbref',mcbr);
@@ -115,6 +117,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
         }
         _t.sendobj({destroy:_cnt});
         delete _t.sayers[_cnt];
+        //console.log(Object.keys(t.sayers).length,'sayers');
       };
     })(this,replicationid,user));
   }
@@ -268,6 +271,16 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   return u;
 };
 ReplicatorCommunication.prototype.handOver = function(input){
+/*
+  console.log(
+    'users',this.users ? Object.keys(this.users).length : 0,
+    'cbs',this.cbs ? Object.keys(this.cbs).length : 0,
+    'persist',this.persist ? Object.keys(this.persist).length : 0,
+    'destroyables',this.destroyables ? Object.keys(this.destroyables).length : 0,
+    'sayers',this.sayers ? Object.keys(this.sayers).length : 0,
+    'statii',this.statii ? Object.keys(this.statii).length : 0
+  );
+  */
   var counter = input.counter;
   var cbrefs = '';
   delete input.counter;

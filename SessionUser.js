@@ -14,14 +14,14 @@ function __socketIOHeartBeat(cursor){
       return;
     }
     if(s.queue.length){
-      var rq = s.retrieveQueue();
-      for(var i in rq){
-        var qi = rq[i];
-        if(qi && qi[1] && qi[1][0]==='botcount'){
-          console.log(s.session,'emmiting',qi);
-        }
+      if(s.lastemit && n-s.lastemit<500){
+        cursor++;
+        continue;
       }
+      var rq = s.retrieveQueue();
+      console.log(rq.length);
       s.sockio.emit('_',rq);
+      s.lastemit = n;
     }
     cursor++;
   }
@@ -61,10 +61,10 @@ ConsumerSession.prototype.retrieveQueue = function(){
     //console.log(this.session,'splicing',this.queue.length);
     var rq = this.queue;
     this.queue = [];
-    return rq;
+    return JSON.stringify(rq);
   }else{
     //console.log('empty q');
-    return [];
+    return "[]";
   }
 };
 ConsumerSession.prototype.setSocketIO = function(sock){
