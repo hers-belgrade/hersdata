@@ -156,13 +156,13 @@ Collection.prototype.destroy = function(){
   if(!this._destroyData){return;}
   this._destroyData();
   this.destroyed.fire(this);
-  this.onNewTransaction.destruct();
-  this.accessLevelChanged.destruct();
-  this.txnBegins.destruct();
-  this.txnEnds.destruct();
-  this.newReplica.destruct();
-  this.replicationInitiated.destruct();
   this.destroyed.destruct();
+  this.replicationInitiated.destruct();
+  this.newReplica.destruct();
+  this.txnEnds.destruct();
+  this.txnBegins.destruct();
+  this.accessLevelChanged.destruct();
+  this.onNewTransaction.destruct();
   this.newElement.destruct();
   for(var i in this.functionalities){
     //console.log('__DESTROY__ing',i);
