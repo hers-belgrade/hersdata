@@ -25,7 +25,7 @@ function __socketIOHeartBeat(cursor){
     }
     cursor++;
   }
-  Timeout.set(__socketIOHeartBeat,100);
+  Timeout.set(__socketIOHeartBeat,500);
 };
 
 __socketIOHeartBeat();

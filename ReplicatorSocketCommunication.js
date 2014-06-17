@@ -1,6 +1,5 @@
 var ReplicatorCommunication = require('./ReplicatorCommunication'),
-  Timeout = require('herstimeout'),
-  zlib = require('zlib');
+  Timeout = require('herstimeout');
 
 function ReplicatorSocketCommunication(data){
   ReplicatorCommunication.call(this,data);
@@ -14,7 +13,6 @@ function ReplicatorSocketCommunication(data){
   this.sendingQueue = [];
   this.sending = false;
   this.sendingBuffs = [];
-  this.createUnzip();
   this.dataCursor = 0;
   this.incomingData = [];
   this._auxSendingQueue = undefined;
@@ -38,26 +36,7 @@ ReplicatorSocketCommunication.prototype.destroy = function(){
   delete this.socket;
   ReplicatorCommunication.prototype.destroy.call(this);
 };
-ReplicatorSocketCommunication.prototype.createUnzip = function(){
-  this.unzip = zlib.createGunzip();
-  var t = this;
-  this.unzip.on('data',function(chunk){
-    if(typeof t.dataRead === 'undefined'){
-      return;
-    }
-    //console.log('got data');
-    t.dataRead+=chunk.toString('utf8');
-  });
-  this.unzip.on('end',function(){
-    Timeout.next(t,'handleUnzipEnd');
-  });
-  this.unzip.on('error',function(){
-    console.log('unzip error',arguments);
-    process.exit(0);
-  });
-  //console.log('new unzip created');
-};
-ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
+ReplicatorSocketCommunication.prototype.handleDataRead = function(){
   if(this.dataRead){
     try{
     //var n = Timeout.now();
@@ -69,10 +48,11 @@ ReplicatorSocketCommunication.prototype.handleUnzipEnd = function(){
     //console.log('exec time',Timeout.now()-n);
     }catch(e){
       console.log('could not read',this.dataRead,'from socket');
-      process.exit(0);
+      this.dataRead = '';
+      this.destroy();
+      //process.exit(0);
     }
   }
-  this.createUnzip();
   this.processData(this.currentData,this.dataCursor);
 };
 ReplicatorSocketCommunication.prototype._internalSend = function(buf){
@@ -93,20 +73,6 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     return;
   }
   this.sending = true;
-  /*
-  var zip = zlib.createGzip({
-    level:9
-  });
-  var t = this;
-  zip.on('data',function(chunk){
-    t.sendingBuffs && t.sendingBuffs.push(chunk);
-  });
-  zip.on('end',function(){
-    Timeout.next(t,'handleZipEnd');
-  });
-  zip.write(sqb);
-  zip.end();
-  */
   this.sendMore();
 };
 ReplicatorSocketCommunication.prototype.bufferize = function(sq){
@@ -128,17 +94,6 @@ ReplicatorSocketCommunication.prototype.bufferize = function(sq){
   this.sendingBuffs.push(lb);
   this.sendingBuffs.push(sqb);
 }
-ReplicatorSocketCommunication.prototype.handleZipEnd = function(){
-  if(!this.sendingBuffs){return;}
-  var tl = 0;
-  for (var i in this.sendingBuffs){
-    tl+=this.sendingBuffs[i].length;
-  }
-  var lb = new Buffer(4);
-  lb.writeUInt32LE(tl,0);
-  this.sendingBuffs.unshift(lb);
-  this.sendMore();
-};
 ReplicatorSocketCommunication.prototype.sendobj = function(obj){
   if(!this.sendingQueue){return;}
   this.sendingQueue.push(obj);
@@ -231,14 +186,13 @@ ReplicatorSocketCommunication.prototype.processData = function(data,offset){
     canread=this.bytesToRead;
   }
   this.dataRead+=data.toString('utf8',i,i+canread);
-  //this.unzip.write(data.slice(i,i+canread));
   this.bytesToRead-=canread;
   i+=canread;
   this.dataCursor = i;
   if(this.bytesToRead===0){
     this.bytesToRead=-1;
     this.lenBufread=0;
-    this.handleUnzipEnd();
+    this.handleDataRead();
     //this.unzip.end();
   }else{
     //console.log('at',i,'data is',data.length,'long, now what?');
