@@ -13,19 +13,23 @@ function __socketIOHeartBeat(cursor){
       __socketIOHeartBeat(cursor);
       return;
     }
-    if(s.queue.length){
-      if(s.lastemit && n-s.lastemit<500){
-        cursor++;
-        continue;
+    var sl = s.queue.length;
+    if(sl){
+      if(s.lastlen<sl && s.lastemit){
+        s.lastlen = sl;
+        if(s.lastlen<1000){
+          cursor++;
+          continue;
+        }
       }
       var rq = s.retrieveQueue();
-      console.log(rq.length);
       s.sockio.emit('_',rq);
       s.lastemit = n;
+      s.lastlen = 0;
     }
     cursor++;
   }
-  Timeout.set(__socketIOHeartBeat,500);
+  Timeout.set(__socketIOHeartBeat,100);
 };
 
 __socketIOHeartBeat();
@@ -45,7 +49,6 @@ function ConsumerSession(u,session,address){
     t.say(item);
   });
 };
-ConsumerSession.initTxn = JSON.stringify([JSON.stringify([]),JSON.stringify([null,'init'])]);
 ConsumerSession.prototype.destroy = function(){
   if(!this.user){return;}
   this.user.sessionDown(this);
@@ -61,10 +64,10 @@ ConsumerSession.prototype.retrieveQueue = function(){
     //console.log(this.session,'splicing',this.queue.length);
     var rq = this.queue;
     this.queue = [];
-    return JSON.stringify(rq);
+    return rq;
   }else{
     //console.log('empty q');
-    return "[]";
+    return [];
   }
 };
 ConsumerSession.prototype.setSocketIO = function(sock){
