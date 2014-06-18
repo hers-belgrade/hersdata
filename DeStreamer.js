@@ -45,7 +45,6 @@ ElementWaiter.prototype.destroy = function(){
   if(!this.parent){return;}
   this.parent && this.parent.destroyed && this.parent.destroyed.detach(this.parentDestroyed);
   this.detach();
-  console.log('ElementWaiter dying');
   for(var i in this){
     delete this[i];
   }
