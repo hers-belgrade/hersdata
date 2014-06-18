@@ -26,7 +26,6 @@ DataUser.prototype.destroy = function(){
   if(!this._parent){return;}
   this._parent.dismiss(this);
   delete this.__engager;
-  console.log('DataUser destroying',this.followers ? Object.keys(this.followers).length : 0);
   DataFollower.prototype.destroy.call(this);
 };
 
