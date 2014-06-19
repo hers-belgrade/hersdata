@@ -17,9 +17,12 @@ function DataFollower(data,createcb,cb,user,path){
   Listener.call(this);
   path = path || [];
   this.path = path;
+  /*
   if(cb){
     this.say = cb;
   }
+  */
+  this.saycb = cb;
   this.createcb = createcb;
   this.destroyed = new HookCollection();
   this._parent = user;
@@ -45,6 +48,10 @@ DataFollower.prototype.destroy = function(){
   var dh = this.destroyed;
   delete this.destroyed;
   dh.fire();
+  if(this._parent && this._parent.followers){
+    var spath = this.path ? this.path.join('/') : '.';
+    delete this._parent.followers[spath];
+  }
   this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
   this.finalizer();
@@ -55,6 +62,16 @@ DataFollower.prototype.destroy = function(){
   //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
 };
 DataFollower.prototype.finalizer = function(){
+};
+DataFollower.prototype.say = function(item){
+  if(this.saycb){
+    this.saycb.call(this,item);
+  }else{
+    if(this._parent && this._parent.say){
+      //this._parent.say(item);
+      this._parent.say([this._parent.path.concat(item[0]),item[1]]);
+    }
+  }
 };
 DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
@@ -216,7 +233,8 @@ DataFollower.prototype.attachToCollection = function(name,el){
   if(!this.say){return;}
   if(name.charAt(0)==='_'){return;}
   this.createListener(name+'_destroyed',function(){
-    this.say.call(this,[this.path,[name]]);
+    this.say([this.path,[name]]);
+    //this.say.call(this,[this.path,[name]]);
   },el.destroyed);
 };
 DataFollower.prototype.emitScalarValue = function(name,val,cb){
@@ -362,27 +380,6 @@ DataFollower.prototype.bid = function(path,paramobj,cb){
 DataFollower.prototype.offer = function(path,paramobj,cb){
   return this.user().offer(this.data,path,paramobj,cb,this.remotepath);
 };
-DataFollower.prototype.waitFor = function(queryarry,cb){
-  return this.user().waitFor(this.data,queryarry,cb,this.remotepath);
-};
-DataFollower.prototype.waitForever = function(queryarry,cb){
-  var t = this;
-  var wfFunc = function(){
-    var u = t.user();
-    if(!u){return;}
-    u.waitFor(t.data,queryarry,function(discard){
-      if(discard==='DISCARD_THIS'){
-        wfFunc && wfFunc();
-        return;
-      }
-      cb.apply(t,arguments);
-    });
-  };
-  this.user().destroyed.attach(function(){
-    wfFunc=null;
-  });
-  wfFunc();
-};
 DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   path = path || [];
   var spath = path.join('/') || '.';
@@ -397,6 +394,7 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   }else{
     this.followers = {};
   }
+  /*
   if(typeof saycb === 'undefined'){
     saycb = (function(t){
       var _t = t;
@@ -405,6 +403,7 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
       };
     })(this);
   }
+  */
   if(!this.data){
     console.trace();
     console.log('no data on parent');
@@ -414,6 +413,8 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
     console.log('parent destroyed');
   }
   var df = new (ctor||DataFollower)(this.data,cb,saycb,this,path,options);
+  this.followers[spath] = df;
+  /*
   if(df.destroyed){
     this.followers[spath] = df;
     df.destroyed.attach((function(fs,sp){
@@ -424,6 +425,7 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
       }
     })(this.followers,spath));
   }
+  */
   //console.log('returning new df');
   return df;
 };

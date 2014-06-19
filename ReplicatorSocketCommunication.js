@@ -49,7 +49,8 @@ ReplicatorSocketCommunication.prototype.handleDataRead = function(){
     }catch(e){
       console.log('could not read',this.dataRead,'from socket');
       this.dataRead = '';
-      this.destroy();
+      this.socket && this.socket.destroy();
+      delete this.socket;
       //process.exit(0);
     }
   }
