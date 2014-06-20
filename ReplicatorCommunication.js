@@ -10,7 +10,7 @@ var __id = 0;
 
 function statusSetter(stts){
   if(!(this.rc && this.rc.counter)){return;}
-  this.rc.send('userstatus',this.fullname(),stts);
+  this.rc.send('userstatus',this._replicationid,stts);
 };
 
 function remoteSayer(item){
@@ -32,10 +32,18 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
 RemoteFollower.prototype.setStatus = statusSetter;
 RemoteFollower.prototype.say = remoteSayer;
 
-function RemoteUser(rc,username,realmname,roles,replicationid){
+function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
   this._replicationid=replicationid;
-  DataUser.call(this,rc.data,username,realmname,roles);
+  if(!this.rc.remotes){
+    this.rc.remotes = {};
+  }
+  this.rc.remotes[this._replicationid] = this;
+  this.username = username;
+  this.realmname = realmname;
+  this.roles = roles;
+  this.path = path;
+  this.init();
 }
 RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   value:RemoteUser,
@@ -43,9 +51,32 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+RemoteUser.prototype.init = function(){
+  var data = this.rc.data.element(this.path);
+  if(data){
+    var username = this.username, realmname = this.realmname, roles = this.roles;
+    delete this.username;
+    delete this.realmname;
+    delete this.roles;
+    DataUser.call(this,data,undefined,undefined,username,realmname,roles);
+  }else{
+    this.setStatus('LATER');
+    var t = this;
+    var df = new DataFollower(rc.data,function(stts){
+      switch(stts){
+        case 'OK':
+          t.init();
+          this.destroy();
+          break;
+      }
+    },null,this.rc.superuser,path);
+  }
+};
 RemoteUser.prototype.setStatus = statusSetter;
 RemoteUser.prototype.say = remoteSayer;
 RemoteUser.prototype.follow = function(path,statuscb,saycb){
+  return DataUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+  //
   if(statuscb){
     return DataUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
   }else{
@@ -55,11 +86,7 @@ RemoteUser.prototype.follow = function(path,statuscb,saycb){
 
 function RCSuperUser(rc,username,realmname){
   this.rc = rc;
-  this.replicators = {};
-  this.replicatorcbs = {};
   this._replicationid = '0.0.0.0';
-  this.replicators[rc._id] = '0.0.0.0';
-  this.replicatorcbs[rc._id] = [];
   SuperUser.call(this,rc.data,undefined,undefined,username,realmname);
 }
 RCSuperUser.prototype = Object.create(SuperUser.prototype,{constructor:{
@@ -69,6 +96,8 @@ RCSuperUser.prototype = Object.create(SuperUser.prototype,{constructor:{
   configurable:false
 }});
 RCSuperUser.prototype.follow = function(path,statuscb,saycb){
+  return SuperUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+  //
   if(statuscb){
     return SuperUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
   }else{
@@ -394,6 +423,18 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   this._fullname = u.fullname();
   return u;
 };
+ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,path){
+  new RemoteUser(this,username,realmname,roles,id,path);
+};
+ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
+  var p = this.remotes[parentid];
+  if(!p){
+    this.sendobj({destroy:parentid});
+    return;
+  }
+  this.inputcounter=id;
+  p.follow(path);
+};
 ReplicatorCommunication.prototype.handOver = function(input){
 /*
   console.log(
@@ -470,6 +511,15 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.user){
+    var mn = input.user.code;
+    var m = this[mn];
+    if(typeof m === 'function'){
+      m.apply(this,input.user.args);
+    }else{
+      console.log('no user related method',mn,'to invoke');
+      return;
+    }
+    /*
     var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
     if (!this.users) this.users = {};
 
@@ -511,6 +561,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
         this.handleDestroyable(counter,cbrefs,method.apply(u,input[i]));
       }
     }
+    */
     return;
   }
   this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
