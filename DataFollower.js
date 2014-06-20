@@ -68,8 +68,8 @@ DataFollower.prototype.say = function(item){
     this.saycb.call(this,item);
   }else{
     if(this._parent && this._parent.say){
-      //this._parent.say(item);
-      this._parent.say([this._parent.path.concat(item[0]),item[1]]);
+      var p = this._parent.pathtocommunication ? this._parent.pathtocommunication : this._parent.path;
+      this._parent.say([p.concat(item[0]),item[1]]);
     }
   }
 };
@@ -187,35 +187,8 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
     }
   }
   this.pathtocommunication = this.path.slice(0,cursor);
-  target.communication.usersend(this,this.pathtocommunication,this.remotepath,'follow',remotepath,(function(_t, _d,_p){
-    var t = _t, d = _d, p = _p;
-    return function(status){
-      if (status === 'DISCARD_THIS') {
-        t.remotepath = p;
-        t.huntTarget(d);
-        return;
-      }
-      //console.log('remote follow said',arguments);
-      t.setStatus(status);
-    };
-  })(this, data, (this.remotepath) ? this.remotepath.slice() : undefined),(function(t){
-    var _t = t;
-    return function(item){
-      typeof item === 'object' && item instanceof Array && _t.say && _t.say([_t.pathtocommunication.concat(item[0]),item[1]]);
-    };
-  })(this),'__persistmycb');
-  //console.log('post usersend will change',this.remotepath);
-  if(this.remotepath){
-    //console.log('augmenting the remotepath',this.remotepath);
-    this.remotepath.push(remotepath);
-    //console.log('to',this.remotepath);
-  }else{
-    this.remotepath = remotepath;
-  }
-  //console.log('to',this.remotepath);
-  //console.log('with my followers',this.followers ? Object.keys(this.followers) : 'none');
-  //console.log('with parents path',this._parent.path);
-  //console.log('and path',this.path);
+  this.remotetail = remotepath;
+  target.communication.remoteLink(this);
   this.data = target;
 
 }
@@ -271,6 +244,7 @@ DataFollower.prototype.attachToScalar = function(name,el){
   },el.destroyed);
 };
 DataFollower.prototype.attachAppropriately = function(name,el){
+  if(!this.listeners){return;}
   switch(el.type()) {
     case 'Scalar': return this.attachToScalar(name,el);
     case 'Collection': return this.attachToCollection(name, el);

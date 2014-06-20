@@ -74,6 +74,8 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     target[datamethod](path.slice(cursor),paramobj,cb,this);
   }
 };
+User.prototype.applyOptions = function(options){
+};
 User.prototype.invoke = function(data,path,paramobj,cb,remotepath) {
   Timeout.next(this,'perform','invoke',data,path,2,'run',paramobj,cb,remotepath);
 };
@@ -84,13 +86,14 @@ User.prototype.offer = function(data,path,paramobj,cb,remotepath) {
   Timeout.next(this,'perform','offer',data,path,1,'takeOffer',paramobj,cb,remotepath);
 };
 
-User.Create = function(username,realmname,roles,ctor){
+User.Create = function(username,realmname,roles,ctor,options){
   var fn = username+'@'+realmname;
   var u = __Instances[fn];
   if(u){
+    u.applyOptions(options);
     return u;
   }
-  u = new ctor(username,realmname,roles);
+  u = new ctor(username,realmname,roles,options);
   __Instances[fn] = u;
   return u;
 };

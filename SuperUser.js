@@ -14,8 +14,8 @@ SuperUser.prototype.contains = function(){
   return true;
 };
 
-function DataSuperUser(data,statuscb, cb,username,realmname){
-  DataUser.call(this,data,statuscb,cb,username,realmname,'',SuperUser);
+function DataSuperUser(data,statuscb, cb,username,realmname,userconstructor,userctoroptions){
+  DataUser.call(this,data,statuscb,cb,username,realmname,'',userconstructor||SuperUser,userctoroptions);
 }
 DataSuperUser.prototype = Object.create(DataUser.prototype,{constructor:{
   value:DataSuperUser,
@@ -23,5 +23,6 @@ DataSuperUser.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+DataSuperUser.SuperUser = SuperUser;
 
 module.exports = DataSuperUser;

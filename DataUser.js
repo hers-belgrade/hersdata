@@ -2,10 +2,10 @@ var DataFollower = require('./DataFollower'),
   UserEngagement = require('./UserEngagement'),
   User = require('./User');
 
-function DataUser(data,createcb,cb,username,realmname,roles,userconstructor){
+function DataUser(data,createcb,cb,username,realmname,roles,userconstructor,userctoroptions){
   if(!data){return};
   userconstructor = userconstructor || User;
-  DataFollower.call(this,data,createcb,cb,User.Create(username,realmname,roles,userconstructor));
+  DataFollower.call(this,data,createcb,cb,User.Create(username,realmname,roles,userconstructor,userctoroptions));
   UserEngagement.call(this,this._parent);
   var t = this;
   this._parent.destroyed.attach(function(){

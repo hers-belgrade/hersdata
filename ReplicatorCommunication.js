@@ -1,11 +1,141 @@
 var Timeout = require('herstimeout'),
   BigCounter = require('./BigCounter'),
+  DataFollower = require('./DataFollower'),
   DataUser = require('./DataUser'),
   SuperUser = require('./SuperUser'),
   HookCollection = require('./hookcollection');
 
 var __start = Timeout.now();
 var __id = 0;
+
+function statusSetter(stts){
+  if(!(this.rc && this.rc.counter)){return;}
+  this.rc.send('userstatus',this.fullname(),stts);
+};
+
+function remoteSayer(item){
+  if(!(this.rc && this.rc.counter)){return;}
+  this.rc.send('usersay',this._replicationid,item);
+}
+
+function RemoteFollower(data,createcb,saycb,user,path,rc){
+  this._replicationid = rc.inputcounter;
+  this.rc = rc;
+  DataFollower.call(this,data,createcb,saycb,user,path);
+};
+RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
+  value:RemoteFollower,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+RemoteFollower.prototype.setStatus = statusSetter;
+RemoteFollower.prototype.say = remoteSayer;
+
+function RemoteUser(rc,username,realmname,roles,replicationid){
+  this.rc = rc;
+  this._replicationid=replicationid;
+  DataUser.call(this,rc.data,username,realmname,roles);
+}
+RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
+  value:RemoteUser,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+RemoteUser.prototype.setStatus = statusSetter;
+RemoteUser.prototype.say = remoteSayer;
+RemoteUser.prototype.follow = function(path,statuscb,saycb){
+  if(statuscb){
+    return DataUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+  }else{
+    return DataUser.prototype.follow.call(this,path,statuscb,saycb);
+  }
+};
+
+function RCSuperUser(rc,username,realmname){
+  this.rc = rc;
+  this.replicators = {};
+  this.replicatorcbs = {};
+  this._replicationid = '0.0.0.0';
+  this.replicators[rc._id] = '0.0.0.0';
+  this.replicatorcbs[rc._id] = [];
+  SuperUser.call(this,rc.data,undefined,undefined,username,realmname);
+}
+RCSuperUser.prototype = Object.create(SuperUser.prototype,{constructor:{
+  value:RCSuperUser,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+RCSuperUser.prototype.follow = function(path,statuscb,saycb){
+  if(statuscb){
+    return SuperUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+  }else{
+    return SuperUser.prototype.follow.call(this,path,statuscb,saycb);
+  }
+};
+RCSuperUser.prototype.say = function(item){
+  this.rc.slaveSays.fire(item);
+};
+
+function RemoteFollowerSlave(rc,localfollower){
+  localfollower.remotelink = this;
+  this.rc = rc;
+  rc.counter.inc();
+  this._id = rc.counter.toString();
+  if(!rc.senders){
+    rc.senders = {};
+  }
+  rc.senders[this._id] = this;
+  this.follower=localfollower;
+  if(localfollower.remotepath){
+    this.remotepath = JSON.parse(JSON.stringify(localfollower.remotepath));
+  }
+  if(localfollower.remotepath){
+    localfollower.remotepath.push(localfollower.remotetail);
+  }else{
+    localfollower.remotepath = localfollower.remotetail;
+  }
+  //create
+  var _parent = localfollower._parent.remotelink;
+  if(_parent){
+    this.send('createFollower',_parent._id,this._id,localfollower.remotetail);
+  }else{
+    this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,localfollower.remotetail);
+  }
+}
+RemoteFollowerSlave.prototype.send = function(code){
+  var obj = {
+    code:code
+  };
+  var args = Array.prototype.slice.call(arguments,1);
+  if(args.length){
+    obj.args = args;
+  }
+  this.rc.sendobj({
+    user:obj
+  });
+};
+RemoteFollowerSlave.prototype.setStatus = function(stts){
+  if(stts==='RETREATING'){
+    this.destroy();
+    return;
+  }
+  this.follower.setStatus(stts);
+};
+RemoteFollowerSlave.prototype.say = function(item){
+  if(item==='DISCARD_THIS'){
+    this.destroy();
+    return;
+  }
+  this.follower.say([this.follower.pathtocommunication.concat(item[0]),item[1]]); 
+};
+RemoteFollowerSlave.prototype.destroy = function(){
+  if(!this.follower){return;}
+  
+  this.follower.remotepath = this.remotepath;
+}
 
 function userStatus(replicatorcommunication){
   var rc = replicatorcommunication;
@@ -78,7 +208,7 @@ ReplicatorCommunication.prototype.send = function(code){
   sendobj[code] = this.prepareCallParams(Array.prototype.slice.call(arguments,1),false);
   this.sendobj(sendobj);
 };
-ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pathtome){
+ReplicatorCommunication.prototype.addToSenders1 = function(user,replicationid,pathtome){
   if(!user.replicators){
     user.replicators = {};
   }
@@ -92,14 +222,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
     }
     user.replicators[this._id] = replicationid;
     user.replicatorcbs[this._id] = [];
-    this.sayers[replicationid] = (function(u,p){
-      var _u = u, _p = p;
-      return function(item){if(!_u.say){
-        //console.log(_u,'has no say');
-        return;
-      }_u.say.call(_u,[_p.concat(item[0]),item[1]]);};
-    })(user,pathtome||[]);
-    //console.log(Object.keys(this.sayers).length,'sayers when',user.fullname(),user.path);
+    this.sayers[replicationid] = user;
     user.destroyed.attach((function(t,replicationid,user){
       var _t = t, _cnt = replicationid,_u = user; 
       return function(){
@@ -122,7 +245,7 @@ ReplicatorCommunication.prototype.addToSenders = function(user,replicationid,pat
     })(this,replicationid,user));
   }
 };
-ReplicatorCommunication.prototype.usersend = function(user,pathtome,remotepath,code){
+ReplicatorCommunication.prototype.usersend1 = function(user,pathtome,remotepath,code){
   if(!(user.username()&&user.realmname())){
     return;
     console.trace();
@@ -243,20 +366,22 @@ ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
   }
   return ret;
 };
+ReplicatorCommunication.prototype.remoteLink = function(follower){
+  new RemoteFollowerSlave(this,follower);
+};
 ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   if(!this.users){
     this.users = {};
   }
-  var sayer;
+  var u;
   if(slaveside){
-    this.masterSays = new HookCollection();
-    sayer = userSayer(this,'slavesay');
+    var ms = new HookCollection();
+    this.masterSays = ms;
+    u = new SuperUser(this.data,function(){},function(item){ms.fire(item);},token.name,token.realmname);
   }else{
     this.slaveSays = new HookCollection();
-    sayer = userSayer(this,'mastersay');
+    u =  new RCSuperUser(this,token.name,token.realmname);
   }
-  var u =  new SuperUser(this.data,this.userStatus,sayer,token.name,token.realmname);
-  u._replicationid = '0.0.0.0';
   u.replicators = {};
   var fullname = u.fullname();
   this.users[fullname] = u;
@@ -267,7 +392,6 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
     }
   })(this.users,fullname));
   this._fullname = u.fullname();
-  this.addToSenders(u,'0.0.0.0');
   return u;
 };
 ReplicatorCommunication.prototype.handOver = function(input){
@@ -282,6 +406,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   );
   */
   var counter = input.counter;
+  this.inputcounter = counter;
   var cbrefs = '';
   delete input.counter;
   for(var i in input){
@@ -321,10 +446,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.userstatus) {
     var us = input.userstatus;
-    if(this.statii){
-      var s = this.statii[us[0]];
+    if(this.senders){
+      var s = this.senders[us[0]];
       if(s){
-        s(us[1]);
+        s.setStatus(us[1]);
       }else{
         console.log('no status for',us[0],'to userstatus',us[1]);
       }
@@ -333,10 +458,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.usersay){
     var us = input.usersay;
-    if(this.sayers){
-      var s = this.sayers[us[0]];
+    if(this.senders){
+      var s = this.senders[us[0]];
       if(s){
-        s(us[1]);
+        s.say(us[1]);
       }else{
         //console.log('no sayer for',us[0],'to usersay',us[1], input);
         this.send({destroy:us[0]});
@@ -355,9 +480,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
         console.log('superuser cannot be automatically created');
         process.exit(0);
       }
-      u =  new DataUser(this.data,this.userStatus,this.userSayer,username,realmname,input.user.roles);
+      u =  new RemoteUser(this,username,realmname,input.user.roles,input.user._id);
       u.user().server = this.replicaToken.name;
-      u._replicationid = input.user._id;
       u.destroyed.attach((function(_us,_fn){
         var us=_us,fn=_fn
         return function(){
