@@ -294,33 +294,6 @@ DataFollower.prototype.reportElement = function(name,el,cb){
       break;
   }
 };
-DataFollower.prototype.explain = function(cb){
-  if(!this.data){return;}
-  if(!this.data.access_level){
-    console.trace();
-    console.log('DataFollower',this.path,'missed the destruction');
-    return;
-  }
-  if(this.remotepath){
-    var t = this;
-    this.data.communication.usersend(this,this.pathtocommunication,this.remotepath,'explain',cb,'__persistmycb');
-    return;
-  }
-  if(!this.contains(this.data.access_level())){
-    return;
-  }
-  var t = this;
-  this.data.traverseElements(function(name,el){
-    t.reportElement(name,el,cb);
-  });
-  if(this.followers){
-    for(var i in this.followers){
-      this.followers[i].explain(function(item){
-        cb([t.path.concat(item[0]),item[1]]);
-      });
-    }
-  }
-};
 DataFollower.prototype.engaged = function(){
   return this._parent.engaged();
 };
@@ -404,13 +377,56 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   return df;
 };
 DataFollower.prototype.describe = function(cb){
-  this.explain(cb);
-  return;
+  if(!this.data){cb();return;}
+  if(!this.data.access_level){
+    console.trace();
+    console.log('DataFollower',this.path,'missed the destruction');
+    cb();
+    return;
+  }
+  if(this.remotelink){
+    this.remotelink.perform('remotedescribe',[],{},cb);
+    return;
+  }
+  if(!this.contains(this.data.access_level())){
+    return;
+  }
   var ret = [];
-  this.explain(function(item){
+  var pusher = function(item){
     ret.push(item);
+  };
+  var batchpushers = {};
+  var batchpusher = function(bpname){
+    var bpn = bpname,bps = batchpushers,_cb=cb,_ret=ret;
+    return function(items){
+      Array.prototype.push.apply(_ret,items);
+      batchpushers.delete[bpn];
+      if(!Object.keys(batchpushers).length){
+        _cb(_ret);
+      }
+    };
+  };
+  var t = this;
+  this.data.traverseElements(function(name,el){
+    t.reportElement(name,el,pusher);
   });
-  cb && cb.call(this,ret);
+  if(this.followers){
+    for(var i in this.followers){
+      batchpushers[i]=1;
+    }
+    for(var i in this.followers){
+      this.followers[i].remotedescribe(t.path,{},batchpusher(i));
+    }
+    return;
+  }
+  cb(ret); //cb.call(this,ret);??
+};
+DataFollower.prototype.remotedescribe = function(path,paramobj,cb){
+  var ret = [];
+  this.describe(function(item){
+    ret.push([path.concat(item[0]),item[1]]);
+  });
+  return ret;
 };
 DataFollower.prototype.handleBid = function(reqname,cb){
   var bf = this.follow(['__requirements',reqname],function(stts){
