@@ -95,7 +95,11 @@ Broadcaster.prototype.describe = function(cb,translatorname){
   DataUser.prototype.describe.call(this,cb);
 };
 Broadcaster.prototype.attach = function(cb,translatorname){
-  this.describe(cb,translatorname);
+  this.describe(function(items){
+    for(var i in items){
+      cb(items[i]);
+    }
+  },translatorname);
   if(!translatorname){
     return this.broadcast.attach(cb);
   }else if(this.translators){

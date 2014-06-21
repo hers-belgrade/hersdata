@@ -105,6 +105,10 @@ ConsumerSession.prototype.say = function(item){
   if(!this.queue){
     return false;
   }
+  /*
+  console.trace();
+  console.log('saying',item);
+  */
   this.queue.push(item);
   return true;
 };
