@@ -45,8 +45,13 @@ function ConsumerSession(u,session,address){
   this.queue = [];
   this.lastAccess = Timeout.now();
   var t = this;
-  u.describe(function(item){
-    t.say(item);
+  u.describe(function(items){
+    //console.trace();
+    //console.log(t.session,u.fullname(),'describing',items);
+    for(var i in items){
+      //console.log(t.session,u.fullname(),'saying',items[i]);
+      t.say(items[i]);
+    }
   });
 };
 ConsumerSession.prototype.destroy = function(){
@@ -100,6 +105,10 @@ ConsumerSession.prototype.say = function(item){
   if(!this.queue){
     return false;
   }
+  /*
+  console.trace();
+  console.log('saying',item);
+  */
   this.queue.push(item);
   return true;
 };

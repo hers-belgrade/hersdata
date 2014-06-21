@@ -195,7 +195,12 @@ RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
   this.send('perform',this._id,code,path,paramobj,rcs);
 };
 RemoteFollowerSlave.prototype.docb = function(cbid,args){
-  //console.log('docb',arguments);
+  /*
+  console.log('docb',cbid);//,args);
+  for(var i in args){
+    console.log(args[i]);
+  }
+  */
   var cb = this.cbs[cbid];
   if(typeof cb === 'function'){
     delete this.cbs[cbid];

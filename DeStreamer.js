@@ -68,6 +68,7 @@ DeStreamer.prototype = Object.create(Collection.prototype,{constructor:{
   configurable:false
 }});
 DeStreamer.prototype.destream = function(item){
+  //console.trace();
   //console.log('destreaming',item);
   if(!this.elementRaw){return;} //me ded
   if(!item){
@@ -91,8 +92,9 @@ DeStreamer.prototype.destream = function(item){
     if(el && el.destream){
       //console.log('data destreamer at',n,'destreaming');
       el.destream(item);
+      //console.log('to',el.dataDebug());
     }else{
-      console.log('no',n,'at',this.dataDebug(),'but',el);
+      //console.log('no',n,'at',this.dataDebug(),'but',el,'because',item);
     }
     return;
   }
@@ -119,6 +121,7 @@ DeStreamer.prototype.processItemData = function(itemdata){
     if(itemdata[1] === null){
       var c;
       if(typeof this.destreamerpos !== 'undefined' && this.destreamerdepth){
+        //console.log('new child DeStreamer for',itemdata[0],'with',this.destreamerpos+1,this.destreamerdepth-1);
         c = new DeStreamer('*',{from:this.destreamerpos+1,depth:this.destreamerdepth-1});
       }else{
         //console.log('no child DeStreamer for',itemdata[0],this.destreamerpos,this.destreamerdepth);
