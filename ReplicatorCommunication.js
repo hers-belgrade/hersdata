@@ -165,11 +165,20 @@ RemoteFollowerSlave.prototype.say = function(item){
     this.destroy();
     return;
   }
+  if(!this.follower.pathtocommunication){
+    console.log('follower ded?',this.follower);
+    return;
+  }
   this.follower.say([this.follower.pathtocommunication.concat(item[0]),item[1]]); 
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
   this.follower.remotepath = this.remotepath;
+  delete this.follower.remotelink;
+  delete this.rc.senders[this._id];
+  for(var i in this){
+    delete this[i];
+  }
 }
 RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
   if(!this.rc.counter){

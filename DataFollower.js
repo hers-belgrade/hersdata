@@ -40,6 +40,9 @@ DataFollower.prototype.destroy = function(){
   }
   //var p = this.path;
   //console.log(this.path,'dying');
+  if(this.remotelink){
+    this.remotelink.destroy();
+  }
   for(var i in this.followers){
     this.followers[i].destroy();
     delete this.followers[i];
