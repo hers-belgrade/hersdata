@@ -21,6 +21,10 @@ function remoteSayer(item){
 function RemoteFollower(data,createcb,saycb,user,path,rc){
   this._replicationid = rc.inputcounter;
   this.rc = rc;
+  if(!this.rc.remotes){
+    this.rc.remotes = {};
+  }
+  this.rc.remotes[this._replicationid] = this;
   DataFollower.call(this,data,createcb,saycb,user,path);
 };
 RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
@@ -31,6 +35,9 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
 }});
 RemoteFollower.prototype.setStatus = statusSetter;
 RemoteFollower.prototype.say = remoteSayer;
+RemoteFollower.prototype.follow = function(path,statuscb,saycb){
+  return DataFollower.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+}
 
 function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
@@ -434,6 +441,24 @@ ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
   }
   this.inputcounter=id;
   p.follow(path);
+};
+ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid){
+  var r = this.remotes[id];
+  if(!r){
+    this.sendobj({destroy:id});
+    return;
+  }
+  var m = r[code];
+  if(typeof m === 'function'){
+    m.call(r,path,paramobj,(function(t,arry){
+      return function(){
+        Array.prototype.push.call(arry,arguments);
+        t.sendobj({commandresult:arry});
+      };
+    }(this,[id,cbid])));
+  }else{
+    this.sendobj({commandresult:[id,cbid,'NO_METHOD',[code]]});
+  }
 };
 ReplicatorCommunication.prototype.handOver = function(input){
 /*
