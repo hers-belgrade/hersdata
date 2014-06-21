@@ -448,10 +448,14 @@ ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid)
     return;
   }
   var m = r[code];
+  console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
     m.call(r,path,paramobj,(function(t,arry){
       return function(){
-        Array.prototype.push.call(arry,arguments);
+        for(var i in arguments){
+          arry.push(arguments[i]);
+        }
+        console.log('commandresult',arry);
         t.sendobj({commandresult:arry});
       };
     }(this,[id,cbid])));
