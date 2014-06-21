@@ -79,7 +79,17 @@ Broadcaster.prototype.describe = function(cb,translatorname){
   if(this.translators){
     var t = this.translators[translatorname];
     if(t){
-      cb = t.translate(cb);
+      var _ret = [];
+      var tr = t.translate(function(item){
+        _ret.push(item);
+      });
+      var _cb = cb;
+      cb = function(items){
+        for(var i in items){
+          tr(items[i]);
+        }
+        _cb(_ret);
+      };
     }
   }
   DataUser.prototype.describe.call(this,cb);

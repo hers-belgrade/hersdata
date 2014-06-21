@@ -92,7 +92,7 @@ DeStreamer.prototype.destream = function(item){
       //console.log('data destreamer at',n,'destreaming');
       el.destream(item);
     }else{
-      console.log('no',n,'at',this.dataDebug(),'but',el);
+      console.log('no',n,'at',this.dataDebug(),'but',el,'because',item);
     }
     return;
   }

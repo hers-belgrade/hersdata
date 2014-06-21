@@ -377,11 +377,11 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   return df;
 };
 DataFollower.prototype.describe = function(cb){
-  if(!this.data){cb();return;}
+  if(!this.data){cb([]);return;}
   if(!this.data.access_level){
     console.trace();
     console.log('DataFollower',this.path,'missed the destruction');
-    cb();
+    cb([]);
     return;
   }
   if(this.remotelink){
@@ -389,17 +389,20 @@ DataFollower.prototype.describe = function(cb){
     return;
   }
   if(!this.contains(this.data.access_level())){
+    cb([]);
     return;
   }
   var ret = [];
   var pusher = function(item){
     ret.push(item);
+    //console.log('1st level push',item,'=>',ret);
   };
   var batchpushers = {};
   var batchpusher = function(bpname){
     var bpn = bpname,bps = batchpushers,_cb=cb,_ret=ret;
     return function(items){
       Array.prototype.push.apply(_ret,items);
+      //console.log('ret is',_ret,'because',items);
       batchpushers.delete[bpn];
       if(!Object.keys(batchpushers).length){
         _cb(_ret);
