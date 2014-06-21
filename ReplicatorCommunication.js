@@ -162,9 +162,28 @@ RemoteFollowerSlave.prototype.say = function(item){
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
-  
   this.follower.remotepath = this.remotepath;
 }
+RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
+  if(!this.rc.counter){
+    cb('DISCARD_THIS');
+    return;
+  }
+  this.rc.counter.inc();
+  var rcs = this.rc.toString();
+  if(!this.cbs){
+    this.cbs = {};
+  }
+  this.cbs[rcs] = cb;
+  this.send('perform',this._id,code,path,paramobj,rcs);
+};
+RemoteFollowerSlave.prototype.docb = function(cbid){
+  var cb = this.cbs[cbid];
+  if(typeof cb === 'function'){
+    delete this.cbs[cbid];
+    cb.apply(null,Array.prototype.slice(arguments,1));
+  }
+};
 
 function userStatus(replicatorcommunication){
   var rc = replicatorcommunication;
@@ -337,34 +356,14 @@ ReplicatorCommunication.prototype.prepareCallParams = function(ca,persist,user){
 };
 ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
-    cbref = commandresult.shift();
-    var cb = this.cbs[cbref];
-    //console.log('cb for',cbref,'is',cb);
-    if(typeof cb === 'function'){
-      cb.apply(null,commandresult);
-      if(!(this.persist && this.persist[cbref])){
-        delete this.cbs[cbref];
-      }
-      if(commandresult==='DISCARD_THIS'){
-        console.log('discarding',cbref);
-        delete this.cbs[cbref];
-        if(this.persist){
-          delete this.persist[cbref];
-        }
-      }
-      if(commandresult==='DISCARD_GROUP'){
-        var cbrefs = arguments[1];
-        if(!cbrefs){return;}
-        cbrefs = cbrefs.split(',');
-        for(var i in cbrefs){
-          console.log('discarding',i);
-          delete this.cbs[cbrefs[i]];
-          if(this.persist){
-            delete this.persist[cbrefs[i]];
-          }
-        }
-      }
+    rid = commandresult.shift();
+    var r = this.senders[rid];
+    if(!r){
+      this.sendobj({destroy:rid});
+      return;
     }
+    cbref = commandresult.shift();
+    r.docb(cbref,commandresult);
   }
 };
 ReplicatorCommunication.prototype.parseAndSubstitute= function(params){
