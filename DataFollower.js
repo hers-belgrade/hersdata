@@ -343,13 +343,13 @@ DataFollower.prototype.contains = function(key){
   return this._parent ? this._parent.contains(key) : false;
 };
 DataFollower.prototype.invoke = function(path,paramobj,cb){
-  return this.user().invoke(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('invoke',path,paramobj,cb) : this.user().invoke(this.data,path,paramobj,cb,this.remotepath);
 };
 DataFollower.prototype.bid = function(path,paramobj,cb){
-  return this.user().bid(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('bid',path,paramobj,cb) : this.user().bid(this.data,path,paramobj,cb,this.remotepath);
 };
 DataFollower.prototype.offer = function(path,paramobj,cb){
-  return this.user().offer(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('offer',path,paramobj,cb) : this.user().offer(this.data,path,paramobj,cb,this.remotepath);
 };
 DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   path = path || [];
