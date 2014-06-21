@@ -63,6 +63,10 @@ DataFollower.prototype.destroy = function(){
 };
 DataFollower.prototype.finalizer = function(){
 };
+DataFollower.prototype.setStatus = function(stts){
+  this._status = stts;
+  this.createcb && this.createcb.call(this,this._status);
+};
 DataFollower.prototype.say = function(item){
   if(this.saycb){
     this.saycb.call(this,item);
@@ -72,10 +76,6 @@ DataFollower.prototype.say = function(item){
       this._parent.say([p.concat(item[0]),item[1]]);
     }
   }
-};
-DataFollower.prototype.setStatus = function(stts){
-  this._status = stts;
-  this.createcb && this.createcb.call(this,this._status);
 };
 function listenForTarget(target,data,cursor){
   this.purgeListeners();
@@ -180,10 +180,7 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
       console.log('now what?',remotepath,this._parent.remotepath,'parents followers',Object.keys(this._parent.followers));
     }
     if(subcursor===mylastp.length){
-      console.log('cutting',remotepath,'by',subcursor,'elements on parent rp',this._parent.remotepath);
       remotepath.splice(0,subcursor);
-      console.trace();
-      console.log('real subpath is',remotepath,'on parent rp',this._parent.remotepath);
     }
   }
   this.pathtocommunication = this.path.slice(0,cursor);
