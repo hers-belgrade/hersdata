@@ -26,7 +26,7 @@ function RemoteFollower(data,createcb,saycb,user,path,rc){
   }
   this.rc.remotes[this._replicationid] = this;
   DataFollower.call(this,data,createcb,saycb,user,path);
-  console.log('new RemoteFollower',this.fullname(),this._replicationid,this.path,data.dataDebug());
+  //console.log('new RemoteFollower',this.fullname(),this._replicationid,this.path,data.dataDebug());
 };
 RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:RemoteFollower,
@@ -167,7 +167,7 @@ RemoteFollowerSlave.prototype.say = function(item){
     return;
   }
   if(!this.follower.pathtocommunication){
-    console.log('follower ded?',this.follower);
+    //console.log('follower ded?',this.follower);
     return;
   }
   this.follower.say([this.follower.pathtocommunication.concat(item[0]),item[1]]); 
@@ -195,7 +195,7 @@ RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
   this.send('perform',this._id,code,path,paramobj,rcs);
 };
 RemoteFollowerSlave.prototype.docb = function(cbid,args){
-  console.log('docb',arguments);
+  //console.log('docb',arguments);
   var cb = this.cbs[cbid];
   if(typeof cb === 'function'){
     delete this.cbs[cbid];
@@ -459,14 +459,14 @@ ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid)
     return;
   }
   var m = r[code];
-  console.log('perform',id,code,path,paramobj,cbid);
+  //console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
     m.call(r,path,paramobj,(function(t,arry){
       return function(){
         for(var i in arguments){
           arry.push(arguments[i]);
         }
-        console.log('commandresult',arry);
+        //console.log('commandresult',arry);
         t.sendobj({commandresult:arry});
       };
     }(this,[id,cbid])));
