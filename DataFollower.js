@@ -397,23 +397,22 @@ DataFollower.prototype.describe = function(cb){
     ret.push(item);
     //console.log('1st level push',item,'=>',ret);
   };
-  var batchpushers = {};
-  var batchpusher = function(bpname){
-    var bpn = bpname,bps = batchpushers,_cb=cb,_ret=ret;
-    return function(items){
-      Array.prototype.push.apply(_ret,items);
-      //console.log('ret is',_ret,'because',items);
-      batchpushers.delete[bpn];
-      if(!Object.keys(batchpushers).length){
-        _cb(_ret);
-      }
-    };
-  };
   var t = this;
   this.data.traverseElements(function(name,el){
     t.reportElement(name,el,pusher);
   });
   if(this.followers){
+    var batchpushers = {};
+    var batchpusher = function(bpname){
+      var bpn = bpname,bps = batchpushers,_cb=cb,_ret=ret;
+      return function(items){
+        Array.prototype.push.apply(_ret,items);
+        delete bps[bpn];
+        if(!Object.keys(bps).length){
+          _cb(_ret);
+        }
+      };
+    };
     for(var i in this.followers){
       batchpushers[i]=1;
     }
@@ -425,11 +424,13 @@ DataFollower.prototype.describe = function(cb){
   cb(ret); //cb.call(this,ret);??
 };
 DataFollower.prototype.remotedescribe = function(path,paramobj,cb){
-  var ret = [];
-  this.describe(function(item){
-    ret.push([path.concat(item[0]),item[1]]);
+  this.describe(function(items){
+    for(var i in items){
+      var item = items[i];
+      item[0] = path.concat(item[0]);
+    }
+    cb(items);
   });
-  return ret;
 };
 DataFollower.prototype.handleBid = function(reqname,cb){
   var bf = this.follow(['__requirements',reqname],function(stts){
