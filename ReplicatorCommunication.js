@@ -26,6 +26,7 @@ function RemoteFollower(data,createcb,saycb,user,path,rc){
   }
   this.rc.remotes[this._replicationid] = this;
   DataFollower.call(this,data,createcb,saycb,user,path);
+  console.log('new RemoteFollower',this.fullname(),this._replicationid,this.path,data.dataDebug());
 };
 RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:RemoteFollower,
@@ -177,18 +178,19 @@ RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
     return;
   }
   this.rc.counter.inc();
-  var rcs = this.rc.toString();
+  var rcs = this.rc.counter.toString();
   if(!this.cbs){
     this.cbs = {};
   }
   this.cbs[rcs] = cb;
   this.send('perform',this._id,code,path,paramobj,rcs);
 };
-RemoteFollowerSlave.prototype.docb = function(cbid){
+RemoteFollowerSlave.prototype.docb = function(cbid,args){
+  console.log('docb',arguments);
   var cb = this.cbs[cbid];
   if(typeof cb === 'function'){
     delete this.cbs[cbid];
-    cb.apply(null,Array.prototype.slice(arguments,1));
+    cb.apply(null,args);
   }
 };
 
