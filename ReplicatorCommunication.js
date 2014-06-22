@@ -174,6 +174,7 @@ RemoteFollowerSlave.prototype.say = function(item){
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
+  console.log(this._id,'dying');
   this.follower.remotepath = this.remotepath;
   delete this.follower.remotelink;
   delete this.rc.senders[this._id];
