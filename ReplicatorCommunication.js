@@ -15,7 +15,7 @@ function statusSetter(stts){
 
 function remoteSayer(item){
   if(!(this.rc && this.rc.counter)){return;}
-  this.rc.send('usersay',this._replicationid,item);
+  this.rc.send('usersay',this._replicationid,item[1]);
 }
 
 function RemoteFollower(data,createcb,saycb,user,path,rc){
@@ -209,25 +209,6 @@ RemoteFollowerSlave.prototype.docb = function(cbid,args){
   }
 };
 
-function userStatus(replicatorcommunication){
-  var rc = replicatorcommunication;
-  return function(item){
-    if(!rc.counter){return;} //rc ded
-    rc.send('userstatus',this.fullname(),item);
-  }
-}
-
-function userSayer(replicatorcommunication,sendcode){
-  var rc = replicatorcommunication;
-  var sc = sendcode || 'usersay';
-  return function(item){
-    Timeout.next(function(sc,rc,item,t){
-      if(!rc.counter){return;} //rc ded
-      rc.send(sc,t._replicationid,item);
-    },sc,rc,item,this);
-  }
-}
-
 var _instanceCount = new BigCounter();
 
 function ReplicatorCommunication(data){
@@ -240,8 +221,6 @@ function ReplicatorCommunication(data){
   this.sayers = {};
   this.__id = __id;
   this.data = data;
-  this.userStatus = userStatus(this);
-  this.userSayer = userSayer(this);
 }
 ReplicatorCommunication.prototype.destroy = function(){
   if(this.slaveSays){
