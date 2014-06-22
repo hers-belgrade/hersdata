@@ -45,13 +45,8 @@ function ConsumerSession(u,session,address){
   this.queue = [];
   this.lastAccess = Timeout.now();
   var t = this;
-  u.describe(function(items){
-    //console.trace();
-    //console.log(t.session,u.fullname(),'describing',items);
-    for(var i in items){
-      //console.log(t.session,u.fullname(),'saying',items[i]);
-      t.say(items[i]);
-    }
+  u.describe(function(item){
+    t.say(item);
   });
 };
 ConsumerSession.prototype.destroy = function(){
@@ -95,6 +90,11 @@ ConsumerSession.prototype.setSocketIO = function(sock){
 };
 ConsumerSession.prototype.say = function(item){
   if(!this.session){return;}
+  if(item&&typeof item[1]==='undefined'){
+    console.log(item,'!!');
+    console.trace();
+    process.exit(0);
+  }
   if(!this.sockio){
     var n = Timeout.now();
     if(n-this.lastAccess>10000){

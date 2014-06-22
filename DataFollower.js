@@ -72,6 +72,10 @@ DataFollower.prototype.setStatus = function(stts){
 };
 DataFollower.prototype.say = function(item){
   if(this.saycb){
+    if(this.saycb.say){
+      this.saycb.say(item);
+      return;
+    }
     this.saycb.call(this,item);
   }else{
     if(this._parent && this._parent.say){
@@ -377,6 +381,13 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   return df;
 };
 DataFollower.prototype.describe = function(cb){
+  this.realdescribe(function(items){
+    for(var i in items){
+      cb(items[i]);
+    }
+  });
+};
+DataFollower.prototype.realdescribe = function(cb){
   if(!this.data){cb([]);return;}
   if(!this.data.access_level){
     console.trace();
@@ -424,7 +435,7 @@ DataFollower.prototype.describe = function(cb){
   cb(ret); //cb.call(this,ret);??
 };
 DataFollower.prototype.remotedescribe = function(path,paramobj,cb){
-  this.describe(function(items){
+  this.realdescribe(function(items){
     for(var i in items){
       var item = items[i];
       item[0] = path.concat(item[0]);

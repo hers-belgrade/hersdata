@@ -121,7 +121,7 @@ function executeOneOnUser(user,command,params,cb){
     var method = user[command];
     if(!method){
       //console.trace();
-      console.log('no method named',command,'on user');
+      console.log('no method named',command,'on user',params);
       cb('NO_FUNCTIONALITY',method);
     }else{
       //console.log('applying',command,'to',user.username,Array.prototype.slice.call(arguments,2));
