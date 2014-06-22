@@ -71,17 +71,24 @@ DataFollower.prototype.setStatus = function(stts){
   this.createcb && this.createcb.call(this,this._status);
 };
 DataFollower.prototype.say = function(item){
-  if(this.saycb){
-    if(this.saycb.say){
-      this.saycb.say(item);
-      return;
-    }
-    this.saycb.call(this,item);
-  }else{
-    if(this._parent && this._parent.say){
-      var p = this._parent.pathtocommunication ? this._parent.pathtocommunication : this._parent.path;
-      this._parent.say([p.concat(item[0]),item[1]]);
-    }
+  var toscb = typeof this.saycb;
+  switch(toscb){
+    case 'function':
+      this.saycb.call(this,item);
+      break;
+    case 'object':
+      var scb = this.saycb;
+      if(scb===null){return;}
+      var obj=scb[0],m=obj[scb[1]];
+      typeof m === 'function' && m.call(obj,item);
+      break;
+    case 'undefined':
+      if(this._parent && this._parent.say){
+        var p = this._parent.pathtocommunication ? this._parent.pathtocommunication : this._parent.path;
+        console.log(this.path,'need to tell parent',item,'with path',p);
+        this._parent.say([p.concat(item[0]),item[1]]);
+      }
+      break;
   }
 };
 function listenForTarget(target,data,cursor){

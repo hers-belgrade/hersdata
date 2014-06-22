@@ -90,11 +90,6 @@ ConsumerSession.prototype.setSocketIO = function(sock){
 };
 ConsumerSession.prototype.say = function(item){
   if(!this.session){return;}
-  if(item&&typeof item[1]==='undefined'){
-    console.log(item,'!!');
-    console.trace();
-    process.exit(0);
-  }
   if(!this.sockio){
     var n = Timeout.now();
     if(n-this.lastAccess>10000){

@@ -166,11 +166,11 @@ RemoteFollowerSlave.prototype.say = function(item){
     this.destroy();
     return;
   }
-  if(!this.follower.pathtocommunication){
+  if(!this.follower.remotetail){
     //console.log('follower ded?',this.follower);
     return;
   }
-  this.follower.say([this.follower.pathtocommunication.concat(item[0]),item[1]]); 
+  this.follower.say([this.follower.remotetail,item]);
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
