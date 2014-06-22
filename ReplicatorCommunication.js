@@ -155,11 +155,10 @@ RemoteFollowerSlave.prototype.send = function(code){
   });
 };
 RemoteFollowerSlave.prototype.setStatus = function(stts){
+  this.follower.setStatus(stts);
   if(stts==='RETREATING'){
     this.destroy();
-    return;
   }
-  this.follower.setStatus(stts);
 };
 RemoteFollowerSlave.prototype.say = function(item){
   if(item==='DISCARD_THIS'){
@@ -170,7 +169,7 @@ RemoteFollowerSlave.prototype.say = function(item){
     //console.log('follower ded?',this.follower);
     return;
   }
-  this.follower.say([this.follower.remotetail,item]);
+  this.follower.say([this.follower.path,item]);
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}

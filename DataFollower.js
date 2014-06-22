@@ -84,9 +84,11 @@ DataFollower.prototype.say = function(item){
       break;
     case 'undefined':
       if(this._parent && this._parent.say){
-        var p = this._parent.pathtocommunication ? this._parent.pathtocommunication : this._parent.path;
-        console.log(this.path,'need to tell parent',item,'with path',p);
-        this._parent.say([p.concat(item[0]),item[1]]);
+        if(this._parent.remotetail){
+          this._parent.say([this._parent.remotetail.concat(item[0]),item[1]]);
+        }else{
+          this._parent.say(item);
+        }
       }
       break;
   }
