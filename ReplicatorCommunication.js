@@ -15,7 +15,7 @@ function statusSetter(stts){
 
 function remoteSayer(item){
   if(!(this.rc && this.rc.counter)){return;}
-  this.rc.send('usersay',this._replicationid,item);
+  this.rc.send('usersay',this._replicationid,item[1]);
 }
 
 function RemoteFollower(data,createcb,saycb,user,path,rc){
