@@ -73,6 +73,7 @@ KeyRing.prototype.removeKey = function(key){
 KeyRing.prototype.destroy = function(){
   if(!this.destroyed){return;}
   if(this.engaged()){
+    //console.log(this.fullname(),'still engaged',Object.keys(this.engagements).length,'times');
     return;
   }
   this.destroyed.fire();

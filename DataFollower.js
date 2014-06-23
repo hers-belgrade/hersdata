@@ -12,7 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
-  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
   this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
@@ -39,7 +39,7 @@ DataFollower.prototype.destroy = function(){
     return;
   }
   //var p = this.path;
-  //console.log(this.path,'dying');
+  //console.log(this.fullname(),this.path,'dying');
   if(this.remotelink){
     this.remotelink.destroy();
   }
@@ -62,7 +62,7 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
-  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
 };
 DataFollower.prototype.finalizer = function(){
 };
@@ -118,6 +118,7 @@ function listenForDestructor(target,data,cursor){
     delete this.data;
     cursor--;
     if(cursor<0){
+      //console.log(this.fullname(),this.path,'exhausted,dying');
       Timeout.next(this,'destroy');
       return;
     }
@@ -424,15 +425,15 @@ DataFollower.prototype.remotedescribe = function(path,paramobj,cb){
   });
 };
 DataFollower.prototype.handleBid = function(reqname,cb){
-  var bf = this.follow(['__requirements',reqname],function(stts){
+  this.follow(['__requirements',reqname],function(stts){
     if(stts==='OK'){
       if(cb(true)){
-        bf.destroy();
+        this.destroy();
       }
     }
     if(stts==='RETREATING'){
       if(cb(false)){
-        bf.destroy();
+        this.destroy();
       }
     }
   });
