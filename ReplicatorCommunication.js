@@ -495,7 +495,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.destroy){
     var di = input.destroy;
-    var d = this.destroyables ? this.destroyables[di] : null;
+    var d = this.remotes ? this.remotes[di] : null;
     if(d){
       //console.log('destroying',di);
       d.destroy();
