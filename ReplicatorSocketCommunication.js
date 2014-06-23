@@ -63,7 +63,7 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     return;
   }
   var sl = this.sendingQueue.length;
-  if(sl>this.bufferizingthreshold+1){ //so that we leave at least on element in the queue
+  if(sl>this.bufferizingthreshold+1){ //so that we leave at least one element in the queue
     sl=this.bufferizingthreshold;
   }
   var sq = this.sendingQueue.splice(0,sl);
@@ -85,8 +85,8 @@ ReplicatorSocketCommunication.prototype.bufferize = function(sq){
   }else{
     this.bufferizingthreshold++;
   }
-  if(this.bufferizingthreshold>200){
-    this.bufferizingthreshold=200;
+  if(this.bufferizingthreshold>2000){
+    this.bufferizingthreshold=2000;
   }
   if(this.bufferizingthreshold<50){
     this.bufferizingthreshold=50;

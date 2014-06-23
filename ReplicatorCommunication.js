@@ -33,6 +33,11 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+RemoteFollower.prototype.destroy = function(){
+  if(!this.rc){return;}
+  delete this.rc.remotes[this._replicationid];
+  DataFollower.prototype.destroy.call(this);
+};
 RemoteFollower.prototype.setStatus = statusSetter;
 RemoteFollower.prototype.say = remoteSayer;
 RemoteFollower.prototype.follow = function(path,statuscb,saycb){
@@ -58,6 +63,11 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+RemoteUser.prototype.destroy = function(){
+  if(!this.rc){return;}
+  delete this.rc.remotes[this._replicationid];
+  DataUser.prototype.destroy.call(this);
+};
 RemoteUser.prototype.init = function(){
   var data = this.rc.data.element(this.path);
   if(data){
@@ -345,14 +355,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.destroy){
-    var di = input.destroy;
-    var d = this.remotes ? this.remotes[di] : null;
+    var di = input.destroy, base = this.slaveside ? this.senders : this.remotes;
+    var d = base ? base[di] : null;
     if(d){
-      //console.log('destroying',di);
       d.destroy();
-      //delete this.destroyables[di];
-    }else{
-      console.log('no destroyable on',di);
     }
     return;
   }
