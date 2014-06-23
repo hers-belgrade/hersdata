@@ -5,6 +5,7 @@ function ReplicatorSocketCommunication(data){
   ReplicatorCommunication.call(this,data);
 
   this.bufferizingthreshold=100;
+  this.bufferizingthresholdmax = 1000000;
   this.lenBuf = new Buffer(4);
   this.lenBufread = 0;
   this.bytesToRead = -1;
@@ -62,17 +63,18 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
     //console.log(this.__id,'got out because there is nothing to send');
     return;
   }
-  var sl = this.sendingQueue.length;
-  if(sl>this.bufferizingthreshold+1){ //so that we leave at least one element in the queue
-    sl=this.bufferizingthreshold;
-  }
-  var sq = this.sendingQueue.splice(0,sl);
-  this.start = Timeout.now();
-  this.bufferize(sq);
   if(this.sending){
     //console.log(this.__id,'got out because I am already sending');
     return;
   }
+  var sl = this.sendingQueue.length;
+  if(sl>this.bufferizingthreshold+1){ //so that we leave at least one element in the queue
+    sl=this.bufferizingthreshold;
+  }
+  //console.log('splicing at length',sl);
+  var sq = this.sendingQueue.splice(0,sl);
+  this.start = Timeout.now();
+  this.bufferize(sq);
   this.sending = true;
   this.sendMore();
 };
@@ -82,11 +84,14 @@ ReplicatorSocketCommunication.prototype.bufferize = function(sq){
   var sqbl = sqb.length;
   if(sqbl>64*1024){
     this.bufferizingthreshold--;
+    this.bufferizingthresholdmax = this.bufferizingthreshold*2;
   }else{
-    this.bufferizingthreshold++;
+    if(this.sendingQueue.length){
+      this.bufferizingthreshold++;
+    }
   }
-  if(this.bufferizingthreshold>2000){
-    this.bufferizingthreshold=2000;
+  if(this.bufferizingthreshold>this.bufferizingthresholdmax){
+    this.bufferizingthreshold=this.bufferizingthresholdmax;
   }
   if(this.bufferizingthreshold<50){
     this.bufferizingthreshold=50;
@@ -125,6 +130,7 @@ ReplicatorSocketCommunication.prototype.sendingDoneHandler = function(){
   ReplicatorSocketCommunication.output -= this.sendingLength;
   //console.log(this.sendingLength/elaps);
   //console.log(this.__id,'drain',this.sendingBuffer.length);
+  //console.log('bufferizingthreshold',this.bufferizingthreshold,'out buffs',this.sendingBuffs.length,'sending Q',this.sendingQueue.length);
   Timeout.next(this,'sendMore');
 };
 
