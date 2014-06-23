@@ -12,7 +12,7 @@ function DataFollower(data,createcb,cb,user,path){
     process.exit(0);
   }
   __DataFollowerInstanceCount++;
-  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
   this._status = 'INITIALIZED';
   Listener.call(this);
   path = path || [];
@@ -62,7 +62,7 @@ DataFollower.prototype.destroy = function(){
     delete this[i];
   }
   __DataFollowerInstanceCount--;
-  //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
+  console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
 };
 DataFollower.prototype.finalizer = function(){
 };
@@ -212,16 +212,6 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
   this.data = target;
 
 }
-DataFollower.prototype.followerFor = function(name){
-  var fn,fs;
-  if((typeof name === 'object') && (name instanceof Array)){
-    fn = name[0];
-    fs = name[1];
-  }else{
-    fn = name;
-    fs = false;
-  }
-};
 DataFollower.prototype.attachToCollection = function(name,el){
   if(!this.say){return;}
   if(name.charAt(0)==='_'){return;}
@@ -275,12 +265,10 @@ DataFollower.prototype.attachToContents = function(data,cursor){
     this.stalled = true;
     return;
   }
-
   if (this.data.communication) {
     this.remoteAttach(data, this.data, cursor);
     return;
   }
-  
   var t = this;
   this.data.traverseElements(function(name,el){
     if(t.say){
@@ -359,18 +347,20 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
       return f;
     }
   }else{
-    this.followers = {};
-  }
-  if(!this.data){
-    console.trace();
-    console.log('no data on parent');
+    if(this.destroyed){//this alive
+      this.followers = {};
+    }
   }
   if(!this._parent){
     console.trace();
     console.log('parent destroyed');
   }
   var df = new (ctor||DataFollower)(this.data,cb,saycb,this,path,options);
-  this.followers[spath] = df;
+  if(this.destroyed){
+    this.followers[spath] = df;
+  }else{
+    Timeout.next(df,'destroy');
+  }
   return df;
 };
 DataFollower.prototype.describe = function(cb){
