@@ -476,7 +476,6 @@ DataFollower.prototype.handleBid = function(reqname,cb){
 function OfferHandler(data,createcb,saycb,user,path,cb){
   this.cb = cb;
   DataFollower.call(this,data,null,null,user,path);
-  console.log('new OfferHandler',this.remotepath);
 }
 OfferHandler.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:OfferHandler,
@@ -505,7 +504,6 @@ OfferHandler.prototype.say = function(item){
 function OffersHandler(data,createcb,saycb,user,path,cb){
   this.cb = cb;
   DataFollower.call(this,data,null,null,user,path);
-  console.log('new OffersHandler',this.remotepath,this.remotelink._id);
 }
 OffersHandler.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:OffersHandler,
@@ -513,10 +511,12 @@ OffersHandler.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-OffersHandler.prototype.say = function(item){
-  if(item==='DISCARD_THIS'){
+OffersHandler.prototype.setStatus = function(stts){
+  if(stts==='RETREATING' || stts==='DISCARD_THIS'){
     this.destroy();
   }
+};
+OffersHandler.prototype.say = function(item){
   if(item && item[1] && item[1][1]===null){
     var offerid = item[1][0];
     if(typeof offerid!== 'undefined'){

@@ -26,7 +26,6 @@ RemoteCollectionReplica.prototype.go = function(cb){
   net.createConnection(this.url.port,this.url.address,function(){
     t.status = 'connected';
     cb && cb(t.status);
-    console.log(Object.keys(t.communication.cbs).length,'cbs to handle');
     t.communication.listenTo(this);
     console.log('reconnecting');
     CollectionReplica.prototype.go.call(t);
