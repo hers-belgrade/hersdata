@@ -361,16 +361,6 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   }else{
     this.followers = {};
   }
-  /*
-  if(typeof saycb === 'undefined'){
-    saycb = (function(t){
-      var _t = t;
-      return function(item){
-        _t.say && _t.say([_t.path.concat(item[0]),item[1]]);
-      };
-    })(this);
-  }
-  */
   if(!this.data){
     console.trace();
     console.log('no data on parent');
@@ -381,19 +371,6 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   }
   var df = new (ctor||DataFollower)(this.data,cb,saycb,this,path,options);
   this.followers[spath] = df;
-  /*
-  if(df.destroyed){
-    this.followers[spath] = df;
-    df.destroyed.attach((function(fs,sp){
-      var _fs=fs,_sp = sp;
-      return function(){
-        //console.log('parent follower removing',_sp);
-        delete _fs[_sp];
-      }
-    })(this.followers,spath));
-  }
-  */
-  //console.log('returning new df');
   return df;
 };
 DataFollower.prototype.describe = function(cb){

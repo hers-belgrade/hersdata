@@ -12,7 +12,7 @@ function DataUser(data,createcb,cb,username,realmname,roles,userconstructor,user
     DataFollower.prototype.destroy.call(t);
   });
   data.destroyed.attach(function(){
-    createcb.call(t,'DISCONNECTED');
+    createcb && createcb.call(t,'DISCONNECTED');
     t.destroy();
   });
 };
