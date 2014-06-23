@@ -70,6 +70,15 @@ DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
   this.createcb && this.createcb.call(this,this._status);
 };
+DataFollower.prototype.upward = function(item){
+  if(this._parent && this._parent.say){
+    if(this._parent.remotetail){
+      this._parent.say([this._parent.remotetail.concat(item[0]),item[1]]);
+    }else{
+      this._parent.say(item);
+    }
+  }
+};
 DataFollower.prototype.say = function(item){
   var toscb = typeof this.saycb;
   switch(toscb){
@@ -78,18 +87,15 @@ DataFollower.prototype.say = function(item){
       break;
     case 'object':
       var scb = this.saycb;
-      if(scb===null){return;}
+      if(scb===null){
+        this.upward(item);
+        return;
+      }
       var obj=scb[0],m=obj[scb[1]];
       typeof m === 'function' && m.call(obj,item);
       break;
     case 'undefined':
-      if(this._parent && this._parent.say){
-        if(this._parent.remotetail){
-          this._parent.say([this._parent.remotetail.concat(item[0]),item[1]]);
-        }else{
-          this._parent.say(item);
-        }
-      }
+      this.upward(item);
       break;
   }
 };
@@ -201,6 +207,7 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
   }
   this.pathtocommunication = this.path.slice(0,cursor);
   this.remotetail = remotepath;
+  this.dataforremote = data;
   target.communication.remoteLink(this);
   this.data = target;
 
@@ -466,104 +473,59 @@ DataFollower.prototype.handleBid = function(reqname,cb){
     }
   });
 };
-function OfferHandler(parnt,offerid,offershandler,cb){
-  if(!parnt.follower){return;}
-  this.parentDestructionFollower = parnt.follower.destroyed.attach((function(t){
-    var _t = t;
-    return function(){
-      _t.destroy();
-    }
-  })(this));
-  this._parent = parnt;
-  this.offerid = offerid;
+function OfferHandler(data,createcb,saycb,user,path,cb){
   this.cb = cb;
-  this.follower = this._parent.follower.follow([this.offerid],(function(t){
-    return function(stts){
-      t.handleStatus(stts);
-    };
-  })(this),(function(t){
-    return function(item){
-      t.handleSay(item);
-    };
-  })(this));
+  DataFollower.call(this,data,null,null,user,path);
+  console.log('new OfferHandler',this.remotepath);
 }
-OfferHandler.prototype.destroy = function(){
-  if(!this.follower){return;}
-  if(!this._parent){return;}
-  var pdf = this.parentDestructionFollower;
-  var f = this.follower;
-  var pf = this._parent.follower;
-  for(var i in this){
-    delete this[i];
-  }
-  pdf && pf && pf.destroyed && pf.destroyed.detach(pdf);
-  f && f.destroyed && f.destroy();
-};
-OfferHandler.prototype.handleStatus = function(stts){
-  if(this.cb && this.called && stts!=='OK'){
-    this.cb(this.offerid);
-    this.destroy();
-  }
-};
-OfferHandler.prototype.handleSay = function(item){
-  if(this.cb && item && item[1] && item[1][0] === 'data' && item[1][1]){
+OfferHandler.prototype = Object.create(DataFollower.prototype,{constructor:{
+  value:OfferHandler,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+OfferHandler.prototype.say = function(item){
+  if(this.cb && item && item[1] && item[1][0] === 'data'){
     this.called = true;
-    var cbr = this.cb(this.offerid,item[1][1]);
-    if(cbr){
-      if(cbr='super'){
-        this._parent.destroy();
-      }else{
-        this.destroy();
+    var data = item[1][1];
+    var cbr = this.cb(this.path[this.path.length-1],data);
+    if(typeof data === 'undefined'){
+      this.destroy();
+    }else{
+      if(cbr){
+        if(cbr='super'){
+          this._parent.destroy();
+        }else{
+          this.destroy();
+        }
       }
     }
   }
 };
-function OffersHandler(df,reqname,cb){
+function OffersHandler(data,createcb,saycb,user,path,cb){
   this.cb = cb;
-  this.follower = df.follow(['__requirements',reqname,'offers'],(function(t){
-    return function(stts){
-      t.handleStatus(stts);
-    };
-  })(this),(function(t){
-    return function(item){
-      t.handleSay(item);
-    }
-  }(this)));
-  this.follower.destroyed.attach((function(t){
-    var _t = t;
-    return function(){
-      _t.destroy();
-    };
-  })(this));
+  DataFollower.call(this,data,null,null,user,path);
+  console.log('new OffersHandler',this.remotepath,this.remotelink._id);
 }
-OffersHandler.prototype.handleStatus = function(stts){
-  //console.log('offer branch status',stts);
-};
-OffersHandler.prototype.handleSay = function(item){
+OffersHandler.prototype = Object.create(DataFollower.prototype,{constructor:{
+  value:OffersHandler,
+  enumerable:false,
+  writable:false,
+  configurable:false
+}});
+OffersHandler.prototype.say = function(item){
   if(item==='DISCARD_THIS'){
-    return;
-  }
-  if(!this.follower){
-    return;
+    this.destroy();
   }
   if(item && item[1] && item[1][1]===null){
     var offerid = item[1][0];
     if(typeof offerid!== 'undefined'){
-      //console.log('offerbranch on',this.offerid,'is ok, going for',[this.offerid]);
-      new OfferHandler(this,offerid,this.follower,this.cb);
+      this.follow([offerid],null,null,OfferHandler,this.cb);
     }
   }
 };
-OffersHandler.prototype.destroy = function(){
-  if(!this.follower){return;}
-  var f = this.follower;
-  for(var i in this){
-    delete this[i];
-  }
-  f && f.destroyed && f.destroy();
-};
 DataFollower.prototype.handleOffer = function(reqname,cb){
-  return new OffersHandler(this,reqname,cb);
+  this.follow(['__requirements',reqname,'offers'],null,null,OffersHandler,cb);
 };
 
 module.exports = DataFollower;

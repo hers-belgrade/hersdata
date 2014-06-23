@@ -126,6 +126,8 @@ function RemoteFollowerSlave(rc,localfollower){
   }
   rc.senders[this._id] = this;
   this.follower=localfollower;
+  this.dataforremote = localfollower.dataforremote;
+  delete localfollower.dataforremote;
   if(localfollower.remotepath){
     this.remotepath = JSON.parse(JSON.stringify(localfollower.remotepath));
   }
@@ -157,7 +159,7 @@ RemoteFollowerSlave.prototype.send = function(code){
 RemoteFollowerSlave.prototype.setStatus = function(stts){
   this.follower.setStatus(stts);
   if(stts==='RETREATING'){
-    this.destroy();
+    Timeout.next(this,'destroy');
   }
 };
 RemoteFollowerSlave.prototype.say = function(item){
@@ -173,9 +175,12 @@ RemoteFollowerSlave.prototype.say = function(item){
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
+  console.trace();
   console.log(this._id,'dying');
   this.follower.remotepath = this.remotepath;
   delete this.follower.remotelink;
+  Timeout.next(this.follower,'huntTarget',this.dataforremote);
+  this.rc.sendobj({destroy:this._id});
   delete this.rc.senders[this._id];
   for(var i in this){
     delete this[i];
