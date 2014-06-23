@@ -72,11 +72,8 @@ DataFollower.prototype.setStatus = function(stts){
 };
 DataFollower.prototype.upward = function(item){
   if(this._parent && this._parent.say){
-    if(this._parent.remotetail){
-      this._parent.say([this._parent.remotetail.concat(item[0]),item[1]]);
-    }else{
-      this._parent.say(item);
-    }
+    var p = this._parent.remotetail ? this._parent.remotetail : (this._parent.path ? this._parent.path : undefined);
+    this._parent.say(p ? [p.concat(item[0]),item[1]] : item);
   }
 };
 DataFollower.prototype.say = function(item){
