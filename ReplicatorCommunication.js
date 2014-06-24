@@ -284,7 +284,8 @@ ReplicatorCommunication.prototype.remoteLink = function(follower){
 ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   var u;
   if(slaveside){
-    this.masterSays = new HookCollection();
+    var ms = new HookCollection();
+    this.masterSays = ms;
     u = new SuperUser(this.data,function(){},function(item){ms.fire(item);},token.name,token.realmname);
   }else{
     this.slaveSays = new HookCollection();
