@@ -71,9 +71,10 @@ DataFollower.prototype.setStatus = function(stts){
   this.createcb && this.createcb.call(this,this._status);
 };
 DataFollower.prototype.upward = function(item){
-  if(this._parent && this._parent.say){
-    var p = this._parent.remotetail ? this._parent.remotetail : (this._parent.path ? this._parent.path : undefined);
-    this._parent.say(p ? [p.concat(item[0]),item[1]] : item);
+  var _p = this._parent;
+  if(_p && _p.say){
+    var p = _p.remotetail ? _p.remotetail : (_p.path ? _p.path : undefined);
+    _p.say(p ? [p.concat(item[0]),item[1]] : item);
   }
 };
 DataFollower.prototype.say = function(item){
