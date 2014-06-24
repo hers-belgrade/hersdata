@@ -76,6 +76,10 @@ KeyRing.prototype.destroy = function(){
     //console.log(this.fullname(),'still engaged',Object.keys(this.engagements).length,'times');
     return;
   }
+  this.finalize();
+};
+KeyRing.prototype.finalize = function(){
+  //console.log('KeyRing',this.fullname(),'dying');
   this.destroyed.fire();
   this.newKey.destruct();
   this.keyRemoved.destruct();

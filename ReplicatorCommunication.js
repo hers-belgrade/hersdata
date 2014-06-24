@@ -79,7 +79,7 @@ RemoteUser.prototype.init = function(){
   }else{
     this.setStatus('LATER');
     var t = this;
-    var df = new DataFollower(rc.data,function(stts){
+    var df = new DataFollower(this.rc.data,function(stts){
       switch(stts){
         case 'OK':
           t.init();

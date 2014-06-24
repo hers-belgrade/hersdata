@@ -10,9 +10,6 @@ function User(username,realmname,roles){
 	this._username = username;
 	this._realmname = realmname;
   this.addKey(this.fullname());
-  this.destroyed.attach(function(){
-    delete __Instances[username+'@'+realmname];
-  });
 }
 User.prototype = Object.create(KeyRing.prototype,{constructor:{
   value:User,
@@ -20,6 +17,12 @@ User.prototype = Object.create(KeyRing.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
+User.prototype.finalize = function(){
+  delete __Instances[this.fullname()];
+  //console.log(Object.keys(__Instances).length,'Users left');
+  //console.log('Users left',Object.keys(__Instances));
+  KeyRing.prototype.finalize.call(this);
+};
 User.prototype.username = function(){
   return this._username;
 };
