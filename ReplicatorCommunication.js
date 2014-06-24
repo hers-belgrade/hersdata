@@ -390,7 +390,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
       return;
     }
   }
-  this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
+  this.data.processInput(this,input);
+  //this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
 };
 
 ReplicatorCommunication.prototype.handleDestroyable1 = function(counter,cbrefs,obj){
