@@ -454,6 +454,46 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   re.functionalities.requirement.f.offer(paramobj,cb,user);
 };
 
+function __doParams(mname,_p,localerrorhandler,obj,errcb,caller){
+  var pa = [];
+  if(_p.params){
+    if(_p.params==='originalobj'){
+      if(typeof obj !== 'object'){
+        throw 'First parameter to '+mname+' has to be an object';
+      }
+      pa.push(obj);
+    }else{
+      var pd = _p.defaults||{};
+      var _ps = _p.params;
+      if(typeof obj !== 'object'){
+        console.trace();
+        throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',')
+      }
+      for(var i=0; i<_ps.length; i++){
+        var __p = obj[_ps[i]];
+        if(typeof __p === 'undefined'){
+          var __pd = pd[_ps[i]];
+          if(typeof __pd === 'undefined'){
+            if(errcb){
+              errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
+            }else{
+              console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
+            }
+            return;
+          }else{
+            __p = __pd;
+          }
+        }
+        pa.push(__p);
+      }
+    }
+    pa.push(localerrorhandler(errcb),caller);
+  }else{
+    pa.push(localerrorhandler(errcb),caller);
+  }
+  return pa;
+};
+
 Collection.prototype.attach = function(functionalityname, config, key){
   var self = this;
   if(!key){key=undefined;}
@@ -517,7 +557,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     }
   } 
 
-  var my_mod = {},req,off,reqs, close;
+  var req,off,reqs, close;
   if (m.requirements) {
     if(!self.element(['__requirements'])){
       self.commit('requirements_create',[
@@ -532,7 +572,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
     off = rf.startwoffer;
     close = rf._close;
   }
-  var SELF = (function(s,r,m,su,rq,off, close){var _close = close,_s=s,_r=r,_m=m, _su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,my_mod,new SuperUser(self,function() {}, function(){},fqnname,'dcp'),req,off, close);
+  var SELF = (function(s,r,su,rq,off,close){var _close = close,_s=s,_r=r,_su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,new SuperUser(self,null,null,fqnname,'dcp'),req,off, close);
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
@@ -555,46 +595,9 @@ Collection.prototype.attach = function(functionalityname, config, key){
           return _p.apply(SELF(), arguments);
         }
       }
-
       if(mname!=='init'){
         return function(obj,errcb,caller){
-          var pa = [];
-          if(_p.params){
-            if(_p.params==='originalobj'){
-              if(typeof obj !== 'object'){
-                throw 'First parameter to '+mname+' has to be an object';
-              }
-              pa.push(obj);
-            }else{
-              var pd = _p.defaults||{};
-              var _ps = _p.params;
-              if(typeof obj !== 'object'){
-                console.trace();
-                throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',')
-              }
-              for(var i=0; i<_ps.length; i++){
-                var __p = obj[_ps[i]];
-                if(typeof __p === 'undefined'){
-                  var __pd = pd[_ps[i]];
-                  if(typeof __pd === 'undefined'){
-                    if(errcb){
-                      errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
-                    }else{
-                      console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
-                    }
-                    return;
-                  }else{
-                    __p = __pd;
-                  }
-                }
-                pa.push(__p);
-              }
-            }
-            pa.push(localerrorhandler(errcb),caller);
-          }else{
-            pa.push(localerrorhandler(errcb),caller);
-          }
-          _p.apply(SELF(),pa);
+          _p.apply(SELF(),__doParams(mname,_p,localerrorhandler,obj,errcb,caller));
         };
       }else{
         return function(errcb,caller){
@@ -604,13 +607,18 @@ Collection.prototype.attach = function(functionalityname, config, key){
     })(i,p);
   }
   ret['__DESTROY__'] = function(){
-    delete self.functionalities[fqnname];
-    self = null;
-    for(var i in ret){
-      delete ret[i];
+    var f = self.functionalities[fqnname];
+    if(f){
+      var ret = f.ret;
+      delete f.ret;
+      delete f.key;
+      delete self.functionalities[fqnname];
+      for(var i in ret){
+        delete ret[i];
+      }
     }
-    m = undefined;
-    ret = undefined;
+    self = null;
+    SELF = null;
   };
 
   if ('function' === typeof(ret.init)) { ret.init(); }
