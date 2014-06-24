@@ -124,7 +124,11 @@ RCSuperUser.prototype.follow = function(path,statuscb,saycb){
   }
 };
 RCSuperUser.prototype.say = function(item){
-  this.rc.slaveSays.fire(item);
+  if(!(this.rc && this.rc.slaveSays)){
+    this.destroy();
+  }else{
+    this.rc.slaveSays.fire(item);
+  }
 };
 
 function RemoteFollowerSlave(rc,localfollower){
