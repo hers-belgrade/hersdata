@@ -64,17 +64,6 @@ Broadcaster.prototype.say = function(item){
     }
   }
 };
-Broadcaster.prototype.describeElem = function(elem,cb){
-  for(var i in elem){
-    cb([this.path,[i,elem[i]]]);
-  }
-  for(var i in elem){
-    var e = elem[i];
-    if(typeof e === 'object'){
-      this.describeElem(e,cb);
-    }
-  }
-};
 Broadcaster.prototype.describe = function(cb,translatorname){
   if(this.translators){
     var t = this.translators[translatorname];
