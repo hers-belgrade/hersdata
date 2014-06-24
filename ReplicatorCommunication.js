@@ -35,6 +35,7 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
 }});
 RemoteFollower.prototype.destroy = function(){
   if(!this.rc){return;}
+  this.rc.sendobj({destroy:this._replicationid});
   delete this.rc.remotes[this._replicationid];
   DataFollower.prototype.destroy.call(this);
 };
@@ -65,6 +66,7 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
 }});
 RemoteUser.prototype.destroy = function(){
   if(!this.rc){return;}
+  this.rc.sendobj({destroy:this._replicationid});
   delete this.rc.remotes[this._replicationid];
   DataUser.prototype.destroy.call(this);
 };
@@ -253,11 +255,6 @@ ReplicatorCommunication.prototype.destroy = function(){
       }
     }
   }
-  if(this.users){
-    for(var i in this.users){
-      this.users[i].destroy();
-    }
-  }
   for(var i in this){
     delete this[i];
   }
@@ -285,28 +282,15 @@ ReplicatorCommunication.prototype.remoteLink = function(follower){
   new RemoteFollowerSlave(this,follower);
 };
 ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
-  if(!this.users){
-    this.users = {};
-  }
   var u;
   if(slaveside){
-    var ms = new HookCollection();
-    this.masterSays = ms;
+    this.masterSays = new HookCollection();
     u = new SuperUser(this.data,function(){},function(item){ms.fire(item);},token.name,token.realmname);
   }else{
     this.slaveSays = new HookCollection();
     u =  new RCSuperUser(this,token.name,token.realmname);
   }
-  u.replicators = {};
-  var fullname = u.fullname();
-  this.users[fullname] = u;
-  u.destroyed.attach((function(_us,_fn){
-    var us=_us,fn=_fn
-    return function(){
-      delete us[fn];
-    }
-  })(this.users,fullname));
-  this._fullname = u.fullname();
+  this.superuser = u;
   return u;
 };
 ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,path){
@@ -405,55 +389,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
       console.log('no user related method',mn,'to invoke');
       return;
     }
-    /*
-    var username = input.user.username, realmname = input.user.realmname, fullname = username+'@'+realmname, u;
-    if (!this.users) this.users = {};
-
-    if(!this.users[fullname]){
-      var ut, uc;
-      if(this.replicaToken.name+'@'+this.replicaToken.realmname===fullname){
-        console.trace();
-        console.log('superuser cannot be automatically created');
-        process.exit(0);
-      }
-      u =  new RemoteUser(this,username,realmname,input.user.roles,input.user._id);
-      u.user().server = this.replicaToken.name;
-      u.destroyed.attach((function(_us,_fn){
-        var us=_us,fn=_fn
-        return function(){
-          delete us[fn];
-        }
-      })(this.users,fullname));
-      this.users[fullname] = u;
-    }else{
-      u = this.users[fullname];
-    }
-    var remotepath = input.user.remotepath;
-    if(remotepath){
-      if(typeof remotepath[0] === 'object'){
-        while(remotepath.length){
-          u = u.follow(remotepath.shift());
-        }
-      }else{
-        u = u.follow(remotepath);
-      }
-    }
-    //console.log('on remotepath',input.user.remotepath);
-    delete input.user;
-    for(var i in input){
-      var method = u[i];
-      if(method){
-        //console.log(u.username(),'applies',i);//,input[i]);
-        this.handleDestroyable(counter,cbrefs,method.apply(u,input[i]));
-      }
-    }
-    */
-    return;
   }
   this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
 };
 
-ReplicatorCommunication.prototype.handleDestroyable = function(counter,cbrefs,obj){
+ReplicatorCommunication.prototype.handleDestroyable1 = function(counter,cbrefs,obj){
   if (obj && ('function' === typeof(obj.destroy))) {
     //console.log('putting destroyable to',counter);
     if (!this.destroyables){
