@@ -139,6 +139,7 @@ DataFollower.prototype.huntTarget = function(data){
     return;
   }
   delete this.stalled;
+  /*
   if(this._parent.remotepath){
     //console.log('parent remotepath',user.remotepath);
     if(typeof this._parent.remotepath[0] === 'string'){
@@ -148,6 +149,7 @@ DataFollower.prototype.huntTarget = function(data){
     }
     //console.log('my composite remotepath',this.remotepath);
   }
+  */
   var cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}
@@ -190,6 +192,7 @@ DataFollower.prototype.huntTarget = function(data){
 }
 
 DataFollower.prototype.remoteAttach = function (data,target,cursor) {
+  /*
   var remotepath = this.path.slice(cursor);
   if(this.remotepath && typeof this.remotepath[0]==='object'){
     var mylastp = this.remotepath[this.remotepath.length-1];
@@ -204,8 +207,10 @@ DataFollower.prototype.remoteAttach = function (data,target,cursor) {
       remotepath.splice(0,subcursor);
     }
   }
-  this.pathtocommunication = this.path.slice(0,cursor);
   this.remotetail = remotepath;
+  */
+  this.remotetail = this.path.slice(cursor);
+  this.pathtocommunication = this.path.slice(0,cursor);
   this.dataforremote = data;
   target.communication.remoteLink(this);
   this.data = target;

@@ -72,6 +72,7 @@ ConsumerSession.prototype.retrieveQueue = function(){
 };
 ConsumerSession.prototype.setSocketIO = function(sock){
   //console.log('setSocketIO, queue len',this.queue.length);
+  sock.user = this;
   if(!this.sockio){
     __socketIOSessions.push(this);
     delete this.lastAccess;
@@ -79,6 +80,7 @@ ConsumerSession.prototype.setSocketIO = function(sock){
   this.sockio = sock;
   var t = this;
   sock.on('disconnect',function(){
+    delete sock.user;
     delete t.sockio;
     t.destroy();
   });
