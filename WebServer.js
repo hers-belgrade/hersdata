@@ -129,9 +129,7 @@ WebServer.prototype.start = function (port) {
 //module.exports = WebServer;
 
 var serv = new WebServer(process.argv[3],process.argv[4],process.argv[5]);
-serv.data.replicationInitiated.attach(function(){
-  serv.start(process.argv[2]);
-});
+serv.data.replicationInitiated.attach([serv,'start',[process.argv[2]]]);
 
 //console.log(process.argv);
 process.on ('message', function (m) {

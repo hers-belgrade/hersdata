@@ -3,12 +3,7 @@ var Collection = require('./Collection'),
  
 function ElementWaiter(parnt,cb,ctx){
   this.parent = parnt;
-  this.parentDestroyed = parnt.destroyed.attach((function(t){
-    var _t = t;
-    return function(){
-      t.destroy();
-    };
-  })(this));
+  this.parentDestroyed = parnt.destroyed.attach([this,'destroy']);
   this.ctx = ctx;
   this.cb = cb;
 };
@@ -30,16 +25,16 @@ ElementWaiter.prototype.attachTo = function(el){
   var t = this;
   if(el.type()==='Scalar'){
     this.el = el;
-    //console.log('attaching to Scalar');
-    this.changerIndex = el.changed.attach(function(el){
-      //console.log('Scalar changed to',el.value());
-      t.trigger(el.value());
-    });
+    this.changerIndex = el.changed.attach([this,'scalarChanged']);
   }
-  el.destroyed.attach(function(){
-    t.trigger();
-    t.detach();
-  });
+  el.destroyed.attach([this,'elementDestroyed']);
+};
+ElementWaiter.prototype.scalarChanged = function(el){
+  this.trigger(el.value());
+};
+ElementWaiter.prototype.elementDestroyed = function(){
+  this.trigger();
+  this.detach();
 };
 ElementWaiter.prototype.destroy = function(){
   if(!this.parent){return;}

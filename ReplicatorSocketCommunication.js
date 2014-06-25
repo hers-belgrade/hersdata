@@ -19,12 +19,7 @@ function ReplicatorSocketCommunication(data){
   this._auxSendingQueue = undefined;
 
   var self = this;
-  data.replicationInitiated.attach (function () {
-    if (!self._auxSendingQueue) return;
-    Array.prototype.push.apply (self.sendingQueue, self._auxSendingQueue);
-    self._auxSendingQueue = undefined;
-    self._internalSend();
-  });
+  data.replicationInitiated.attach ([this,'replicationInitiated']);
 };
 ReplicatorSocketCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
   value:ReplicatorSocketCommunication,
@@ -36,6 +31,12 @@ ReplicatorSocketCommunication.prototype.destroy = function(){
   this.socket && this.socket.destroy();
   delete this.socket;
   ReplicatorCommunication.prototype.destroy.call(this);
+};
+ReplicatorSocketCommunication.prototype.replicationInitiated = function(){
+  if (!this._auxSendingQueue) return;
+  Array.prototype.push.apply (this.sendingQueue, this._auxSendingQueue);
+  this._auxSendingQueue = undefined;
+  this._internalSend();
 };
 ReplicatorSocketCommunication.prototype.handleDataRead = function(){
   if(this.dataRead){

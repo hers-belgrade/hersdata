@@ -17,11 +17,12 @@ BroadcasterGroup.prototype.add = function(bcastername,data,username,realmname,ro
   this.bcasters[bcastername] = b;
   this.newBroadcaster.fire(bcastername,b);
   var t = this;
-  b.destroyed.attach(function(){
-    t.newBroadcaster.fire(bcastername);
-    delete t.bcasters[bcastername];
-  });
+  b.destroyed.attach([this,'broadcasterDestroyed',[bcastername]]);
   return b;
+};
+BroadcasterGroup.prototype.broadcasterDestroyed = function(name){
+  delete this.bcasters[bcastername];
+  this.newBroadcaster.fire(bcastername);
 };
 BroadcasterGroup.prototype.traverse = function(cb,ctx){
   for(var i in this.bcasters){

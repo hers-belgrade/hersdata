@@ -21,7 +21,10 @@ function DataFollower(data,createcb,cb,user,path){
   this.createcb = createcb;
   this.destroyed = new HookCollection();
   this._parent = user;
-  this.huntTarget(data);
+  if(!(user.data&&user.data===data)){
+    this.rootdata = data;
+  }
+  this.huntTarget();
 }
 DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
   value:DataFollower,
@@ -91,72 +94,89 @@ DataFollower.prototype.say = function(item){
       break;
   }
 };
-function listenForTarget(target,data,cursor){
+DataFollower.prototype.targetListener = function(name,el){
+  if(name===this.path[this.cursor]){
+    Timeout.next(this,'huntTarget');
+  }
+};
+DataFollower.prototype.listenForTarget = function(target){
   this.purgeListeners();
   //console.trace();
   //console.log('waiting for',this.path[cursor],'to appear on',this.path);
-  this.createListener('newelementlistener',function(name,el){
-    if(name===this.path[cursor]){
-      //console.log('time has come for',this.path[cursor],'on',this.path);
-      Timeout.next(this,'huntTarget',data);
-    }
-  },target.newElement);
+  this.createListener('targetListener',null,target.newElement);
   this.setStatus('LATER');
+};
+DataFollower.prototype.destructListener = function(){
+  delete this.data;
+  this.cursor--;
+  if(this.cursor<0){
+    //console.log(this.fullname(),this.path,'exhausted,dying');
+    Timeout.next(this,'destroy');
+    return;
+  }
+  this.setStatus('RETREATING');
+  Timeout.next(this,'huntTarget');
+};
+DataFollower.prototype.listenForDestructor = function(target){
+  this.createListener('destructListener',null,target.destroyed);
 }
-function listenForDestructor(target,data,cursor){
-  this.createListener('destructlistener',function(){
-    delete this.data;
-    cursor--;
-    if(cursor<0){
-      //console.log(this.fullname(),this.path,'exhausted,dying');
-      Timeout.next(this,'destroy');
-      return;
-    }
-    this.setStatus('RETREATING');
-    Timeout.next(this,'huntTarget',data);
-  },target.destroyed);
-}
-DataFollower.prototype.huntTarget = function(data){
+DataFollower.prototype.huntTarget = function(){
+  if(!this.destroyed){
+    return;
+  }
   if(!this._parent){
     this.destroy();
     return;
   }
-  var target = data;
+  var target = this.rootdata || this._parent.data;
   if(!(target&&target.newElement)){
     this.stalled = true;
     this.setStatus('STALLED');
     return;
   }
   delete this.stalled;
-  var cursor = 0;
+  this.cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}
-  while(cursor<this.path.length){
-    var ttarget = target.elementRaw(this.path[cursor]);
+  while(this.cursor<this.path.length){
+    var ttarget = target.elementRaw(this.path[this.cursor]);
     if(!ttarget){
       //console.trace();
       //console.log('huntTarget stopped on',this.path,'at',cursor,'target',target.communication ? 'has' : 'has no','communication',target.dataDebug());
-      listenForTarget.call(this,target,data,cursor);
+      this.listenForTarget(target);
       if(!this.listeners){return;} //me ded after setStatus...
-      listenForDestructor.call(this,target,data,cursor);
+      this.listenForDestructor(target);
       if(target.communication){
-        this.remoteAttach(data,target,cursor);
+        this.remoteAttach(target);
         return;
       }else{
         target = null;
       }
       break;
     }else{
-      //console.log('target ok on',this.path[cursor],'on',ttarget.dataDebug());
       target = ttarget;
     }
-    cursor++;
+    this.cursor++;
   }
   if(target){
     this.data = target;
-    listenForDestructor.call(this,this.data,data,cursor);
+    this.listenForDestructor(this.data);
     this.setStatus('OK');
-    this.attachToContents(data,cursor);
+    if(!this.destroyed){ //setStatus killed me as a consequence
+      return;
+    }
+    if (this.data.communication) {
+      this.remoteAttach(this.data);
+      return;
+    }
+    var t = this;
+    this.data.traverseElements(function(name,el){
+      if(t.say){
+        t.reportElement(name,el,t.say);
+      }
+      t.attachAppropriately(name,el);
+    });
+    this.createListener('newElementListener',null,this.data.newElement);
     for(var i in this.followers){
       var f = this.followers[i];
       if(f.stalled){
@@ -168,21 +188,23 @@ DataFollower.prototype.huntTarget = function(data){
     }
   }
 }
-
-DataFollower.prototype.remoteAttach = function (data,target,cursor) {
-  this.remotetail = this.path.slice(cursor);
-  this.dataforremote = data;
+DataFollower.prototype.newElementListener = function(name,el){
+  this.reportElement(name,el);
+  this.attachAppropriately(name,el);
+};
+DataFollower.prototype.remoteAttach = function (target) {
+  this.remotetail = this.path.slice(this.cursor);
   target.communication.remoteLink(this);
   this.data = target;
-
-}
+};
+DataFollower.prototype.collectionDestroyed = function(name){
+  this.say([this.path,[name]]);
+  this.destroyListener('collectionDestroyed',[name]);
+};
 DataFollower.prototype.attachToCollection = function(name,el){
   if(!this.say){return;}
   if(name.charAt(0)==='_'){return;}
-  this.createListener(name+'_destroyed',function(){
-    this.say([this.path,[name]]);
-    //this.say.call(this,[this.path,[name]]);
-  },el.destroyed);
+  this.createListener('collectionDestroyed',[name],el.destroyed);
 };
 DataFollower.prototype.emitScalarValue = function(name,val,cb){
   if(!cb){return;}
@@ -192,30 +214,32 @@ DataFollower.prototype.emitScalarValue = function(name,val,cb){
     cb.call(this,[this.path,[name,val]]);
   }
 };
+DataFollower.prototype.scalarChanged = function(name,el,changedmap){
+  var priv = this.contains(el.access_level());
+  var val = priv ? el.value() : el.public_value();
+  if(changedmap.key){
+    this.emitScalarValue(name,val,this.say);
+    return;
+  }
+  if(priv){
+    if(changedmap.private){
+      this.emitScalarValue(name,val,this.say);
+    }
+  }else{
+    if(changedmap.public){
+      this.emitScalarValue(name,val,this.say);
+    }
+  }
+};
+DataFollower.prototype.scalarDestroyed = function(name){
+  this.say([this.path,[name]]);
+  this.destroyListener('scalarChanged',[name]);
+  this.destroyListener('scalarDestroyed',[name]);
+};
 DataFollower.prototype.attachToScalar = function(name,el){
   if(!this.say){return;}
-  this.createListener(name+'_changed',function(el,changedmap){
-    var priv = this.contains(el.access_level());
-    var val = priv ? el.value() : el.public_value();
-    if(changedmap.key){
-      this.emitScalarValue(name,val,this.say);
-      return;
-    }
-    if(priv){
-      if(changedmap.private){
-        this.emitScalarValue(name,val,this.say);
-      }
-    }else{
-      if(changedmap.public){
-        this.emitScalarValue(name,val,this.say);
-      }
-    }
-  },el.changed);
-  this.createListener(name+'_destroyed',function(){
-    this.say([this.path,[name]]);
-    this.destroyListener(name+'_changed');
-    this.destroyListener(name+'_destroyed');
-  },el.destroyed);
+  this.createListener('scalarChanged',[name],el.changed);
+  this.createListener('scalarDestroyed',[name],el.destroyed);
 };
 DataFollower.prototype.attachAppropriately = function(name,el){
   if(!this.listeners){return;}
@@ -223,27 +247,6 @@ DataFollower.prototype.attachAppropriately = function(name,el){
     case 'Scalar': return this.attachToScalar(name,el);
     case 'Collection': return this.attachToCollection(name, el);
   }
-};
-DataFollower.prototype.attachToContents = function(data,cursor){
-  if(!this.data){
-    this.stalled = true;
-    return;
-  }
-  if (this.data.communication) {
-    this.remoteAttach(data, this.data, cursor);
-    return;
-  }
-  var t = this;
-  this.data.traverseElements(function(name,el){
-    if(t.say){
-      t.reportElement(name,el,t.say);
-    }
-    t.attachAppropriately(name,el);
-  });
-  this.createListener('newEl',function(name,el){
-    this.reportElement(name,el);
-    this.attachAppropriately(name,el);
-  },this.data.newElement);
 };
 DataFollower.prototype.reportCollection = function(name,el,cb){
   if(name.charAt(0)==='_'){return;}

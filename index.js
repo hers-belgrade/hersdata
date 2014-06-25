@@ -36,7 +36,6 @@ module.exports = {
 	helpers: require('./helpers'),
   HookCollection: HookCollection,
   Listener: require('./Listener'),
-  Bridge: require('./bridge'),
   UserEngagement: require('./UserEngagement'),
   SessionUser: require('./SessionUser'),
   DataUser: require('./DataUser'),

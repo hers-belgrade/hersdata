@@ -6,7 +6,6 @@ var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var HookCollection = require('./hookcollection');
-var Waiter = require('./bridge').Data_CollectionElementWaiter;
 var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
 var User = require('./User');
@@ -797,11 +796,6 @@ Collection.prototype.processInput = function(sender,input){
         });
         ret.revive = reviv;
         sender.send('internal','initDCPreplica',ret);
-        if(dodcp){
-          sender.createListener('dataTxn',function(chldcollectionpath,txnalias,txnprimitives,datacopytxnprimitives,txnid){
-            sender.send('rpc','_commit',txnalias,txnprimitives,txnid,chldcollectionpath);
-          },this.onNewTransaction);
-        }
         this.newReplica.fire(sender);
         break;
       case 'initDCPreplica':

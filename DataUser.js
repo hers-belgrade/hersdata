@@ -7,14 +7,8 @@ function DataUser(data,createcb,cb,username,realmname,roles,userconstructor,user
   userconstructor = userconstructor || User;
   DataFollower.call(this,data,createcb,cb,User.Create(username,realmname,roles,userconstructor,userctoroptions));
   UserEngagement.call(this,this._parent);
-  var t = this;
-  this._parent.destroyed.attach(function(){
-    DataFollower.prototype.destroy.call(t);
-  });
-  data.destroyed.attach(function(){
-    createcb && createcb.call(t,'DISCONNECTED');
-    t.destroy();
-  });
+  this._parent.destroyed.attach([this,'parentDestroyed']);
+  data.destroyed.attach([this,'dataDestroyed']);
 };
 DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:DataUser,
@@ -22,6 +16,13 @@ DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:true,
   configurable:true
 }});
+DataUser.prototype.dataDestroyed = function(){
+  this.setStatus('DISCONNECTED');
+  this.destroy();
+};
+DataUser.prototype.parentDestroyed = function(){
+  DataFollower.prototype.destroy.call(this);
+};
 DataUser.prototype.destroy = function(){
   if(!this._parent){return;}
   this._parent.dismiss(this);

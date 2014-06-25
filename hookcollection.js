@@ -32,14 +32,27 @@ HookCollection.prototype.isEmpty = function(){
   }
   return true;
 };
+function __isExecutable(entity){
+  var toe = typeof entity;
+  if(toe==='function'){return true;}
+  if(toe==='object' && entity instanceof Array && (entity.length===2 || entity.length===3)){
+    var m = entity[0][entity[1]];
+    if(typeof m !== 'function'){
+      return false;
+    }
+    entity[1] = m;
+    return true;
+  }
+  return false;
+};
 HookCollection.prototype.attach = function(cb){
-  if(typeof cb === 'function'){
+  if(__isExecutable(cb)){
 		this.inc();
     this.collection[this.counter]=cb;
     //console.log('attached',cb,'to',this.counter);
 		return this.counter;
   }else{
-    console.log(cb.toString(),'is not a function');
+    console.log(cb.toString(),'is not executable');
   }
 };
 HookCollection.prototype.detach = function(i){
@@ -57,6 +70,13 @@ HookCollection.prototype.detach = function(i){
     delete this.collection;
   }
 };
+function __execute(exc,params){
+  if(typeof exc === 'function'){
+    exc.apply(null,params);
+    return;
+  }
+  exc[1].apply(exc[0],exc[2] ? exc[2].concat(params) : params);
+};
 HookCollection.prototype.fire = function(){
   var c = this.collection;
   var fordel=[];
@@ -66,7 +86,7 @@ HookCollection.prototype.fire = function(){
     try{
       var fqn = c[i];
       //console.log('calling',fqn,'on',i,'with',pa);
-      fqn.apply(null,pa);
+      __execute(fqn,pa);
     }
     catch(e){
       console.log(e);
