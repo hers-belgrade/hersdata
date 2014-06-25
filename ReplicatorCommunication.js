@@ -143,17 +143,6 @@ function RemoteFollowerSlave(rc,localfollower){
   this.follower=localfollower;
   this.dataforremote = localfollower.dataforremote;
   delete localfollower.dataforremote;
-  /*
-  if(localfollower.remotepath){
-    this.remotepath = JSON.parse(JSON.stringify(localfollower.remotepath));
-  }
-  if(localfollower.remotepath){
-    localfollower.remotepath.push(localfollower.remotetail);
-  }else{
-    localfollower.remotepath = localfollower.remotetail;
-  }
-  */
-  //create
   var _parent = localfollower._parent.remotelink;
   if(_parent){
     this.send('createFollower',_parent._id,this._id,localfollower.remotetail);

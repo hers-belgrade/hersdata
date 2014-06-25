@@ -17,11 +17,6 @@ function DataFollower(data,createcb,cb,user,path){
   Listener.call(this);
   path = path || [];
   this.path = path;
-  /*
-  if(cb){
-    this.say = cb;
-  }
-  */
   this.saycb = cb;
   this.createcb = createcb;
   this.destroyed = new HookCollection();
@@ -86,7 +81,7 @@ DataFollower.prototype.say = function(item){
     case 'object':
       var scb = this.saycb;
       if(scb===null){
-        this.upward(item);
+        //this.upward(item);
         return;
       }
       var obj=scb[0],m=obj[scb[1]];
@@ -139,17 +134,6 @@ DataFollower.prototype.huntTarget = function(data){
     return;
   }
   delete this.stalled;
-  /*
-  if(this._parent.remotepath){
-    //console.log('parent remotepath',user.remotepath);
-    if(typeof this._parent.remotepath[0] === 'string'){
-      this.remotepath = [this._parent.remotepath];
-    }else{
-      this.remotepath = this._parent.remotepath.slice();
-    }
-    //console.log('my composite remotepath',this.remotepath);
-  }
-  */
   var cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}
@@ -192,23 +176,6 @@ DataFollower.prototype.huntTarget = function(data){
 }
 
 DataFollower.prototype.remoteAttach = function (data,target,cursor) {
-  /*
-  var remotepath = this.path.slice(cursor);
-  if(this.remotepath && typeof this.remotepath[0]==='object'){
-    var mylastp = this.remotepath[this.remotepath.length-1];
-    var subcursor=0;
-    while(mylastp[subcursor]===remotepath[subcursor]){
-      subcursor++;
-    }
-    if(subcursor){
-      console.log('now what?',remotepath,this._parent.remotepath,'parents followers',Object.keys(this._parent.followers));
-    }
-    if(subcursor===mylastp.length){
-      remotepath.splice(0,subcursor);
-    }
-  }
-  this.remotetail = remotepath;
-  */
   this.remotetail = this.path.slice(cursor);
   this.pathtocommunication = this.path.slice(0,cursor);
   this.dataforremote = data;
@@ -331,13 +298,13 @@ DataFollower.prototype.contains = function(key){
   return this._parent ? this._parent.contains(key) : false;
 };
 DataFollower.prototype.invoke = function(path,paramobj,cb){
-  return this.remotelink ? this.remotelink.perform('invoke',path,paramobj,cb) : this.user().invoke(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('invoke',path,paramobj,cb) : this.user().invoke(this.data,path,paramobj,cb);
 };
 DataFollower.prototype.bid = function(path,paramobj,cb){
-  return this.remotelink ? this.remotelink.perform('bid',path,paramobj,cb) : this.user().bid(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('bid',path,paramobj,cb) : this.user().bid(this.data,path,paramobj,cb);
 };
 DataFollower.prototype.offer = function(path,paramobj,cb){
-  return this.remotelink ? this.remotelink.perform('offer',path,paramobj,cb) : this.user().offer(this.data,path,paramobj,cb,this.remotepath);
+  return this.remotelink ? this.remotelink.perform('offer',path,paramobj,cb) : this.user().offer(this.data,path,paramobj,cb);
 };
 DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   path = path || [];
