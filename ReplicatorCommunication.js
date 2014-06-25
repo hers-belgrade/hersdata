@@ -181,7 +181,6 @@ RemoteFollowerSlave.prototype.say = function(item){
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
-  //this.follower.remotepath = this.remotepath;
   delete this.follower.remotelink;
   Timeout.next(this.follower,'huntTarget',this.dataforremote);
   this.rc.sendobj({destroy:this._id});

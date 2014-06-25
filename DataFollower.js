@@ -81,7 +81,6 @@ DataFollower.prototype.say = function(item){
     case 'object':
       var scb = this.saycb;
       if(scb===null){
-        //this.upward(item);
         return;
       }
       var obj=scb[0],m=obj[scb[1]];
@@ -100,11 +99,6 @@ function listenForTarget(target,data,cursor){
     if(name===this.path[cursor]){
       //console.log('time has come for',this.path[cursor],'on',this.path);
       Timeout.next(this,'huntTarget',data);
-    }else{
-      if(name==this.path[cursor]){
-        console.log(typeof name, typeof this.path[cursor]);
-      }
-      //console.log('no can do',name,'<>',this.path[cursor],'on',this.path);
     }
   },target.newElement);
   this.setStatus('LATER');
@@ -177,7 +171,6 @@ DataFollower.prototype.huntTarget = function(data){
 
 DataFollower.prototype.remoteAttach = function (data,target,cursor) {
   this.remotetail = this.path.slice(cursor);
-  this.pathtocommunication = this.path.slice(0,cursor);
   this.dataforremote = data;
   target.communication.remoteLink(this);
   this.data = target;
