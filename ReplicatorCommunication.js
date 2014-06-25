@@ -396,45 +396,16 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }
   }
   this.data.processInput(this,input);
-  //this.handleDestroyable(counter,cbrefs,this.data.processInput(this,input));
-};
-
-ReplicatorCommunication.prototype.handleDestroyable1 = function(counter,cbrefs,obj){
-  if (obj && ('function' === typeof(obj.destroy))) {
-    //console.log('putting destroyable to',counter);
-    if (!this.destroyables){
-      this.destroyables = {};
-      this.destroyablecount = 0;
-    }
-    this.destroyables[counter] = obj;
-    this.destroyablecount++;
-    //console.log('desctcnt',this.destroyablecount);
-    if(obj.destroyed){
-      obj.destroyed.attach((function(t,cnt){
-        return function(){
-          t.destroyablecount--;
-          //console.log('desctcnt',t.destroyablecount);
-          //console.log('removing destroyable',cnt);
-          delete t.destroyables[cnt];
-        }
-      })(this,counter));
-    }
-  }
 };
 
 ReplicatorCommunication.prototype.purge = function () {
-  var old_cbs = this.cbs;
-  this.cbs = {};
-  for (var i in old_cbs) {
-    try{
-    old_cbs[i].call(null, 'DISCARD_THIS');
-    }
-    catch(e){
-      console.log(e.stack);
-      console.log(old_cbs[i].toString());
-    }
+  var ss = this.senders;
+  if(!ss){
+    return;
   }
-  console.log('discard this sent ....');
+  for(var i in ss){
+    ss[i].destroy();
+  }
 };
 
 ReplicatorCommunication.metrics = function(){
