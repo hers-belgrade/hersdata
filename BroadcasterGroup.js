@@ -20,7 +20,7 @@ BroadcasterGroup.prototype.add = function(bcastername,data,username,realmname,ro
   b.destroyed.attach([this,'broadcasterDestroyed',[bcastername]]);
   return b;
 };
-BroadcasterGroup.prototype.broadcasterDestroyed = function(name){
+BroadcasterGroup.prototype.broadcasterDestroyed = function(bcastername){
   delete this.bcasters[bcastername];
   this.newBroadcaster.fire(bcastername);
 };
