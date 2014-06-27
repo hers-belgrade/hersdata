@@ -5,6 +5,7 @@ var net = require('net');
 var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
+var executable = require('./executable'),isExecutable = executable.isA,callExecutable=executable.call,applyExecutable=executable.apply;
 var HookCollection = require('./hookcollection');
 var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
@@ -63,8 +64,9 @@ function Collection(a_l){
   };
 
   this.traverseElements = function(cb){
+    if(!isExecutable(cb)){return;}
     for(var i in data){
-      var cbr = cb(i,data[i]);
+      var cbr = applyExecutable(cb,[i,data[i]]);
       if(typeof cbr !== 'undefined'){
         return cbr;
       }
@@ -395,14 +397,18 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   var functionalityname = path[path.length-2];
   //console.log(methodname);
 	if (methodname.charAt(0) === '_' && user.username().charAt(0)!=='*'){
-    cb && cb('ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname);
+    if(isExecutable(cb)){
+      applyExecutable(cb,['ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname]);
+    }
     return;
   }
   var f = this.functionalities && this.functionalities[functionalityname];
   if(f){
     var key = f.key;
     if((typeof key !== 'undefined')&&(!user.contains(key))){
-      cb && cb('ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have');
+      if(isExecutable(cb)){
+        applyExecutable(cb,['ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have']);
+      }
       return;
     }
     f = f.f;
@@ -411,28 +417,36 @@ Collection.prototype.run = function(path,paramobj,cb,user){
       //console.log('invoking',methodname,'for',user.fullname(),cb); 
       m(paramobj,cb,user);
     }else{
-      cb && cb('NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname);
+      if(isExecutable(cb)){
+        applyExecutable(cb,['NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname]);
+      }
       return;
     }
   }else{
     //console.trace();
     console.log(functionalityname,'is not a functionalityname while processing',path);
     //console.log(this.dataDebug());
-    cb && cb('NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here');
+    if(isExecutable(cb)){
+      applyExecutable(cb,['NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here']);
+    }
     return;
   }
 };
 
 Collection.prototype.takeBid = function(path,paramobj,cb,user){
   if(!path.length){
-    cb && cb('VOID_REQUIREMENT');
+    if(isExecutable(cb)){
+      callExecutable(cb,'VOID_REQUIREMENT');
+    }
     return;
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements',rn]);
   if(!(re && re.functionalities && re.functionalities.requirement.f)){
     console.log('no requirement',rn,'on',this.dataDebug(),'=>',re?re.dataDebug():'','with',path);
-    cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
+    if(isExecutable(cb)){
+      applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
+    }
     return;
   }
   re.functionalities.requirement.f.bid(paramobj,cb,user);
@@ -440,14 +454,18 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
 
 Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   if(!path.length){
-    cb && cb('VOID_REQUIREMENT');
+    if(isExecutable(cb)){
+      callExecutable(cb,'VOID_REQUIREMENT');
+    }
     return;
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements',rn]);
   if(!(re && re.functionalities.requirement.f)){
     console.log('no requirement',rn,'on',this.dataDebug());
-    cb && cb('NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist');
+    if(isExecutable(cb)){
+      applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
+    }
     return;
   }
   re.functionalities.requirement.f.offer(paramobj,cb,user);
@@ -634,12 +652,16 @@ Collection.prototype.setSessionUserFunctionality = function(config,requirements)
 
 Collection.prototype.getReplicatingUser = function(cb){
   if(this.replicatingUser){
-    cb(this.replicatingUser);
+    if(isExecutable(cb)){
+      callExecutable(cb,this.replicatingUser);
+    }
     return;
   }
   var t=this,rul = this.replicationInitiated.attach(function(user){
     t.replicationInitiated.detach(rul);
-    cb(user);
+    if(isExecutable(cb)){
+      callExecutable(cb,user);
+    }
   });
 };
 
@@ -674,7 +696,7 @@ Collection.prototype.closeReplicatingClient = function(replicatorname){
   }
 };
 
-Collection.prototype.openReplication = function(port){
+Collection.prototype.openReplication = function(port,cb){
   if(!(this.functionalities && this.functionalities.system)){
     this.attach('./system',{});
   }
@@ -704,16 +726,19 @@ Collection.prototype.openReplication = function(port){
     c.on('end',finalize);
     c.on('close',finalize);
   });
-  while(true){
-    try{
-      server.listen(port);
-      break;
-    }
-    catch(e){
-      port++;
-    }
+  server.on('error',function(){
+    console.log('server error',arguments);
+    port++;
+    this.listen(port);
+  });
+  if(isExecutable(cb)){
+    console.log('yes');
+    server.on('listening',function(){
+      console.log('listening',port);
+      callExecutable(cb,port);
+    });
   }
-  return port;
+  server.listen(port);
 };
 
 Collection.prototype.killAllProcesses = function () {
