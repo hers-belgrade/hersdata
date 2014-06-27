@@ -704,7 +704,16 @@ Collection.prototype.openReplication = function(port){
     c.on('end',finalize);
     c.on('close',finalize);
   });
-  server.listen(port);
+  while(true){
+    try{
+      server.listen(port);
+      break;
+    }
+    catch(e){
+      port++;
+    }
+  }
+  return port;
 };
 
 Collection.prototype.killAllProcesses = function () {

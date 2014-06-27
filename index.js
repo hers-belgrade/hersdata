@@ -34,6 +34,7 @@ module.exports = {
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
+  ArrayMap: require('./ArrayMap'),
   HookCollection: HookCollection,
   Listener: require('./Listener'),
   UserEngagement: require('./UserEngagement'),
@@ -44,6 +45,7 @@ module.exports = {
   Broadcaster: require('./Broadcaster'),
   AutoBroadcaster: require('./AutoBroadcaster'),
   BroadcasterGroup: require('./BroadcasterGroup'),
-  BroadcastingChannel: require('./BroadcastingChannel')
+  BroadcastingChannel: require('./BroadcastingChannel'),
+  HTTPTalker: require('./HTTPTalker')
 };
 

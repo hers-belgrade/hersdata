@@ -1,27 +1,10 @@
+var ArrayMap = require('./ArrayMap'),
+  executable = require('./executable');
+
 function HookCollection(){
 };
 HookCollection.prototype.empty = function(){
-	var c = 0;
-	for(var n in this.collection){
-		return false;
-	}
-  return true;
-};
-HookCollection.prototype._inc = function(){
-  this.counter++;
-  if(this.counter>10000000){
-    this.counter=1;
-  }
-};
-HookCollection.prototype.inc = function(){
-  if(!this.collection){
-    this.collection = {};
-    this.counter = 0;
-  }
-	this._inc();
-	while(this.counter in this.collection){
-		this._inc();
-	}
+  return this.collection && this.collection.isEmpty();
 };
 HookCollection.prototype.isEmpty = function(){
   if(!this.collection){
@@ -32,25 +15,12 @@ HookCollection.prototype.isEmpty = function(){
   }
   return true;
 };
-function __isExecutable(entity){
-  var toe = typeof entity;
-  if(toe==='function'){return true;}
-  if(toe==='object' && entity instanceof Array && (entity.length===2 || entity.length===3)){
-    var m = entity[0][entity[1]];
-    if(typeof m !== 'function'){
-      return false;
-    }
-    entity[1] = m;
-    return true;
-  }
-  return false;
-};
 HookCollection.prototype.attach = function(cb){
-  if(__isExecutable(cb)){
-		this.inc();
-    this.collection[this.counter]=cb;
-    //console.log('attached',cb,'to',this.counter);
-		return this.counter;
+  if(executable.isA(cb)){
+    if(!this.collection){
+      this.collection = new ArrayMap();
+    }
+		return this.collection.add(cb);
   }else{
     console.log(cb.toString(),'is not executable');
   }
@@ -64,39 +34,24 @@ HookCollection.prototype.detach = function(i){
     */
     return;
   }
-	delete this.collection[i];
-  if(this.isEmpty()){
-    delete this.counter;
+  this.collection.remove(i);
+  if(this.collection.isEmpty()){
     delete this.collection;
   }
 };
-function __execute(exc,params){
-  if(typeof exc === 'function'){
-    exc.apply(null,params);
-    return;
-  }
-  exc[1].apply(exc[0],exc[2] ? exc[2].concat(params) : params);
-};
 HookCollection.prototype.fire = function(){
-  var c = this.collection;
-  var fordel=[];
-  var pa = Array.prototype.slice.call(arguments);
-  //console.log('firing on',c);
-  for(var i in c){
-    try{
-      var fqn = c[i];
-      //console.log('calling',fqn,'on',i,'with',pa);
-      __execute(fqn,pa);
-    }
-    catch(e){
-      console.log(e);
-      console.log(e.stack);
-      fordel.unshift(i);
-    }
+  if(!this.collection){return;}
+  this.collection.traverse([this,this.fireSingle,[Array.prototype.slice.call(arguments)]]);
+};
+HookCollection.prototype.fireSingle = function(params,fqn,index){
+  try{
+    //console.log('calling',fqn,'on',index,'with',pa);
+    executable.apply(fqn,params);
   }
-  var fdl = fordel.length;
-  for(var i=0; i<fdl; i++){
-		delete c[fordel[i]];
+  catch(e){
+    this.collection.remove(index);
+    console.log(e);
+    console.log(e.stack);
   }
 };
 /* controversial
@@ -116,13 +71,7 @@ HookCollection.prototype.fireAndForget = function(){
 }
 */
 HookCollection.prototype.destruct = function(){
-  if(this.collection){
-    for(var i in this.collection){
-      delete this.collection[i];
-    }
-    delete this.collection;
-    delete this.counter;
-  }
+  delete this.collection;
 }
 
 module.exports = HookCollection;
