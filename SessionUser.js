@@ -15,9 +15,9 @@ function __socketIOHeartBeat(cursor){
     }
     var sl = s.queue.length;
     if(sl){
-      if(s.lastlen<sl && s.lastemit){
+      if(s.lastlen<sl && n-s.lastemit<500){
         s.lastlen = sl;
-        if(s.lastlen<1000){
+        if(s.lastlen<100){
           cursor++;
           continue;
         }

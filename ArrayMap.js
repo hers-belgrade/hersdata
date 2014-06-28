@@ -5,7 +5,7 @@ function ArrayMap(){
 }
 ArrayMap.prototype.add = function(item){
   if(typeof item === 'undefined'){
-    return 0;
+    return -1;
   }
   var a = this.arry;
   for(var i in a){
@@ -34,8 +34,10 @@ ArrayMap.prototype.traverse = function(cb){
   }
   var exec = executable.apply;
   var a = this.arry;
-  for(var i in a){
-    exec(cb,[a[i],i]);
+  var cursor = 0;
+  while(cursor<a.length){
+    exec(cb,[a[cursor],cursor]);
+    cursor++;
   }
 };
 ArrayMap.prototype.isEmpty = function(){

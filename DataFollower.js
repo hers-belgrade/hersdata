@@ -202,7 +202,7 @@ DataFollower.prototype.collectionDestroyed = function(name){
   this.destroyListener('collectionDestroyed',[name]);
 };
 DataFollower.prototype.attachToCollection = function(name,el){
-  if(!this.say){return;}
+  if(!this.destroyed){return;}
   if(name.charAt(0)==='_'){return;}
   this.createListener('collectionDestroyed',[name],el.destroyed);
 };
@@ -232,12 +232,23 @@ DataFollower.prototype.scalarChanged = function(name,el,changedmap){
   }
 };
 DataFollower.prototype.scalarDestroyed = function(name){
+  if(!this.listeners){
+    console.log('dead called scalarDestroyed on',name);
+    console.log(this);
+    console.trace();
+    process.exit(0);
+  }
   this.say([this.path,[name]]);
   this.destroyListener('scalarChanged',[name]);
   this.destroyListener('scalarDestroyed',[name]);
 };
 DataFollower.prototype.attachToScalar = function(name,el){
-  if(!this.say){return;}
+  if(!this.listeners){
+    console.log(this);
+    console.trace();
+    process.exit(0);
+  }
+  if(!this.destroyed){return;}
   this.createListener('scalarChanged',[name],el.changed);
   this.createListener('scalarDestroyed',[name],el.destroyed);
 };
