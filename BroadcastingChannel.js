@@ -16,12 +16,12 @@ BroadcastingChannel.prototype.destroy = function(){
   }
 };
 BroadcastingChannel.prototype.activate = function(){
-  if(this.subscription){return;}
+  if(typeof this.subscription !== 'undefined'){return;}
   if(!this.bcaster){return;}
   this.subscription = this.bcaster.attach(this.say,this.translatorname);
 };
 BroadcastingChannel.prototype.deactivate = function(){
-  if(!this.subscription){return;}
+  if(typeof this.subscription === 'undefined'){return;}
   if(!this.bcaster){return;}
   this.bcaster.detach(this.subscription,this.translatorname);
   delete this.subscription;
@@ -45,7 +45,7 @@ BroadcastingChannel.prototype.describe = function(cb){
   }
 };
 BroadcastingChannel.prototype.active = function(){
-  return !!this.subscription;
+  return typeof this.subscription !== 'undefined';
 };
 
 module.exports = BroadcastingChannel;
