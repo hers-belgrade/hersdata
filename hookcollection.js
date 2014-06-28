@@ -46,12 +46,13 @@ HookCollection.prototype.fire = function(){
 HookCollection.prototype.fireSingle = function(params,fqn,index){
   try{
     //console.log('calling',fqn,'on',index,'with',pa);
-    executable.apply(fqn,params);
+    fqn && executable.apply(fqn,params);
   }
   catch(e){
-    this.collection.remove(index);
     console.log(e);
     console.log(e.stack);
+    console.log(this,'got an error in traversing');
+    this.collection && this.collection.remove(index);
   }
 };
 /* controversial
