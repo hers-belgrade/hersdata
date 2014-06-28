@@ -20,9 +20,6 @@ function PathTranslator(path,replaceleading){
     var _h = h;
     return function(item){
       //console.log('hook firing',item);
-      if(!_h.counter){
-        return;
-      }
       _h.fire(item);
     }
   })(this.hook));
