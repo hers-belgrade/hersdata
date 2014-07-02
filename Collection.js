@@ -511,6 +511,43 @@ function __doParams(mname,_p,localerrorhandler,obj,errcb,caller){
   return pa;
 };
 
+function __nullerrorhandler(errkey,errparams,errmess){
+  return;
+  if(errkey){console.log('('+errkey+'): '+errmess);}
+}
+
+var __produceFunctionalityResultMessage = typeof process.env['DCP_GENERATE_MESSAGES'] !== 'undefined';
+
+function __errorhandler(exctbl,map,errorkey,errorparams){
+  if(!errorkey){
+    applyExecutable(exctbl,[0,'ok']);
+    return;
+  }
+  if(typeof map[errorkey] !== 'object'){
+    console.trace();
+    throw 'Error key '+errorkey+' not specified in the error map';
+  }
+  var eo = map[errorkey];
+  var errmess = eo.message;
+  var eop = eo.params;
+  if(eop && eop.length){
+    if(errorparams.length!==eo.params.length){
+      console.log(errorparams);
+      console.log(errorparams.length,'<>',eo.params.length+1);
+      throw 'Improper number of error parameters provided for '+errorkey;
+    }
+    if(__produceFunctionalityResultMessage){
+      var eopl = eop.length;
+      for(var i=0; i<eopl; i++){
+        errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),errorparams[i]);
+      }
+    }else{
+      errmess = '';
+    }
+  }
+  applyExecutable(exctbl,[errorkey,errorparams,errmess]);
+}
+
 Collection.prototype.attach = function(functionalityname, config, key){
   var self = this;
   if(!key){key=undefined;}
@@ -539,32 +576,11 @@ Collection.prototype.attach = function(functionalityname, config, key){
   }
   
   function localerrorhandler(originalerrcb){
-    var ecb = (typeof originalerrcb !== 'function') ? function(errkey,errparams,errmess){return;if(errkey){console.log('('+errkey+'): '+errmess);}} : originalerrcb, _m=m;
-    var ret =  function(errorkey){
-      if(!errorkey){
-        ecb(0,'ok');
-        return;
-      }
-      var errorparams = Array.prototype.slice.call(arguments,1);
-      if(typeof _m.errors[errorkey] !== 'object'){
-        console.trace();
-        throw 'Error key '+errorkey+' not specified in the error map';
-      }
-      var eo = _m.errors[errorkey];
-      var errmess = eo.message;
-      var eop = eo.params;
-      if(eop && eop.length){
-        if(arguments.length!==eo.params.length+1){
-          throw 'Improper number of error parameters provided for '+errorkey;
-        }
-        var eopl = eop.length;
-        for(var i=0; i<eopl; i++){
-          errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),arguments[i+1]);
-        }
-      }
-      ecb(errorkey,errorparams,errmess);
+    var ecb = (isExecutable(originalerrcb)) ? originalerrcb : __nullerrorhandler, _m=m;
+    return function(errkey){
+      var params = Array.prototype.slice.call(arguments,1);
+      __errorhandler(ecb,_m.errors,errkey,params);
     };
-    return ret;
   };
 
   if ('function' === typeof(m.validate_config)) {

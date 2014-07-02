@@ -16,6 +16,22 @@ function __isExecutable(entity){
   return false;
 };
 
+function __dummy(){};
+function __ensureExecutable(entity){
+  return __isExecutable(entity) ? entity : __dummy;
+}
+
+function __execute(exc){
+  if(typeof exc === 'function'){
+    return exc.call(null);
+  }
+  if(exc[2]){
+    return exc[1].apply(exc[0],exc[2]);
+  }else{
+    return exc[1].call(exc[0]);
+  }
+};
+
 function __executeScalar(exc,param){
   if(typeof exc === 'function'){
     return exc.call(null,param);
@@ -36,6 +52,8 @@ function __executeArray(exc,params){
 
 module.exports = {
   isA: __isExecutable,
+  ensure: __ensureExecutable,
+  run: __execute,
   call: __executeScalar,
   apply: __executeArray
 };

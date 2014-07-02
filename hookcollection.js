@@ -1,5 +1,9 @@
 var ArrayMap = require('./ArrayMap'),
-  executable = require('./executable');
+  executable = require('./executable'),
+  isExecutable = executable.isA,
+  execRun = executable.run,
+  execCall = executable.call,
+  execApply = executable.apply;
 
 function HookCollection(){
 };
@@ -16,7 +20,7 @@ HookCollection.prototype.isEmpty = function(){
   return true;
 };
 HookCollection.prototype.attach = function(cb){
-  if(executable.isA(cb)){
+  if(isExecutable(cb)){
     if(!this.collection){
       this.collection = new ArrayMap();
     }
@@ -41,12 +45,47 @@ HookCollection.prototype.detach = function(i){
 };
 HookCollection.prototype.fire = function(){
   if(!this.collection){return;}
-  this.collection.traverse([this,this.fireSingle,[Array.prototype.slice.call(arguments)]]);
+  var params = Array.prototype.slice.call(arguments);
+  switch(params.length){
+    case 0:
+      this.collection.traverse([this,this.fireSingle]);
+      break;
+    case 1:
+      this.collection.traverse([this,this.fireSingleParam,[params[0]]]);
+      break;
+    default:
+      this.collection.traverse([this,this.fireSingleArray,[params]]);
+      break;
+  }
 };
-HookCollection.prototype.fireSingle = function(params,fqn,index){
+HookCollection.prototype.fireSingle = function(fqn,index){
   try{
     //console.log('calling',fqn,'on',index,'with',pa);
-    fqn && executable.apply(fqn,params);
+    fqn && execRun(fqn);
+  }
+  catch(e){
+    console.log(e);
+    console.log(e.stack);
+    console.log(this,'got an error in traversing');
+    this.collection && this.collection.remove(index);
+  }
+};
+HookCollection.prototype.fireSingleParam = function(param,fqn,index){
+  try{
+    //console.log('calling',fqn,'on',index,'with',pa);
+    fqn && execCall(fqn,param);
+  }
+  catch(e){
+    console.log(e);
+    console.log(e.stack);
+    console.log(this,'got an error in traversing');
+    this.collection && this.collection.remove(index);
+  }
+};
+HookCollection.prototype.fireSingleArray = function(params,fqn,index){
+  try{
+    //console.log('calling',fqn,'on',index,'with',pa);
+    fqn && execApply(fqn,params);
   }
   catch(e){
     console.log(e);

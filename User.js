@@ -1,4 +1,8 @@
 var KeyRing = require('./KeyRing'),
+  executable = require('./executable'),
+  ensureExecutable = executable.ensure,
+  execCall = executable.call,
+  execApply = executable.apply,
   HookCollection = require('./hookcollection'),
   Timeout = require('herstimeout');
 
@@ -37,13 +41,14 @@ User.prototype.contains = function(key){
   return KeyRing.prototype.contains.call(this,key);
 };
 User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,paramobj,cb,remotepath){
+  cb = ensureExecutable(cb);
   if(!data){
-    cb && cb('DISCARD_THIS');
+    execCall(cb,'DISCARD_THIS');
     return;
   }
   if(typeof path === 'string'){
     if(!path){
-      cb && cb('INVALID_DATA_PATH');
+      execCall(cb,'INVALID_DATA_PATH');
       return;
     }
     if(path.charAt(0)==='/'){
@@ -52,7 +57,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
     path = path.split('/');
   }
   if(path.length<pathtaillength){
-    cb && cb('INVALID_DATA_PATH');
+    execCall(cb,'INVALID_DATA_PATH');
     return;
   }
   var target = data;
@@ -60,7 +65,7 @@ User.prototype.perform = function(ownmethod,data,path,pathtaillength,datamethod,
   while(path.length-cursor>pathtaillength){
     var ttarget = target.elementRaw(path[cursor]);
     if(!ttarget){
-      cb && cb('NO_DCP_ELEMENT',path);
+      execApply(cb,['NO_DCP_ELEMENT',path]);
       return;
     }else{
       target = ttarget;

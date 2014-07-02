@@ -309,18 +309,20 @@ ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid)
   var m = r[code];
   //console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
-    m.call(r,path,paramobj,(function(t,arry){
-      return function(){
-        for(var i in arguments){
-          arry.push(arguments[i]);
-        }
-        //console.log('commandresult',arry);
-        t.sendobj({commandresult:arry});
-      };
-    }(this,[id,cbid])));
+    m.call(r,path,paramobj,[this,'reportResult',[[id,cbid]]]);
   }else{
     this.sendobj({commandresult:[id,cbid,'NO_METHOD',[code]]});
   }
+};
+ReplicatorCommunication.prototype.reportResult = function(arry){
+  //console.log('reporting results',arguments,'for arry',arry);
+  for(var i in arguments){
+    if(i==0){continue;}
+    //console.log('pushing',arguments[i],'for',i);
+    arry.push(arguments[i]);
+  }
+  //console.log('commandresult',arry);
+  this.sendobj({commandresult:arry});
 };
 ReplicatorCommunication.prototype.handOver = function(input){
   var counter = input.counter;
