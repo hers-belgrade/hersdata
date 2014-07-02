@@ -793,7 +793,7 @@ Collection.prototype.processInput = function(sender,input){
         }
         var srt = internal[1];
         if(!(srt && typeof srt === 'object')){
-          sender.socket.destroy();
+          sender.socket && sender.socket.destroy();
         }
         sender.replicaToken = srt;
         if(this.replicatingClients[sender.replicaToken.name]){
@@ -829,8 +829,8 @@ Collection.prototype.processInput = function(sender,input){
           }
         });
         ret.revive = reviv;
-        sender.send('internal','initDCPreplica',ret);
         this.newReplica.fire(sender);
+        sender.send('internal','initDCPreplica',ret);
         break;
       case 'initDCPreplica':
         this.cloneFromRemote(internal[1],true);

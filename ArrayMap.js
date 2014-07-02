@@ -1,7 +1,17 @@
-var executable = require('./executable');
+var executable = require('./executable'),
+  execapply = executable.apply;
 
 function ArrayMap(){
   this.arry = [];
+}
+ArrayMap.prototype.allocate = function(index,item){
+  var a = this.arry;
+  while(a.length<index){
+    a.push(void 0);
+  }
+  var ret = a[index];
+  a[index] = item;
+  return ret;
 }
 ArrayMap.prototype.add = function(item){
   if(typeof item === 'undefined'){
@@ -32,11 +42,13 @@ ArrayMap.prototype.traverse = function(cb){
   if(!executable.isA(cb)){
     return;
   }
-  var exec = executable.apply;
   var a = this.arry;
   var cursor = 0;
   while(cursor<a.length){
-    exec(cb,[a[cursor],cursor]);
+    var ar = execapply(cb,[a[cursor],cursor]);
+    if(ar){
+      return;
+    }
     cursor++;
   }
 };
