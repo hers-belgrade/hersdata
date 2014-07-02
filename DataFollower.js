@@ -345,16 +345,18 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
   }
   return df;
 };
+function execItems(cb, items){
+    for(var i in items){
+      execCall(cb,items[i]);
+    }
+  }
 DataFollower.prototype.describe = function(cb){
   if(!isExecutable(cb)){
     return;
   }
-  this.realdescribe(function(items){
-    for(var i in items){
-      execCall(cb,items[i]);
-    }
-  });
+  this.realdescribe([this,execItems,[cb]]);
 };
+DataFollower.prototype.execItems = 
 DataFollower.prototype.realdescribe = function(cb){
   if(!isExecutable(cb)){
     return;

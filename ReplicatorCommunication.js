@@ -3,7 +3,12 @@ var Timeout = require('herstimeout'),
   DataFollower = require('./DataFollower'),
   DataUser = require('./DataUser'),
   SuperUser = require('./SuperUser'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('./hookcollection'),
+  executable = require('./executable'),
+  isExecutable = executable.isA,
+  execRun = executable.run,
+  execCall = executable.call,
+  execApply = executable.apply;
 
 var __start = Timeout.now();
 
@@ -210,9 +215,19 @@ RemoteFollowerSlave.prototype.docb = function(cbid,args){
   }
   */
   var cb = this.cbs[cbid];
-  if(typeof cb === 'function'){
+  if(isExecutable(cb)){
     delete this.cbs[cbid];
-    cb.apply(null,args);
+    switch(args.length){
+      case 0:
+        execRun(cb);
+        break;
+      case 1:
+        execCall(cb,args[0]);
+        break;
+      default:
+        execApply(cb,args);
+        break;
+    }
   }
 };
 
