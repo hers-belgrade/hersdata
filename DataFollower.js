@@ -3,6 +3,7 @@ var User = require('./User'),
   executable = require('./executable'),
   isExecutable = executable.isA,
   execCall = executable.call,
+  execApply = executable.apply,
   HookCollection = require('./hookcollection'),
   Timeout = require('herstimeout');
 
