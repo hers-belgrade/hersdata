@@ -471,7 +471,7 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   re.functionalities.requirement.f.offer(paramobj,cb,user);
 };
 
-function __doParams(mname,_p,localerrorhandler,obj,errcb,caller){
+function __doParams(mname,_p,errors,obj,errcb,caller){
   var pa = [];
   if(_p.params){
     if(_p.params==='originalobj'){
@@ -504,10 +504,8 @@ function __doParams(mname,_p,localerrorhandler,obj,errcb,caller){
         pa.push(__p);
       }
     }
-    pa.push(localerrorhandler(errcb),caller);
-  }else{
-    pa.push(localerrorhandler(errcb),caller);
   }
+  pa.push(localerrorhandler(errors,errcb),caller);
   return pa;
 };
 
@@ -548,6 +546,30 @@ function __errorhandler(exctbl,map,errorkey,errorparams){
   applyExecutable(exctbl,[errorkey,errorparams,errmess]);
 }
 
+function __attachedMethodResolver(selffunc,errors,mname,_p){
+  if (mname.charAt(0) == '_') {
+    return function () {
+      return _p.apply(selffunc(), arguments);
+    }
+  }
+  if(mname!=='init'){
+    return function(obj,errcb,caller){
+      _p.apply(selffunc(),__doParams(mname,_p,errors,obj,errcb,caller));
+    };
+  }else{
+    return function(errcb,caller){
+      _p.call(selffunc(),localerrorhandler(errors,errcb),caller);
+    };
+  }
+};
+
+function localerrorhandler(errors,originalerrcb){
+  var ecb = (isExecutable(originalerrcb)) ? originalerrcb : __nullerrorhandler, _errors = errors;
+  return function(errkey){
+    __errorhandler(ecb,_errors,errkey,Array.prototype.slice.call(arguments,1));
+  };
+};
+
 Collection.prototype.attach = function(functionalityname, config, key){
   var self = this;
   if(!key){key=undefined;}
@@ -575,14 +597,6 @@ Collection.prototype.attach = function(functionalityname, config, key){
     throw functionalityname+" does not have the 'errors' map";
   }
   
-  function localerrorhandler(originalerrcb){
-    var ecb = (isExecutable(originalerrcb)) ? originalerrcb : __nullerrorhandler, _m=m;
-    return function(errkey){
-      var params = Array.prototype.slice.call(arguments,1);
-      __errorhandler(ecb,_m.errors,errkey,params);
-    };
-  };
-
   if ('function' === typeof(m.validate_config)) {
     if (!m.validate_config(config)) {
       console.log('Configuration validation failed, functionality: '+functionalityname, config);
@@ -622,22 +636,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
   for(var i in m){
     var p = m[i];
     if((typeof p !== 'function')) continue;
-    ret[i] = (function(mname,_p){
-      if (mname.charAt(0) == '_') {
-        return function () {
-          return _p.apply(SELF(), arguments);
-        }
-      }
-      if(mname!=='init'){
-        return function(obj,errcb,caller){
-          _p.apply(SELF(),__doParams(mname,_p,localerrorhandler,obj,errcb,caller));
-        };
-      }else{
-        return function(errcb,caller){
-          _p.call(SELF(),localerrorhandler(errcb),caller);
-        };
-      }
-    })(i,p);
+    ret[i] = __attachedMethodResolver(SELF,m.errors,i,p);
   }
   ret['__DESTROY__'] = function(){
     var f = self.functionalities[fqnname];
