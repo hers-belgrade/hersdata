@@ -313,7 +313,11 @@ ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
     return;
   }
   this.inputcounter=id;
-  p.follow(path);
+  if(typeof p.username==='function'){
+    p.follow(path);
+  }else{
+    Timeout.set(this,100,'createFollower',parentid,id,path);
+  }
 };
 ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid){
   var r = this.remotes[id];

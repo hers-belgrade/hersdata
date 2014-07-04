@@ -34,6 +34,7 @@ module.exports = {
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
+  executable: require('./executable'),
   ArrayMap: require('./ArrayMap'),
   HookCollection: HookCollection,
   Listener: require('./Listener'),
