@@ -27,7 +27,7 @@ RemoteCollectionReplica.prototype.go = function(cb){
     t.status = 'connected';
     cb && cb(t.status);
     t.communication.listenTo(this);
-    console.log('reconnecting');
+    console.log('connected');
     CollectionReplica.prototype.go.call(t);
   }).on('error', function (err) {
     console.log('socket error',err);
@@ -38,7 +38,7 @@ RemoteCollectionReplica.prototype.go = function(cb){
     console.log('socket closed on',t.url, err);
     t.status = 'disconnected';
     cb && cb(t.status);
-    Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
+    Timeout.next(function(t,cb){cb && cb('reconnecting');t.go(cb);},t,cb);
   });
 };
 RemoteCollectionReplica.prototype.destroy = function(){
