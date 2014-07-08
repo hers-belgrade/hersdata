@@ -491,11 +491,13 @@ function __doParams(mname,_p,errors,obj,errcb,caller){
         if(typeof __p === 'undefined'){
           var __pd = pd[_ps[i]];
           if(typeof __pd === 'undefined'){
+            /*
             if(errcb){
               errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
             }else{
+            */
               console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
-            }
+            //}
             return;
           }else{
             __p = __pd;

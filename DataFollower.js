@@ -9,6 +9,13 @@ var User = require('./User'),
 
 var __DataFollowerInstanceCount = 0;
 
+function hashEmpty(hash){
+  for(var i in hash){
+    return false;
+  }
+  return true;
+}
+
 function DataFollower(data,createcb,cb,user,path){
   if(!(user && typeof user.username === 'function' && typeof user.realmname === 'function')){
     console.trace();
@@ -21,8 +28,26 @@ function DataFollower(data,createcb,cb,user,path){
   Listener.call(this);
   path = path || [];
   this.path = path;
-  this.saycb = cb;
-  this.createcb = createcb;
+  if(isExecutable(cb)){
+    if(typeof cb === 'function'){
+      this.saycb = [this,cb];
+    }else{
+      if(!cb[0]){
+        cb[0] = this;
+      }
+      this.saycb = cb;
+    }
+  }
+  if(isExecutable(createcb)){
+    if(typeof createcb === 'function'){
+      this.createcb = [this,createcb];
+    }else{
+      if(!createcb[0]){
+        createcb[0] = this;
+      }
+      this.createcb = createcb;
+    }
+  }
   this.destroyed = new HookCollection();
   this._parent = user;
   if(!(user.data&&user.data===data)){
@@ -46,8 +71,8 @@ DataFollower.prototype.destroy = function(){
     this.remotelink.destroy();
   }
   for(var i in this.followers){
-    this.followers[i].destroy();
-    delete this.followers[i];
+    this.followers[i].destroy(); //the follower's .destroy() might delete this.followers as well, so
+    this.followers && delete this.followers[i]; //this.followers has to be checked for
   }
   //block reentrance
   var dh = this.destroyed;
@@ -56,6 +81,9 @@ DataFollower.prototype.destroy = function(){
   if(this._parent && this._parent.followers){
     var spath = this.path ? this.path.join('/') : '.';
     delete this._parent.followers[spath];
+    if(hashEmpty(this._parent.followers)){
+      delete this._parent.followers;
+    }
   }
   this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
@@ -70,7 +98,7 @@ DataFollower.prototype.finalizer = function(){
 };
 DataFollower.prototype.setStatus = function(stts){
   this._status = stts;
-  this.createcb && this.createcb.call(this,this._status);
+  this.createcb && execCall(this.createcb,this._status);
 };
 DataFollower.prototype.upward = function(item){
   var _p = this._parent;
@@ -80,6 +108,12 @@ DataFollower.prototype.upward = function(item){
   }
 };
 DataFollower.prototype.say = function(item){
+  if(isExecutable(this.saycb)){
+    execCall(this.saycb,item);
+  }else{
+    this.upward(item);
+  }
+  return;
   var toscb = typeof this.saycb;
   switch(toscb){
     case 'function':
@@ -174,12 +208,7 @@ DataFollower.prototype.huntTarget = function(){
       return;
     }
     var t = this;
-    this.data.traverseElements(function(name,el){
-      if(t.say){
-        t.reportElement(name,el,t.say);
-      }
-      t.attachAppropriately(name,el);
-    });
+    this.data.traverseElements([this,this.newElementListener]);
     this.createListener('newElementListener',null,this.data.newElement);
     for(var i in this.followers){
       var f = this.followers[i];
@@ -193,7 +222,7 @@ DataFollower.prototype.huntTarget = function(){
   }
 }
 DataFollower.prototype.newElementListener = function(name,el){
-  this.reportElement(name,el);
+  this.reportElement(undefined,name,el);
   this.attachAppropriately(name,el);
 };
 DataFollower.prototype.remoteAttach = function (target) {
@@ -213,25 +242,27 @@ DataFollower.prototype.attachToCollection = function(name,el){
 DataFollower.prototype.emitScalarValue = function(name,val,cb){
   if(!cb){return;}
   if(typeof val === 'undefined'){
-    cb.call(this,[this.path,[name]]);
+    execCall(cb,[this.path,[name]]);
+    //cb.call(this,[this.path,[name]]);
   }else{
-    cb.call(this,[this.path,[name,val]]);
+    execCall(cb,[this.path,[name,val]]);
+    //cb.call(this,[this.path,[name,val]]);
   }
 };
 DataFollower.prototype.scalarChanged = function(name,el,changedmap){
   var priv = this.contains(el.access_level());
   var val = priv ? el.value() : el.public_value();
   if(changedmap.key){
-    this.emitScalarValue(name,val,this.say);
+    this.emitScalarValue(name,val,[this,this.say]);
     return;
   }
   if(priv){
     if(changedmap.private){
-      this.emitScalarValue(name,val,this.say);
+      this.emitScalarValue(name,val,[this,this.say]);
     }
   }else{
     if(changedmap.public){
-      this.emitScalarValue(name,val,this.say);
+      this.emitScalarValue(name,val,[this,this.say]);
     }
   }
 };
@@ -266,14 +297,15 @@ DataFollower.prototype.attachAppropriately = function(name,el){
 DataFollower.prototype.reportCollection = function(name,el,cb){
   if(name.charAt(0)==='_'){return;}
   if(this.contains(el.access_level())){
-    cb && cb.call(this,[this.path,[name,null]]);
+    execCall(cb,[this.path,[name,null]]);
+    //cb && cb.call(this,[this.path,[name,null]]);
   }
 };
 DataFollower.prototype.reportScalar = function(name,el,cb){
   this.emitScalarValue(name,this.contains(el.access_level()) ? el.value() : el.public_value(),cb);
 };
-DataFollower.prototype.reportElement = function(name,el,cb){
-  cb = cb || this.say;
+DataFollower.prototype.reportElement = function(cb,name,el){
+  cb = cb || [this,this.say];
   if(!cb){return;}
   switch(el.type()){
     case 'Scalar':
@@ -356,7 +388,13 @@ DataFollower.prototype.describe = function(cb){
   }
   this.realdescribe([this,execItems,[cb]]);
 };
-DataFollower.prototype.execItems = 
+function followerHandler(desc,map,f,fn,cb,items){
+  Array.prototype.push.apply(desc,items);
+  delete map[fn];
+  if(!Object.keys(map).length){
+    execCall(cb,desc);
+  }
+};
 DataFollower.prototype.realdescribe = function(cb){
   if(!isExecutable(cb)){
     return;
@@ -377,64 +415,54 @@ DataFollower.prototype.realdescribe = function(cb){
     return;
   }
   var ret = [];
-  var pusher = function(item){
-    ret.push(item);
-    //console.log('1st level push',item,'=>',ret);
-  };
-  var t = this;
-  this.data.traverseElements(function(name,el){
-    t.reportElement(name,el,pusher);
-  });
+  this.data.traverseElements([this,'reportElement',[[ret,ret.push]]]);
   if(this.followers){
     var batchpushers = {};
-    var batchpusher = function(bpname){
-      var bpn = bpname,bps = batchpushers,_cb=cb,_ret=ret;
-      return function(items){
-        Array.prototype.push.apply(_ret,items);
-        delete bps[bpn];
-        if(!Object.keys(bps).length){
-          execCall(_cb,ret);
-        }
-      };
-    };
     for(var i in this.followers){
-      batchpushers[i]=1;
+      if(i.charAt(0)!=='_'){
+        batchpushers[i]=1;
+      }
     }
-    for(var i in this.followers){
-      this.followers[i].remotedescribe(t.path,{},batchpusher(i));
+    for(var i in batchpushers){
+      if(i.charAt(0)!=='_'){
+        var f = this.followers[i];
+        this.followers[i].remotedescribe(this.path,{},[null,followerHandler,[ret,batchpushers,f,i,cb]]);
+      }
     }
     return;
   }
   execCall(cb,ret);
 };
+function describeConcatenator(path,cb,items){
+  for(var i in items){
+    var item = items[i];
+    item[0] = path.concat(item[0]);
+  }
+  execCall(cb,items);
+};
 DataFollower.prototype.remotedescribe = function(path,paramobj,cb){
   if(!isExecutable(cb)){
     return;
   }
-  this.realdescribe(function(items){
-    for(var i in items){
-      var item = items[i];
-      item[0] = path.concat(item[0]);
+  this.realdescribe([null,describeConcatenator,[path,cb]]);
+};
+function bidStatuser(cb,stts){
+  if(stts==='OK'){
+    if(execCall(cb,true)){
+      this.destroy();
     }
-    execCall(cb,items);
-  });
+  }
+  if(stts==='RETREATING'){
+    if(execCall(cb,false)){
+      this.destroy();
+    }
+  }
 };
 DataFollower.prototype.handleBid = function(reqname,cb){
   if(!isExecutable(cb)){
     return;
   }
-  this.follow(['__requirements',reqname],function(stts){
-    if(stts==='OK'){
-      if(execCall(cb,true)){
-        this.destroy();
-      }
-    }
-    if(stts==='RETREATING'){
-      if(execCall(cb,false)){
-        this.destroy();
-      }
-    }
-  });
+  this.follow(['__requirements',reqname],[null,bidStatuser,[cb]]);
 };
 function OfferHandler(data,createcb,saycb,user,path,cb){
   if(!isExecutable(cb)){
