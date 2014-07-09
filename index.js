@@ -35,6 +35,7 @@ module.exports = {
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
   executable: require('./executable'),
+  Transactioner: require('./Transactioner'),
   ArrayMap: require('./ArrayMap'),
   HookCollection: HookCollection,
   Listener: require('./Listener'),

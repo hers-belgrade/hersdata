@@ -415,7 +415,7 @@ DataFollower.prototype.realdescribe = function(cb){
     return;
   }
   var ret = [];
-  this.data.traverseElements([this,'reportElement',[[ret,ret.push]]]);
+  this.data.traverseElements([this,'reportElement',[[ret,Array.prototype.push]]]);
   if(this.followers){
     var batchpushers = {};
     for(var i in this.followers){
