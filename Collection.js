@@ -193,7 +193,7 @@ Collection.prototype.dataDebug = function () {
 
 Collection.prototype.toMasterPrimitives = function(path){
   path = path || [];
-  var ret = [['set',path,access_level]];
+  var ret = [['set',path]];
   this.traverseElements(function(name,el){
     var p = path.concat(name);
     Array.prototype.push.apply(ret,el.toMasterPrimitives(p));
