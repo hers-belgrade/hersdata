@@ -3,6 +3,7 @@ var Timeout = require('herstimeout'),
   DataFollower = require('./DataFollower'),
   DataUser = require('./DataUser'),
   SuperUser = require('./SuperUser'),
+  ArrayMap = require('./ArrayMap'),
   HookCollection = require('./hookcollection'),
   executable = require('./executable'),
   isExecutable = executable.isA,
@@ -25,6 +26,7 @@ function remoteSayer(item){
 function RemoteFollower(data,createcb,saycb,user,path,rc){
   this._replicationid = rc.inputcounter;
   this.rc = rc;
+  console.log('new RemoteFollower');
   if(!this.rc.remotes){
     this.rc.remotes = {};
   }
@@ -53,6 +55,7 @@ RemoteFollower.prototype.follow = function(path,statuscb,saycb){
 function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
   this._replicationid=replicationid;
+  console.log('new RemoteUser');
   if(!this.rc.remotes){
     this.rc.remotes = {};
   }
@@ -142,11 +145,11 @@ function RemoteFollowerSlave(rc,localfollower){
   localfollower.remotelink = this;
   this.rc = rc;
   rc.counter.inc();
-  this._id = rc.counter.toString();
+  //this._id = rc.counter.toString();
   if(!rc.senders){
-    rc.senders = {};
+    rc.senders = new ArrayMap();
   }
-  rc.senders[this._id] = this;
+  this._id = rc.senders.add(this);
   this.follower=localfollower;
   this.dataforremote = localfollower.dataforremote;
   delete localfollower.dataforremote;
@@ -186,12 +189,14 @@ RemoteFollowerSlave.prototype.say = function(item){
   }
   this.follower.say([this.follower.path,item]);
 };
-RemoteFollowerSlave.prototype.destroy = function(){
+RemoteFollowerSlave.prototype.destroy = function(quiet){
   if(!this.follower){return;}
   delete this.follower.remotelink;
   Timeout.next(this.follower,'huntTarget',this.dataforremote);
-  this.rc.sendobj({destroy:this._id});
-  delete this.rc.senders[this._id];
+  if(!quiet){
+    this.rc.sendobj({destroy:this._id});
+  }
+  this.rc.senders.remove(this._id);
   for(var i in this){
     delete this[i];
   }
@@ -216,6 +221,7 @@ RemoteFollowerSlave.prototype.docb = function(cbid,args){
     console.log(args[i]);
   }
   */
+  if(!this.cbs){return;}
   var cb = this.cbs[cbid];
   if(isExecutable(cb)){
     delete this.cbs[cbid];
@@ -242,6 +248,12 @@ function ReplicatorCommunication(data){
   this.counter = new BigCounter();
   this.data = data;
 }
+function senderDestroyer(sender,senderindex){
+  if(sender){
+    sender.destroy();
+  }
+  this.remove(senderindex);
+};
 ReplicatorCommunication.prototype.destroy = function(){
   if(this.slaveSays){
     this.slaveSays.destruct();
@@ -253,11 +265,7 @@ ReplicatorCommunication.prototype.destroy = function(){
     delete this.data.communication;
   }
   if (this.senders) {
-    for (var i in this.senders) {
-      if(this.senders[i]){
-        this.senders[i].destroy();
-      }
-    }
+    this.senders.traverse([this.senders,senderDestroyer]);
   }
   if (this.remotes) {
     for (var i in this.remotes) {
@@ -280,7 +288,7 @@ ReplicatorCommunication.prototype.send = function(code){
 ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
     rid = commandresult.shift();
-    var r = this.senders[rid];
+    var r = this.senders.elementAt(rid);
     if(!r){
       this.sendobj({destroy:rid});
       return;
@@ -357,10 +365,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.destroy){
-    var di = input.destroy, base = this.slaveside ? this.senders : this.remotes;
-    var d = base ? base[di] : null;
+    var di = input.destroy;
+    var d = this.masterSays ? this.senders.elementAt(di) : this.remotes[di];
     if(d){
-      d.destroy();
+      d.destroy(true);
     }
     return;
   }
@@ -375,7 +383,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   if(input.userstatus) {
     var us = input.userstatus;
     if(this.senders){
-      var s = this.senders[us[0]];
+      var s = this.senders.elementAt(us[0]);
       if(s){
         s.setStatus(us[1]);
       }else{
@@ -388,7 +396,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   if(input.usersay){
     var us = input.usersay;
     if(this.senders){
-      var s = this.senders[us[0]];
+      var s = this.senders.elementAt(us[0]);
       if(s){
         s.say(us[1]);
       }else{
@@ -412,12 +420,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
 };
 
 ReplicatorCommunication.prototype.purge = function () {
-  var ss = this.senders;
-  if(!ss){
-    return;
-  }
-  for(var i in ss){
-    ss[i].destroy();
+  if(this.senders){
+    this.senders.traverse([this.senders,senderDestroyer]);
   }
 };
 
