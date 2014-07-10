@@ -61,6 +61,7 @@ function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.realmname = realmname;
   this.roles = roles;
   this.path = path;
+  this.server = rc.replicaToken.name;
   this.init();
 }
 RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
@@ -78,11 +79,12 @@ RemoteUser.prototype.destroy = function(){
 RemoteUser.prototype.init = function(){
   var data = this.rc.data.element(this.path);
   if(data){
-    var username = this.username, realmname = this.realmname, roles = this.roles;
+    var username = this.username, realmname = this.realmname, roles = this.roles, server = this.server;
     delete this.username;
     delete this.realmname;
     delete this.roles;
     DataUser.call(this,data,undefined,undefined,username,realmname,roles);
+    this._parent.server = server;
   }else{
     this.setStatus('LATER');
     var t = this;

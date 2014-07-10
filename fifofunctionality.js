@@ -1,4 +1,6 @@
-var BigCounter = require('./BigCounter');
+var BigCounter = require('./BigCounter'),
+  executable = require('./executable'),
+  execCall = executable.call;
 
 var errors = {
   OK:{message:'OK'},
@@ -7,11 +9,11 @@ var errors = {
 
 function add(item,cb){
   if(!item){
-    cb('NO_ITEM_TO_ADD');
+    execCall(cb,'NO_ITEM_TO_ADD');
     return;
   }
   this.self.count++;
-  var idname = this.self.idname || id;
+  var idname = this.self.idname || 'id';
   var id = item[idname];
   if(typeof id === 'undefined'){
     if(!this.self.counter){
@@ -42,7 +44,7 @@ function add(item,cb){
     actions.push(['set',[id,i],[d]]);
   }
   this.data.commit('new_fifo_item',actions);
-  cb('OK');
+  execCall(cb,'OK');
 };
 add.params = 'originalobj';
 

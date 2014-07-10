@@ -29,5 +29,6 @@ DataUser.prototype.destroy = function(){
   delete this.__engager;
   DataFollower.prototype.destroy.call(this);
 };
+DataUser.prototype.dumpEngagementInfo = UserEngagement.prototype.dumpEngagementInfo;
 
 module.exports = DataUser;

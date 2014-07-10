@@ -10,6 +10,7 @@ var HookCollection = require('./hookcollection');
 var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
 var User = require('./User');
+var UserEngagement = require('./UserEngagement');
 var __CollectionCount = 0;
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
@@ -20,6 +21,62 @@ function onChildTxn(name,onntxn,txnc,txnb,txne){
     onntxn.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
   };
 };
+
+function childTxnHandler(name,txnc,chldcollectionpath,txnalias,txnprimitives,txnid){
+  txnc.inc();
+  this.onNewTransaction.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
+};
+
+function itemPerformer(txnc,it){
+  //console.log('should perform',it);
+  if (utils.isArray(it) && it.length) {
+    //console.log('performing',it);
+    this['perform_'+it[0]](it[1], it[2], txnc);
+  }
+};
+
+function collectionCommiter(txnc,txnalias,txnprimitives,_txnc,targetpath) {
+  if(targetpath && typeof targetpath === 'object' && targetpath instanceof Array){
+    var el = this.element(targetpath);
+    if(!el){
+      return;
+      console.log('no element to _commit on');
+      process.exit(0);
+    }
+    applyExecutable(el._commit,[txnalias,txnprimitives]);
+    return;
+  }
+  if(this.__commitunderway){
+    if(!this.__commitstodo){
+      this.__commitstodo=[[txnalias,txnprimitives]];
+    }else{
+      this.__commitstodo.push([txnalias,txnprimitives]);
+      console.log(this.__commitstodo.length,'pending');
+    }
+    return;
+  }
+  this.__commitunderway = true;
+  //console.log('txnBegins',txnalias);
+  this.txnBegins.fire(txnalias);
+  for (var i in txnprimitives) {
+    itemPerformer.call(this,txnc,txnprimitives[i]);
+  }
+  this.txnEnds.fire(txnalias);
+  //console.log('txnEnds',txnalias);
+  txnc.inc();
+  //console.log(txnalias,'firing on self',txnc.toString());
+  this.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
+  delete this.__commitunderway;
+  if(this.__commitstodo){
+    if(this.__commitstodo.length){
+      //this._commit.apply(this,this.__commitstodo.shift());
+      applyExecutable(this._commit,this.__commitstodo.shift());
+    }else{
+      delete this.__commitstodo;
+    }
+  }
+  //console.log(txnc.toString(),'fire done');
+}
 
 function Collection(a_l){
   __CollectionCount++;
@@ -89,68 +146,15 @@ function Collection(a_l){
     return txnCounter.value();
   };
 
-  this.add = function(name,entity){
-    throw_if_invalid_scalar(name);
-    var key = name+'';
-    if(data[key]){
-      data[key].destroy();
-    }
-    data[key] = entity;
-    this.handleNewElement(key,entity);
-    var toe = entity.type();
-    if(toe==='Collection'){
-      entity.onNewTransaction.attach(onChildTxn(name,this.onNewTransaction,txnCounter,this.txnBegins,this.txnEnds));
-    }
+  this._addEntity = function(name,entity){
+    data[name] = entity;
   };
 
-  this._commit = (function(t,txnc){
-    return function (txnalias,txnprimitives,_txnc,targetpath) {
-      if(targetpath && typeof targetpath === 'object' && targetpath instanceof Array){
-        var el = this.element(targetpath);
-        if(!el){
-          return;
-          console.log('no element to _commit on');
-          process.exit(0);
-        }
-        el._commit(txnalias,txnprimitives);
-        return;
-      }
-      if(t.__commitunderway){
-        if(!t.__commitstodo){
-          t.__commitstodo=[[txnalias,txnprimitives]];
-        }else{
-          t.__commitstodo.push([txnalias,txnprimitives]);
-          console.log(t.__commitstodo.length,'pending');
-        }
-        return;
-      }
-      t.__commitunderway = true;
-      //console.log('txnBegins',txnalias);
-      t.txnBegins.fire(txnalias);
-      for (var i in txnprimitives) {
-        var it = txnprimitives[i];
-        //console.log('should perform',it);
-        if (utils.isArray(it) && it.length) {
-          //console.log('performing',it);
-          t['perform_'+it[0]](it[1], it[2], txnc);
-        }
-      }
-      t.txnEnds.fire(txnalias);
-      //console.log('txnEnds',txnalias);
-      txnc.inc();
-      //console.log(txnalias,'firing on self',txnc.toString());
-      t.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
-      delete t.__commitunderway;
-      if(t.__commitstodo){
-        if(t.__commitstodo.length){
-          t._commit.apply(t,t.__commitstodo.shift());
-        }else{
-          delete t.__commitstodo;
-        }
-      }
-      //console.log(txnc.toString(),'fire done');
-    };
-  })(this,txnCounter);
+  this._attachToChildTxn = function(name,entity){
+    entity.onNewTransaction.attach([this,childTxnHandler,[name,txnCounter]]);
+  };
+
+  this._commit = [this,collectionCommiter,[txnCounter]];
 };
 
 Collection.prototype.destroy = function(){
@@ -175,8 +179,23 @@ Collection.prototype.destroy = function(){
   __CollectionCount--;
 };
 
+Collection.prototype.add = function(name,entity){
+  throw_if_invalid_scalar(name);
+  var key = name+'';
+  var d = this.elementRaw(key);
+  if(d){
+    d.destroy();
+  }
+  this._addEntity(key,entity);
+  this.handleNewElement(key,entity);
+  var toe = entity.type();
+  if(toe==='Collection'){
+    this._attachToChildTxn(name,entity);
+  }
+};
+
 Collection.prototype.commit = function(txnalias,txnprimitives){
-  this._commit(txnalias,txnprimitives);
+  applyExecutable(this._commit,[txnalias,txnprimitives]);
 };
 
 Collection.prototype.type = function(){
@@ -471,6 +490,21 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   re.functionalities.requirement.f.offer(paramobj,cb,user);
 };
 
+function defaultChecker(mname,__pn,__pd){
+  if(typeof __pd === 'undefined'){
+    console.log('paramobj provided to',mname,'is missing the value for',__pn);
+    return;
+  }
+  return __pd;
+};
+
+function paramBuilder(mname,pa,pd,__pn,__p){
+  if(typeof __p === 'undefined'){
+    __p = defaultChecker(mname,__pn,pd[__pn]);
+  }
+  pa.push(__p);
+};
+
 function __doParams(mname,_p,errors,obj,errcb,caller){
   var pa = [];
   if(_p.params){
@@ -480,30 +514,13 @@ function __doParams(mname,_p,errors,obj,errcb,caller){
       }
       pa.push(obj);
     }else{
-      var pd = _p.defaults||{};
       var _ps = _p.params;
       if(typeof obj !== 'object'){
         console.trace();
         throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',')
       }
       for(var i=0; i<_ps.length; i++){
-        var __p = obj[_ps[i]];
-        if(typeof __p === 'undefined'){
-          var __pd = pd[_ps[i]];
-          if(typeof __pd === 'undefined'){
-            /*
-            if(errcb){
-              errcb('MISSING_PARAMETER',[mname,_ps[i]],'Paramobj for '+mname+' needs a value for '+_ps[i]);
-            }else{
-            */
-              console.log('paramobj provided to',mname,'is missing the value for',_ps[i]);
-            //}
-            return;
-          }else{
-            __p = __pd;
-          }
-        }
-        pa.push(__p);
+        paramBuilder(mname,pa,_p.defaults||{},_ps[i],obj[_ps[i]]);
       }
     }
   }
@@ -621,7 +638,9 @@ Collection.prototype.attach = function(functionalityname, config, key){
     off = rf.startwoffer;
     close = rf._close;
   }
-  var SELF = (function(s,r,su,rq,off,close){var _close = close,_s=s,_r=r,_su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,new SuperUser(self,null,null,fqnname,'dcp'),req,off, close);
+  var fsu = new SuperUser(self,null,null,fqnname,'dcp');
+  var sue = new UserEngagement(fsu._parent);
+  var SELF = (function(s,r,su,rq,off,close){var _close = close,_s=s,_r=r,_su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,fsu,req,off, close);
   if(req){
     for(var i in m.requirements){
       var r = m.requirements[i];
@@ -650,6 +669,7 @@ Collection.prototype.attach = function(functionalityname, config, key){
       for(var i in ret){
         delete ret[i];
       }
+      sue.destroy();
     }
     self = null;
     SELF = null;
@@ -835,6 +855,7 @@ Collection.prototype.processInput = function(sender,input){
         ret.token = sender.replicaToken;
         var reviv = [];
         User.Traverse(function(u){
+          console.log('in traversing',u.fullname(),u.server,'<>',rtn,'?');
           if(u.server === rtn){
             var ud = {username:u.username(),realmname:u.realmname(),roles:u.roles()};
             var engs = [];

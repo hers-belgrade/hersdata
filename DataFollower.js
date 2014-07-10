@@ -158,6 +158,14 @@ DataFollower.prototype.destructListener = function(){
 DataFollower.prototype.listenForDestructor = function(target){
   this.createListener('destructListener',null,target.destroyed);
 }
+function checkFollowerForStalled(f){
+  if(f.stalled){
+    //console.log('awakening',i);
+    f.huntTarget(this.data);
+  }/*else{
+    //console.log(i,'is awake');
+  }*/
+}
 DataFollower.prototype.huntTarget = function(){
   if(!this.destroyed){
     return;
@@ -211,16 +219,10 @@ DataFollower.prototype.huntTarget = function(){
     this.data.traverseElements([this,this.newElementListener]);
     this.createListener('newElementListener',null,this.data.newElement);
     for(var i in this.followers){
-      var f = this.followers[i];
-      if(f.stalled){
-        //console.log('awakening',i);
-        f.huntTarget(this.data);
-      }/*else{
-        //console.log(i,'is awake');
-      }*/
+      checkFollowerForStalled.call(this,this.followers[i]);
     }
   }
-}
+};
 DataFollower.prototype.newElementListener = function(name,el){
   this.reportElement(undefined,name,el);
   this.attachAppropriately(name,el);
@@ -425,8 +427,7 @@ DataFollower.prototype.realdescribe = function(cb){
     }
     for(var i in batchpushers){
       if(i.charAt(0)!=='_'){
-        var f = this.followers[i];
-        this.followers[i].remotedescribe(this.path,{},[null,followerHandler,[ret,batchpushers,f,i,cb]]);
+        this.followers[i].remotedescribe(this.path,{},[null,followerHandler,[ret,batchpushers,this.followers[i],i,cb]]);
       }
     }
     return;

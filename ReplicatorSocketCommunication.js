@@ -80,7 +80,14 @@ ReplicatorSocketCommunication.prototype._internalSend = function(buf){
   this.sendMore();
 };
 ReplicatorSocketCommunication.prototype.bufferize = function(sq){
+  try{
   var sqb = new Buffer(JSON.stringify(sq),'utf8');
+  }
+  catch(e){
+    console.log(require('util').inspect(sq,{depth:null}));
+    console.log('could not be JSONed');
+    process.exit(0);
+  }
   var lb = new Buffer(4);
   var sqbl = sqb.length;
   if(sqbl>64*1024){
