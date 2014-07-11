@@ -195,7 +195,12 @@ RemoteFollowerSlave.prototype.send = function(code){
 };
 RemoteFollowerSlave.prototype.setStatus = function(stts){
   if(stts==='DISCARD_THIS'){
-    console.log(this.follower.username(),this.follower.path,'RemoteFollowerSlave will die because of DISCARD_THIS',this._id);
+    if(this._id!==null){
+      console.log('removing slot',this._id);
+      this.rc.senders.remove(this._id);
+      this._id = null;
+    }
+    //console.log(this.follower.username(),this.follower.path,'RemoteFollowerSlave will die because of DISCARD_THIS',this._id);
     Timeout.next(this.follower,'destroy');
   }
   this.follower.setStatus(stts);
@@ -415,10 +420,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.usersay){
+    console.log(input);
     var us = input.usersay;
     if(this.senders){
       var s = this.senders.elementAt(us[0]);
       if(s){
+        console.log(s.follower.path);
         s.say(us[1]);
       }
     }
