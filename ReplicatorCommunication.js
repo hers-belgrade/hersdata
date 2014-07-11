@@ -14,6 +14,10 @@ var Timeout = require('herstimeout'),
 var __start = Timeout.now();
 
 function statusSetter(stts){
+  if(stts==='DISCARD_THIS'){
+    console.trace();
+    console.log(this.username(),this.path,'will die',this._replicationid);
+  }
   if(!(this.rc && this.rc.counter)){return;}
   this.rc.send('userstatus',this._replicationid,stts);
 };
@@ -27,9 +31,16 @@ function RemoteFollower(data,createcb,saycb,user,path,rc){
   this._replicationid = rc.inputcounter;
   this.rc = rc;
   if(!this.rc.remotes){
-    this.rc.remotes = {};
+    this.rc.remotes = new ArrayMap();
   }
-  this.rc.remotes[this._replicationid] = this;
+  //this.rc.remotes[this._replicationid] = this;
+  var old = this.rc.remotes.allocate(this._replicationid,this);
+  if(old){
+    console.trace();
+    console.log('Slot',this._replicationid,'was already taken');
+    console.log(old);
+    process.exit(0);
+  }
   DataFollower.call(this,data,createcb,saycb,user,path);
   //console.log('new RemoteFollower',this.fullname(),this._replicationid,this.path,data.dataDebug());
 };
@@ -41,7 +52,12 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
 }});
 RemoteFollower.prototype.destroy = function(){
   if(!this.rc){return;}
-  delete this.rc.remotes[this._replicationid];
+  if(!this.rc.remotes){
+    console.trace();
+    console.log(this.username(),'has rc, but rc has no remotes?!');
+    return;
+  }
+  this.rc.remotes.remove(this._replicationid);
   DataFollower.prototype.destroy.call(this);
 };
 RemoteFollower.prototype.setStatus = statusSetter;
@@ -54,9 +70,16 @@ function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
   this._replicationid=replicationid;
   if(!this.rc.remotes){
-    this.rc.remotes = {};
+    this.rc.remotes = new ArrayMap();
   }
-  this.rc.remotes[this._replicationid] = this;
+  //this.rc.remotes[this._replicationid] = this;
+  var old = this.rc.remotes.allocate(this._replicationid,this);
+  if(old){
+    console.trace();
+    console.log('Slot',this._replicationid,'was already taken');
+    console.log(old);
+    process.exit(0);
+  }
   this.username = username;
   this.realmname = realmname;
   this.roles = roles;
@@ -72,7 +95,7 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
 }});
 RemoteUser.prototype.destroy = function(){
   if(!this.rc){return;}
-  delete this.rc.remotes[this._replicationid];
+  this.rc.remotes.remove(this._replicationid);
   DataUser.prototype.destroy.call(this);
 };
 RemoteUser.prototype.init = function(){
@@ -260,11 +283,7 @@ ReplicatorCommunication.prototype.destroy = function(){
     this.senders.traverse([this.senders,senderDestroyer]);
   }
   if (this.remotes) {
-    for (var i in this.remotes) {
-      if(this.remotes[i]){
-        this.remotes[i].destroy();
-      }
-    }
+    this.remotes.traverse([this.remotes,senderDestroyer]);
   }
   for(var i in this){
     delete this[i];
@@ -309,7 +328,7 @@ ReplicatorCommunication.prototype.createUser = function(username,realmname,roles
   new RemoteUser(this,username,realmname,roles,id,path);
 };
 ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
-  var p = this.remotes[parentid];
+  var p = this.remotes.elementAt(parentid);
   if(!p){
     //this.sendobj({destroy:parentid});
     return;
@@ -322,7 +341,7 @@ ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
   }
 };
 ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid){
-  var r = this.remotes[id];
+  var r = this.remotes.elementAt(id);
   if(!r){
     //this.sendobj({destroy:id});
     return;
