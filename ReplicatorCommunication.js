@@ -176,13 +176,13 @@ RemoteFollowerSlave.prototype.send = function(code){
 };
 RemoteFollowerSlave.prototype.setStatus = function(stts){
   this.follower.setStatus(stts);
-  if(stts==='RETREATING'){
-    Timeout.next(this,'destroy');
+  if(stts==='DISCARD_THIS'){
+    Timeout.next(this.follower,'destroy');
   }
 };
 RemoteFollowerSlave.prototype.say = function(item){
   if(item==='DISCARD_THIS'){
-    this.destroy();
+    Timeout.next(this.follower,'destroy');
     return;
   }
   if(!this.follower.remotetail){
@@ -191,13 +191,9 @@ RemoteFollowerSlave.prototype.say = function(item){
   }
   this.follower.say([this.follower.path,item]);
 };
-RemoteFollowerSlave.prototype.destroy = function(quiet){
+RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
   delete this.follower.remotelink;
-  Timeout.next(this.follower,'huntTarget',this.dataforremote);
-  if(!quiet){
-    this.rc.sendobj({destroy:this._id});
-  }
   this.rc.senders.remove(this._id);
   for(var i in this){
     delete this[i];
