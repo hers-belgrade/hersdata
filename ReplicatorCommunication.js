@@ -26,7 +26,6 @@ function remoteSayer(item){
 function RemoteFollower(data,createcb,saycb,user,path,rc){
   this._replicationid = rc.inputcounter;
   this.rc = rc;
-  console.log('new RemoteFollower');
   if(!this.rc.remotes){
     this.rc.remotes = {};
   }
@@ -40,9 +39,11 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-RemoteFollower.prototype.destroy = function(){
+RemoteFollower.prototype.destroy = function(quiet){
   if(!this.rc){return;}
-  this.rc.sendobj({destroy:this._replicationid});
+  if(!quiet){
+    this.rc.sendobj({destroy:this._replicationid});
+  }
   delete this.rc.remotes[this._replicationid];
   DataFollower.prototype.destroy.call(this);
 };
@@ -55,7 +56,6 @@ RemoteFollower.prototype.follow = function(path,statuscb,saycb){
 function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
   this._replicationid=replicationid;
-  console.log('new RemoteUser');
   if(!this.rc.remotes){
     this.rc.remotes = {};
   }
@@ -73,9 +73,11 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-RemoteUser.prototype.destroy = function(){
+RemoteUser.prototype.destroy = function(quiet){
   if(!this.rc){return;}
-  this.rc.sendobj({destroy:this._replicationid});
+  if(!quiet){
+    this.rc.sendobj({destroy:this._replicationid});
+  }
   delete this.rc.remotes[this._replicationid];
   DataUser.prototype.destroy.call(this);
 };
@@ -290,7 +292,7 @@ ReplicatorCommunication.prototype.execute = function(commandresult){
     rid = commandresult.shift();
     var r = this.senders.elementAt(rid);
     if(!r){
-      this.sendobj({destroy:rid});
+      //this.sendobj({destroy:rid});
       return;
     }
     cbref = commandresult.shift();
@@ -319,7 +321,7 @@ ReplicatorCommunication.prototype.createUser = function(username,realmname,roles
 ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
   var p = this.remotes[parentid];
   if(!p){
-    this.sendobj({destroy:parentid});
+    //this.sendobj({destroy:parentid});
     return;
   }
   this.inputcounter=id;
@@ -332,7 +334,7 @@ ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
 ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid){
   var r = this.remotes[id];
   if(!r){
-    this.sendobj({destroy:id});
+    //this.sendobj({destroy:id});
     return;
   }
   var m = r[code];
@@ -388,7 +390,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
         s.setStatus(us[1]);
       }else{
         //console.log('no status for',us[0],'to userstatus',us[1]);
-        this.send({destroy:us[0]});
+        //this.send({destroy:us[0]});
       }
     }
     return;
@@ -401,7 +403,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
         s.say(us[1]);
       }else{
         //console.log('no sayer for',us[0],'to usersay',us[1], input);
-        this.send({destroy:us[0]});
+        //this.send({destroy:us[0]});
       }
     }
     return;
