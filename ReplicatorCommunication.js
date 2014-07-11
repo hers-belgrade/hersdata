@@ -14,10 +14,12 @@ var Timeout = require('herstimeout'),
 var __start = Timeout.now();
 
 function statusSetter(stts){
+  /*
   if(stts==='DISCARD_THIS'){
     console.trace();
     console.log(this.username(),this.path,'will die',this._replicationid);
   }
+  */
   if(!(this.rc && this.rc.counter)){return;}
   this.rc.send('userstatus',this._replicationid,stts);
 };
@@ -217,9 +219,9 @@ RemoteFollowerSlave.prototype.say = function(item){
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
   delete this.follower.remotelink;
-  console.trace();
+  //console.trace();
   if(this._id!==null){
-    console.log('removing slot',this._id);
+    //console.log('removing slot',this._id);
     this.rc.senders.remove(this._id);
     this.rc.sendobj({destroy:this._id});
     this._id = null;
