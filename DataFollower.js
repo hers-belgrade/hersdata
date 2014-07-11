@@ -66,7 +66,10 @@ DataFollower.prototype.destroy = function(){
     return;
   }
   //var p = this.path;
-  //console.log(this.fullname(),this.path,'dying');
+  /*
+  console.trace();
+  console.log(this.fullname(),this._parent.path,this.path,'dying as',this._status);
+  */
   if(this.remotelink){
     this.remotelink.destroy();
   }
@@ -491,7 +494,7 @@ OfferHandler.prototype.say = function(item){
       this.destroy();
     }else{
       if(cbr){
-        if(cbr='super'){
+        if(cbr==='super'){
           this._parent.destroy();
         }else{
           this.destroy();
