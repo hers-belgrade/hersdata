@@ -147,7 +147,8 @@ DataFollower.prototype.listenForTarget = function(target){
 DataFollower.prototype.destructListener = function(){
   delete this.data;
   this.cursor--;
-  if(this.cursor<0){
+  //console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
+  if(this.cursor<=0){
     //console.log(this.fullname(),this.path,'exhausted,dying');
     Timeout.next(this,'destroy');
     return;
@@ -209,6 +210,9 @@ DataFollower.prototype.huntTarget = function(){
     this.listenForDestructor(this.data);
     this.setStatus('OK');
     if(!this.destroyed){ //setStatus killed me as a consequence
+      return;
+    }
+    if(!this.data){ //setStatus killed me as a consequence
       return;
     }
     if (this.data.communication) {
