@@ -39,11 +39,8 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-RemoteFollower.prototype.destroy = function(quiet){
+RemoteFollower.prototype.destroy = function(){
   if(!this.rc){return;}
-  if(!quiet){
-    this.rc.sendobj({destroy:this._replicationid});
-  }
   delete this.rc.remotes[this._replicationid];
   DataFollower.prototype.destroy.call(this);
 };
@@ -73,11 +70,8 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-RemoteUser.prototype.destroy = function(quiet){
+RemoteUser.prototype.destroy = function(){
   if(!this.rc){return;}
-  if(!quiet){
-    this.rc.sendobj({destroy:this._replicationid});
-  }
   delete this.rc.remotes[this._replicationid];
   DataUser.prototype.destroy.call(this);
 };
@@ -362,6 +356,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     this.execute(commandresult);
     return;
   }
+  /*
   if(input.destroy){
     var di = input.destroy;
     var d = this.masterSays ? this.senders.elementAt(di) : this.remotes[di];
@@ -370,6 +365,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     }
     return;
   }
+  */
   if(input.mastersay){
     this.masterSays.fire(input.mastersay[1]);
     return;
