@@ -209,8 +209,8 @@ RemoteFollowerSlave.prototype.say = function(item){
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
   delete this.follower.remotelink;
-  //console.trace();
   if(this._id!==null){
+    console.trace();
     console.log('removing slot with report',this._id,this._version);
     this.rc._map.remove(this._id);
     this.rc.sendobj({destroy:[this._id,this._version]});
@@ -413,10 +413,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
     if(this._map){
       var s = this._map.elementAt(us[0]);
       if(s && s._version===us[1]){
-        console.log(s.follower.path,us);
+        //console.log(s.follower.path,us);
         s.say(us[2]);
       }else{
-        console.log('fail for',us,s);
+        //console.log('fail for',us,s);
       }
     }
     return;
