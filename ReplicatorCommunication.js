@@ -158,8 +158,8 @@ function RemoteFollowerSlave(rc,localfollower){
   delete localfollower.dataforremote;
   var _parent = localfollower._parent.remotelink;
   if(_parent){
-    console.log('new RemoteFollowerSlave id',this._id,'on parent id',_parent._id,'version',this._version);
-    this.send('createFollower',this._parent._id,this._parent._version,this._id,this._version,localfollower.remotetail);
+    console.log('new RemoteFollowerSlave id',this._id,'version',this._version,'on parent id',_parent._id,'parent version',_parent._version);
+    this.send('createFollower',_parent._id,_parent._version,this._id,this._version,localfollower.remotetail);
   }else{
     console.log('new RemoteUser id',this._id,'version',this._version);
     this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,this._version,localfollower.remotetail);
