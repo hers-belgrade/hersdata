@@ -66,9 +66,10 @@ RemoteFollower.prototype.follow = function(path,id,version){
   return DataFollower.prototype.follow.call(this,path,void 0,void 0,RemoteFollower,{rc:this.rc,id:id,version:version});
 }
 
-function RemoteUser(rc,username,realmname,roles,replicationid,path){
+function RemoteUser(rc,username,realmname,roles,replicationid,version,path){
   this.rc = rc;
   this._replicationid=replicationid;
+  this._version = version;
   var old = this.rc._map.allocate(this._replicationid,this);
   if(old){
     console.trace();
