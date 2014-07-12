@@ -176,8 +176,10 @@ function RemoteFollowerSlave(rc,localfollower){
   delete localfollower.dataforremote;
   var _parent = localfollower._parent.remotelink;
   if(_parent){
+    console.log('new RemoteFollowerSlave id',this._id,'on parent id',_parent._id);
     this.send('createFollower',_parent._id,this._id,localfollower.remotetail);
   }else{
+    console.log('new RemoteUser id',this._id);
     this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,localfollower.remotetail);
   }
 }
@@ -226,7 +228,7 @@ RemoteFollowerSlave.prototype.destroy = function(){
   delete this.follower.remotelink;
   //console.trace();
   if(this._id!==null){
-    //console.log('removing slot',this._id);
+    console.log('removing slot with report',this._id);
     this.rc.senders.remove(this._id);
     this.rc.sendobj({destroy:this._id});
     this._id = null;
@@ -420,12 +422,12 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.usersay){
-    console.log(input);
+    //console.log(input);
     var us = input.usersay;
     if(this.senders){
       var s = this.senders.elementAt(us[0]);
       if(s){
-        console.log(s.follower.path);
+        //console.log(s.follower.path);
         s.say(us[1]);
       }
     }
