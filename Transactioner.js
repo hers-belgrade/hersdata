@@ -1,5 +1,7 @@
 function Txner(data){
   this.data = data;
+  this.name = '';
+  this.q = null;
 };
 Txner.prototype.start = function(name){
   if(this.q){
@@ -29,12 +31,12 @@ Txner.prototype.commit = function(){
     //console.log('commiting',this.name,this.q);
     this.data.commit(this.name,this.q);
   }
-  delete this.name;
-  delete this.q;
+  this.name = '';
+  this.q = null;
 };
 Txner.prototype.destroy = function(){
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 

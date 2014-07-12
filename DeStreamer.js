@@ -6,6 +6,8 @@ function ElementWaiter(parnt,cb,ctx){
   this.parentDestroyed = parnt.destroyed.attach([this,'destroy']);
   this.ctx = ctx;
   this.cb = cb;
+  this.el = null;
+  this.changerIndex = -1;
 };
 ElementWaiter.prototype.trigger = function(val){
   var cbr = this.cb.call(this.ctx,val);
@@ -14,10 +16,10 @@ ElementWaiter.prototype.trigger = function(val){
   }
 };
 ElementWaiter.prototype.detach = function(){
-  if(this.el && this.changerIndex){
+  if(this.el && this.changerIndex>=0){
     this.el.changed && this.el.changed.detach(this.changerIndex);
-    delete this.el;
-    delete this.changerIndex;
+    this.el = null;
+    this.changerIndex = -1;
   }
 }
 ElementWaiter.prototype.attachTo = function(el){
@@ -41,7 +43,7 @@ ElementWaiter.prototype.destroy = function(){
   this.parent && this.parent.destroyed && this.parent.destroyed.detach(this.parentDestroyed);
   this.detach();
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 
@@ -151,7 +153,7 @@ DeStreamer.prototype.attachWaitertoScalar = function(waiter,el,elv){
       this.waitingSubscribers = {};
     }
     var elname = waiter.elname;
-    delete waiter.elname;
+    waiter.elname = '';
     if(!this.waitingSubscribers[elname]){
       this.waitingSubscribers[elname] = [];
     }

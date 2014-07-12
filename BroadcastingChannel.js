@@ -3,6 +3,9 @@ function BroadcastingChannel(sayer){
     return;
   }
   var ss = sayer.say;
+  this.subscription = -1;
+  this.bcaster = null;
+  this.translatorname = '';
   this.say = function(){ss.apply(sayer,arguments);};
   /*
   console.trace();
@@ -12,19 +15,20 @@ function BroadcastingChannel(sayer){
 BroadcastingChannel.prototype.destroy = function(){
   this.deactivate();
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 BroadcastingChannel.prototype.activate = function(){
-  if(typeof this.subscription !== 'undefined'){return;}
+  if(this.subscription>=0){return;}
   if(!this.bcaster){return;}
   this.subscription = this.bcaster.attach(this.say,this.translatorname);
 };
 BroadcastingChannel.prototype.deactivate = function(){
-  if(typeof this.subscription === 'undefined'){return;}
+  if(this.subscription<0){return;}
   if(!this.bcaster){return;}
   this.bcaster.detach(this.subscription,this.translatorname);
-  delete this.subscription;
+  this.subscription = -1;
+  this.bcaster = null;
 };
 BroadcastingChannel.prototype.switchTo = function(broadcaster,translatorname){
   if(broadcaster&&this.bcaster&&broadcaster===this.bcaster){
@@ -35,8 +39,8 @@ BroadcastingChannel.prototype.switchTo = function(broadcaster,translatorname){
     this.bcaster = broadcaster;
     this.translatorname = translatorname;
   }else{
-    delete this.bcaster;
-    delete this.translatorname;
+    this.bcaster = null;
+    this.translatorname = '';
   }
 };
 BroadcastingChannel.prototype.describe = function(cb){
@@ -45,7 +49,7 @@ BroadcastingChannel.prototype.describe = function(cb){
   }
 };
 BroadcastingChannel.prototype.active = function(){
-  return typeof this.subscription !== 'undefined';
+  return this.subscription >= 0;
 };
 
 module.exports = BroadcastingChannel;

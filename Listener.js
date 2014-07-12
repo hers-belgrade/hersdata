@@ -55,7 +55,7 @@ Listener.prototype.purgeListeners = function(){
 };
 Listener.prototype.destroy = function(){
   this.purgeListeners();
-  delete this.listeners;
+  this.listeners = null;
 };
 
 module.exports = Listener;

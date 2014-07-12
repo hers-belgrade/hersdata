@@ -53,7 +53,7 @@ ConsumerSession.prototype.destroy = function(){
   if(!this.user){return;}
   this.user.sessionDown(this);
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 ConsumerSession.prototype.retrieveQueue = function(){
@@ -75,13 +75,13 @@ ConsumerSession.prototype.setSocketIO = function(sock){
   sock.user = this;
   if(!this.sockio){
     __socketIOSessions.push(this);
-    delete this.lastAccess;
+    this.lastAccess = 0;
   }
   this.sockio = sock;
   var t = this;
   sock.on('disconnect',function(){
-    delete sock.user;
-    delete t.sockio;
+    sock.user = null;
+    t.sockio = null;
     t.destroy();
   });
   /*
@@ -165,9 +165,9 @@ SessionUser.prototype.makeSession = function(sess,address){
   }else{
     this.sessionsperaddress[address]++;
   }
-  if(this.dieTimeout){
+  if(this.dieTimeout>=0){
     Timeout.clear(this.dieTimeout);
-    delete this.dieTimeout;
+    this.dieTimeout = -1;
   }
 };
 SessionUser.prototype.sessionDown = function(sess){

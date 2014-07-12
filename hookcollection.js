@@ -6,31 +6,22 @@ var ArrayMap = require('./ArrayMap'),
   execApply = executable.apply;
 
 function HookCollection(){
+  this.collection = new ArrayMap();
 };
 HookCollection.prototype.empty = function(){
-  return this.collection && this.collection.isEmpty();
-};
-HookCollection.prototype.isEmpty = function(){
-  if(!this.collection){
-    return true;
-  }
-  for(var i in this.collection){
-    return false;
-  }
-  return true;
+  return this.collection.isEmpty();
 };
 HookCollection.prototype.attach = function(cb){
+  if(!this.collection){return;}
   if(isExecutable(cb)){
-    if(!this.collection){
-      this.collection = new ArrayMap();
-    }
 		return this.collection.add(cb);
   }else{
     console.log(cb.toString(),'is not executable');
   }
 };
 HookCollection.prototype.detach = function(i){
-  if(!this.collection){
+  if(!this.collection){return;}
+  if(this.collection.isEmpty()){
     /*
     console.trace();
     console.log('no listeners when',i,'should be detached');
@@ -39,12 +30,10 @@ HookCollection.prototype.detach = function(i){
     return;
   }
   this.collection.remove(i);
-  if(this.collection.isEmpty()){
-    delete this.collection;
-  }
 };
 HookCollection.prototype.fire = function(){
   if(!this.collection){return;}
+  if(this.collection.isEmpty()){return;}
   var params = Array.prototype.slice.call(arguments);
   switch(params.length){
     case 0:
@@ -59,6 +48,7 @@ HookCollection.prototype.fire = function(){
   }
 };
 HookCollection.prototype.fireSingle = function(fqn,index){
+  if(!this.collection){return;}
   try{
     //console.log('calling',fqn,'on',index,'with',pa);
     fqn && execRun(fqn);
@@ -111,7 +101,7 @@ HookCollection.prototype.fireAndForget = function(){
 }
 */
 HookCollection.prototype.destruct = function(){
-  delete this.collection;
+  this.collection = null;
 }
 
 module.exports = HookCollection;

@@ -99,7 +99,7 @@ function Scalar(res_val,pub_val, access_lvl) {
     this.changed.destruct();
     this.destroyed.destruct();
     for(var i in this){
-      delete this[i];
+      this[i] = null;
     }
     Scalar.__instanceCount--;
   }

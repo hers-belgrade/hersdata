@@ -50,9 +50,11 @@ function DataFollower(data,createcb,cb,user,path){
   }
   this.destroyed = new HookCollection();
   this._parent = user;
-  if(!(user.data&&user.data===data)){
-    this.rootdata = data;
-  }
+  this.followers = null;
+  this.rootdata = (!(user.data&&user.data===data)) ? data : null;
+  this.data = null;
+  this.stalled = false;
+  this.remotelink = null;
   this.huntTarget();
 }
 DataFollower.prototype = Object.create(Listener.prototype,{constructor:{
@@ -79,20 +81,20 @@ DataFollower.prototype.destroy = function(){
   }
   //block reentrance
   var dh = this.destroyed;
-  delete this.destroyed;
+  this.destroyed = null;
   dh.fire();
   if(this._parent && this._parent.followers){
     var spath = this.path ? this.path.join('/') : '.';
     delete this._parent.followers[spath];
     if(hashEmpty(this._parent.followers)){
-      delete this._parent.followers;
+      this._parent.followers = null;
     }
   }
   this.setStatus('DISCARD_THIS');
   Listener.prototype.destroy.call(this);
   this.finalizer();
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
   __DataFollowerInstanceCount--;
   //console.log('__DataFollowerInstanceCount',__DataFollowerInstanceCount);
@@ -148,7 +150,7 @@ DataFollower.prototype.listenForTarget = function(target){
   this.setStatus('LATER');
 };
 DataFollower.prototype.destructListener = function(){
-  delete this.data;
+  this.data = null;
   this.cursor--;
   //console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
   if(this.cursor<=0){
@@ -184,7 +186,7 @@ DataFollower.prototype.huntTarget = function(){
     this.setStatus('STALLED');
     return;
   }
-  delete this.stalled;
+  this.stalled = false;
   this.cursor = 0;
   this.purgeListeners();
   if(!this.path){return;}

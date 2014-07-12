@@ -17,6 +17,7 @@ function ReplicatorSocketCommunication(data){
   this.dataCursor = 0;
   this.incomingData = [];
   this._auxSendingQueue = undefined;
+  this.socket = null;
 
   var self = this;
   data.replicationInitiated.attach ([this,'replicationInitiated']);
@@ -29,7 +30,7 @@ ReplicatorSocketCommunication.prototype = Object.create(ReplicatorCommunication.
 }});
 ReplicatorSocketCommunication.prototype.destroy = function(){
   this.socket && this.socket.destroy();
-  delete this.socket;
+  this.socket = null;
   ReplicatorCommunication.prototype.destroy.call(this);
 };
 ReplicatorSocketCommunication.prototype.replicationInitiated = function(){
@@ -52,7 +53,7 @@ ReplicatorSocketCommunication.prototype.handleDataRead = function(){
       console.log('could not read',this.dataRead,'from socket');
       this.dataRead = '';
       this.socket && this.socket.destroy();
-      delete this.socket;
+      this.socket = null;
       //process.exit(0);
     }
   }
@@ -144,7 +145,7 @@ ReplicatorSocketCommunication.prototype.sendingDoneHandler = function(){
 
 
 ReplicatorSocketCommunication.prototype.purge = function () {
-  delete this.socket;
+  this.socket = null;
   ReplicatorCommunication.prototype.purge.apply(this, arguments);
 }
 
@@ -183,7 +184,7 @@ ReplicatorSocketCommunication.prototype.processData = function(data,offset){
   if(this.bytesToRead<0){
     if(this.lenBufread!==4){
       ReplicatorSocketCommunication.rcvingTime += (Timeout.now()-_rcvstart);
-      delete this.currentData;
+      this.currentData = null;
       this.dataCursor=0;
       if(this.incomingData.length){
         this.processData(this.incomingData.shift());
@@ -212,7 +213,7 @@ ReplicatorSocketCommunication.prototype.processData = function(data,offset){
   }else{
     //console.log('at',i,'data is',data.length,'long, now what?');
     if(i===data.length){
-      delete this.currentData;
+      this.currentData = null;
       this.dataCursor=0;
       if(this.incomingData.length){
         this.processData(this.incomingData.shift());

@@ -49,7 +49,7 @@ Broadcaster.prototype = Object.create(DataUser.prototype,{constructor:{
 Broadcaster.prototype.destroy = function(){
   if(!this.broadcast){return;}
   this.broadcast.destruct();
-  delete this.broadcast;
+  this.broadcast = null;
   DataUser.prototype.destroy.call(this);
 };
 Broadcaster.prototype.say = function(item){

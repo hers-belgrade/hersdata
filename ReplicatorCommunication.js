@@ -157,8 +157,6 @@ function RemoteFollowerSlave(rc,localfollower){
   this._version = rc.counter.toString();
   this._id = rc._map.add(this);
   this.follower=localfollower;
-  this.dataforremote = localfollower.dataforremote;
-  delete localfollower.dataforremote;
   var _parent = localfollower._parent.remotelink;
   if(_parent){
     //console.log('new RemoteFollowerSlave id',this._id,'version',this._version,'on parent id',_parent._id,'parent version',_parent._version);
@@ -210,7 +208,7 @@ RemoteFollowerSlave.prototype.say = function(item){
 };
 RemoteFollowerSlave.prototype.destroy = function(){
   if(!this.follower){return;}
-  delete this.follower.remotelink;
+  this.follower.remotelink = null;
   if(this._id!==null){
     /*
     console.trace();
@@ -286,13 +284,13 @@ ReplicatorCommunication.prototype.destroy = function(){
     this.masterSays.destruct();
   }
   if(this.data && this.data.communication){
-    delete this.data.communication;
+    this.data.communication = null;
   }
   if (this._map) {
     this._map.traverse([this._map,userDestroyer]);
   }
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 ReplicatorCommunication.prototype.send = function(code){

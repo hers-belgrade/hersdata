@@ -66,13 +66,13 @@ function collectionCommiter(txnc,txnalias,txnprimitives,_txnc,targetpath) {
   txnc.inc();
   //console.log(txnalias,'firing on self',txnc.toString());
   this.onNewTransaction.fire([],txnalias,txnprimitives,txnc.clone());
-  delete this.__commitunderway;
+  this.__commitunderway = false;
   if(this.__commitstodo){
     if(this.__commitstodo.length){
       //this._commit.apply(this,this.__commitstodo.shift());
       applyExecutable(this._commit,this.__commitstodo.shift());
     }else{
-      delete this.__commitstodo;
+      this.__commitstodo = null;
     }
   }
   //console.log(txnc.toString(),'fire done');
@@ -155,6 +155,10 @@ function Collection(a_l){
   };
 
   this._commit = [this,collectionCommiter,[txnCounter]];
+  this.__commitunderway = false;
+  this.__commitstodo = null;
+  this.communication = null;
+  this.replicatingClients = {};
 };
 
 Collection.prototype.destroy = function(){
@@ -174,7 +178,7 @@ Collection.prototype.destroy = function(){
     this.functionalities[i].f.__DESTROY__();
   }
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
   __CollectionCount--;
 };
@@ -663,11 +667,11 @@ Collection.prototype.attach = function(functionalityname, config, key){
     var f = self.functionalities[fqnname];
     if(f){
       var ret = f.ret;
-      delete f.ret;
-      delete f.key;
+      f.ret = null;
+      f.key = null;
       delete self.functionalities[fqnname];
       for(var i in ret){
-        delete ret[i];
+        ret[i] = null;
       }
       sue.destroy();
     }
@@ -716,7 +720,6 @@ Collection.prototype.createRemoteReplica = function(localname,name,realmname,url
 };
 
 Collection.prototype.closeReplicatingClient = function(replicatorname){
-  if(!this.replicatingClients){return;}
   var rc = this.replicatingClients[replicatorname];
   if(!rc){
     console.log('no replicatingClient named',replicatorname,'to close');//'in',this.replicatingClients);
@@ -825,9 +828,6 @@ Collection.prototype.processInput = function(sender,input){
     switch(internal[0]){
       case 'need_init':
         console.log('remote replica announcing as',internal[1],internal[2]);
-        if(!this.replicatingClients){
-          this.replicatingClients = {};
-        }
         var srt = internal[1];
         if(!(srt && typeof srt === 'object')){
           sender.socket && sender.socket.destroy();
@@ -886,14 +886,6 @@ Collection.prototype.processInput = function(sender,input){
       case 'give_up':
         this.destroy(); 
         break;
-      case 'remoteDestroy':{
-        var dest = sender.destroyables && sender.destroyables[internal[1]];
-        if (dest) {
-          delete sender.destroyables[internal[1]];
-          dest.destroy();
-        }
-        break;
-      }
     }
   }
   var targetrpc = input.targetrpc;

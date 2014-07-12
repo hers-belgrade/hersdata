@@ -26,7 +26,7 @@ DataUser.prototype.parentDestroyed = function(){
 DataUser.prototype.destroy = function(){
   if(!this._parent){return;}
   this._parent.dismiss(this);
-  delete this.__engager;
+  this.__engager = null;
   DataFollower.prototype.destroy.call(this);
 };
 DataUser.prototype.dumpEngagementInfo = UserEngagement.prototype.dumpEngagementInfo;

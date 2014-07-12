@@ -16,7 +16,7 @@ UserEngagement.prototype.destroy = function(){
   if(!this.__engager){return;}
   this.__engager.dismiss(this);
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 

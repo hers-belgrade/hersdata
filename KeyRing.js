@@ -85,7 +85,7 @@ KeyRing.prototype.finalize = function(){
   this.keyRemoved.destruct();
   this.destroyed.destruct();
   for(var i in this){
-    delete this[i];
+    this[i] = null;
   }
 };
 KeyRing.prototype.dump = function(){
