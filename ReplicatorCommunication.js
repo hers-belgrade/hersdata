@@ -328,8 +328,8 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   this.superuser = u;
   return u;
 };
-ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,path){
-  new RemoteUser(this,username,realmname,roles,id,path);
+ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,version,path){
+  new RemoteUser(this,username,realmname,roles,id,version,path);
 };
 ReplicatorCommunication.prototype.createFollower = function(parentid,parentversion,id,version,path){
   var p = this._map.elementAt(parentid);
