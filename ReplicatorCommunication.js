@@ -159,7 +159,7 @@ function RemoteFollowerSlave(rc,localfollower){
   var _parent = localfollower._parent.remotelink;
   if(_parent){
     console.log('new RemoteFollowerSlave id',this._id,'on parent id',_parent._id,'version',this._version);
-    this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,this._version,localfollower.remotetail);
+    this.send('createFollower',this._parent._id,this._parent._version,this._id,this._version,localfollower.remotetail);
   }else{
     console.log('new RemoteUser id',this._id,'version',this._version);
     this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,this._version,localfollower.remotetail);
@@ -331,9 +331,9 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
 ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,path){
   new RemoteUser(this,username,realmname,roles,id,path);
 };
-ReplicatorCommunication.prototype.createFollower = function(parentid,id,version,path){
+ReplicatorCommunication.prototype.createFollower = function(parentid,parentversion,id,version,path){
   var p = this._map.elementAt(parentid);
-  if(!p){
+  if(!(p&&p._version===parentversion)){
     return;
   }
   if(typeof p.username==='function'){
