@@ -14,34 +14,31 @@ var Timeout = require('herstimeout'),
 var __start = Timeout.now();
 
 function statusSetter(stts){
-  /*
   if(stts==='DISCARD_THIS'){
     console.trace();
     console.log(this.username(),this.path,'will die',this._replicationid);
   }
-  */
   if(!(this.rc && this.rc.counter)){return;}
-  this.rc.send('userstatus',this._replicationid,stts);
+  this.rc.send('userstatus',this._replicationid,this._version,stts);
 };
 
 function remoteSayer(item){
   if(!(this.rc && this.rc.counter)){return;}
-  this.rc.send('usersay',this._replicationid,item[1]);
+  this.rc.send('usersay',this._replicationid,this._version,item[1]);
 }
 
-function RemoteFollower(data,createcb,saycb,user,path,rc){
-  this._replicationid = rc.inputcounter;
-  this.rc = rc;
-  if(!this.rc.remotes){
-    this.rc.remotes = new ArrayMap();
-  }
-  //this.rc.remotes[this._replicationid] = this;
-  var old = this.rc.remotes.allocate(this._replicationid,this);
+function RemoteFollower(data,createcb,saycb,user,path,options){
+  this._replicationid = options.id;
+  this._version = options.version;
+  this.rc = options.rc;
+  var old = this.rc._map.allocate(this._replicationid,this);
   if(old){
     console.trace();
-    console.log('Slot',this._replicationid,'was already taken');
-    console.log(old);
+    console.log('Slot',this._replicationid,'was already taken',this.rc._id);
+    //console.log(old);
     process.exit(0);
+  }else{
+    console.log('Slot',this._replicationid,'was vacant for RemoteFollower',this.rc._id);
   }
   DataFollower.call(this,data,createcb,saycb,user,path);
   //console.log('new RemoteFollower',this.fullname(),this._replicationid,this.path,data.dataDebug());
@@ -54,33 +51,32 @@ RemoteFollower.prototype = Object.create(DataFollower.prototype,{constructor:{
 }});
 RemoteFollower.prototype.destroy = function(){
   if(!this.rc){return;}
-  if(!this.rc.remotes){
+  if(!this.rc._map){
     console.trace();
-    console.log(this.username(),'has rc, but rc has no remotes?!');
+    console.log(this.username(),'has rc, but rc has no _map?!');
     return;
   }
-  this.rc.remotes.remove(this._replicationid);
+  console.log('Slot',this._replicationid,'removed as RemoteFollower');
+  this.rc._map.remove(this._replicationid);
   DataFollower.prototype.destroy.call(this);
 };
 RemoteFollower.prototype.setStatus = statusSetter;
 RemoteFollower.prototype.say = remoteSayer;
-RemoteFollower.prototype.follow = function(path,statuscb,saycb){
-  return DataFollower.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
+RemoteFollower.prototype.follow = function(path,id,version){
+  return DataFollower.prototype.follow.call(this,path,void 0,void 0,RemoteFollower,{rc:this.rc,id:id,version:version});
 }
 
 function RemoteUser(rc,username,realmname,roles,replicationid,path){
   this.rc = rc;
   this._replicationid=replicationid;
-  if(!this.rc.remotes){
-    this.rc.remotes = new ArrayMap();
-  }
-  //this.rc.remotes[this._replicationid] = this;
-  var old = this.rc.remotes.allocate(this._replicationid,this);
+  var old = this.rc._map.allocate(this._replicationid,this);
   if(old){
     console.trace();
-    console.log('Slot',this._replicationid,'was already taken');
-    console.log(old);
+    console.log('Slot',this._replicationid,'was already taken',this.rc._id);
+    //console.log(old);
     process.exit(0);
+  }else{
+    console.log('Slot',this._replicationid,'was vacant for RemoteUser',this.rc._id);
   }
   this.username = username;
   this.realmname = realmname;
@@ -96,8 +92,9 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   configurable:false
 }});
 RemoteUser.prototype.destroy = function(){
+  console.log('Slot',this._replicationid,'removed as RemoteUser');
   if(!this.rc){return;}
-  this.rc.remotes.remove(this._replicationid);
+  this.rc._map.remove(this._replicationid);
   DataUser.prototype.destroy.call(this);
 };
 RemoteUser.prototype.init = function(){
@@ -124,14 +121,8 @@ RemoteUser.prototype.init = function(){
 };
 RemoteUser.prototype.setStatus = statusSetter;
 RemoteUser.prototype.say = remoteSayer;
-RemoteUser.prototype.follow = function(path,statuscb,saycb){
-  return DataUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
-  //
-  if(statuscb){
-    return DataUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
-  }else{
-    return DataUser.prototype.follow.call(this,path,statuscb,saycb);
-  }
+RemoteUser.prototype.follow = function(path,id,version){
+  return SuperUser.prototype.follow.call(this,path,void 0,void 0,RemoteFollower,{rc:this.rc,id:id,version:version});
 };
 
 function RCSuperUser(rc,username,realmname){
@@ -145,14 +136,8 @@ RCSuperUser.prototype = Object.create(SuperUser.prototype,{constructor:{
   writable:false,
   configurable:false
 }});
-RCSuperUser.prototype.follow = function(path,statuscb,saycb){
-  return SuperUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
-  //
-  if(statuscb){
-    return SuperUser.prototype.follow.call(this,path,statuscb,saycb,RemoteFollower,this.rc);
-  }else{
-    return SuperUser.prototype.follow.call(this,path,statuscb,saycb);
-  }
+RCSuperUser.prototype.follow = function(path,id,version){
+  return SuperUser.prototype.follow.call(this,path,void 0,void 0,RemoteFollower,{rc:this.rc,id:id,version:version});
 };
 RCSuperUser.prototype.say = function(item){
   if(!(this.rc && this.rc.slaveSays)){
@@ -166,19 +151,16 @@ function RemoteFollowerSlave(rc,localfollower){
   localfollower.remotelink = this;
   this.rc = rc;
   rc.counter.inc();
-  //this._id = rc.counter.toString();
-  if(!rc.senders){
-    rc.senders = new ArrayMap();
-  }
-  this._id = rc.senders.add(this);
+  this._version = rc.counter.toString();
+  this._id = rc._map.add(this);
   this.follower=localfollower;
   this.dataforremote = localfollower.dataforremote;
   delete localfollower.dataforremote;
   var _parent = localfollower._parent.remotelink;
   if(_parent){
-    this.send('createFollower',_parent._id,this._id,localfollower.remotetail);
+    this.send('createFollower',_parent._id,this._id,this._version,localfollower.remotetail);
   }else{
-    this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,localfollower.remotetail);
+    this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,this._version,localfollower.remotetail);
   }
 }
 RemoteFollowerSlave.prototype.send = function(code){
@@ -197,7 +179,7 @@ RemoteFollowerSlave.prototype.setStatus = function(stts){
   if(stts==='DISCARD_THIS'){
     if(this._id!==null){
       console.log('removing slot',this._id);
-      this.rc.senders.remove(this._id);
+      this.rc._map.remove(this._id);
       this._id = null;
     }
     //console.log(this.follower.username(),this.follower.path,'RemoteFollowerSlave will die because of DISCARD_THIS',this._id);
@@ -209,7 +191,7 @@ RemoteFollowerSlave.prototype.say = function(item){
   if(item==='DISCARD_THIS'){
     if(this._id!==null){
       console.log('removing slot',this._id);
-      this.rc.senders.remove(this._id);
+      this.rc._map.remove(this._id);
       this._id = null;
     }
     Timeout.next(this.follower,'destroy');
@@ -227,8 +209,8 @@ RemoteFollowerSlave.prototype.destroy = function(){
   //console.trace();
   if(this._id!==null){
     //console.log('removing slot',this._id);
-    this.rc.senders.remove(this._id);
-    this.rc.sendobj({destroy:this._id});
+    this.rc._map.remove(this._id);
+    this.rc.sendobj({destroy:[this._id,this._version]});
     this._id = null;
   }
   for(var i in this){
@@ -280,13 +262,14 @@ function ReplicatorCommunication(data){
   this._id = _instanceCount.toString();
   if(!data){return;}
   this.counter = new BigCounter();
+  this._map = new ArrayMap();
   this.data = data;
 }
-function senderDestroyer(sender,senderindex){
-  if(sender){
-    sender.destroy();
+function userDestroyer(user,userindex){
+  if(user){
+    user.destroy();
   }
-  this.remove(senderindex);
+  this.remove(userindex);
 };
 ReplicatorCommunication.prototype.destroy = function(){
   if(this.slaveSays){
@@ -298,11 +281,8 @@ ReplicatorCommunication.prototype.destroy = function(){
   if(this.data && this.data.communication){
     delete this.data.communication;
   }
-  if (this.senders) {
-    this.senders.traverse([this.senders,senderDestroyer]);
-  }
-  if (this.remotes) {
-    this.remotes.traverse([this.remotes,senderDestroyer]);
+  if (this._map) {
+    this._map.traverse([this._map,userDestroyer]);
   }
   for(var i in this){
     delete this[i];
@@ -317,12 +297,16 @@ ReplicatorCommunication.prototype.send = function(code){
 };
 ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
-    rid = commandresult.shift();
-    var r = this.senders.elementAt(rid);
+    var rid = commandresult.shift();
+    var r = this._map.elementAt(rid);
     if(!r){
       return;
     }
-    cbref = commandresult.shift();
+    var version = commandresult.shift();
+    if(r._version!==version){
+      return;
+    }
+    var cbref = commandresult.shift();
     r.docb(cbref,commandresult);
   }
 };
@@ -345,39 +329,39 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
 ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,path){
   new RemoteUser(this,username,realmname,roles,id,path);
 };
-ReplicatorCommunication.prototype.createFollower = function(parentid,id,path){
-  var p = this.remotes.elementAt(parentid);
+ReplicatorCommunication.prototype.createFollower = function(parentid,id,version,path){
+  var p = this._map.elementAt(parentid);
   if(!p){
     return;
   }
-  this.inputcounter=id;
+  console.log('creating follower with id',id,'on parent',parentid);
   if(typeof p.username==='function'){
-    p.follow(path);
+    p.follow(path,id,version);
   }else{
-    Timeout.set(this,100,'createFollower',parentid,id,path);
+    Timeout.set(this,100,'createFollower',parentid,id,version,path);
   }
 };
-ReplicatorCommunication.prototype.perform = function(id,code,path,paramobj,cbid){
-  var r = this.remotes.elementAt(id);
+ReplicatorCommunication.prototype.perform = function(id,version,code,path,paramobj,cbid){
+  var r = this._map.elementAt(id);
   if(!r){
     return;
   }
   var m = r[code];
   //console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
-    m.call(r,path,paramobj,[this,'reportResult',[[id,cbid]]]);
+    m.call(r,path,paramobj,[this,'reportResult',[[id,version,cbid]]]);
   }else{
-    this.sendobj({commandresult:[id,cbid,'NO_METHOD',[code]]});
+    this.sendobj({commandresult:[id,version,cbid,'NO_METHOD',[code]]});
   }
 };
 ReplicatorCommunication.prototype.reportResult = function(arry){
-  //console.log('reporting results',arguments,'for arry',arry);
+  console.log('reporting results',arguments,'for arry',arry);
   for(var i in arguments){
     if(i==0){continue;}
     //console.log('pushing',arguments[i],'for',i);
     arry.push(arguments[i]);
   }
-  //console.log('commandresult',arry);
+  console.log('commandresult',arry);
   this.sendobj({commandresult:arry});
 };
 ReplicatorCommunication.prototype.handOver = function(input){
@@ -392,10 +376,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
     return;
   }
   if(input.destroy){
+    console.log(this._id,'remote destruction',input.destroy);
     var di = input.destroy;
-    var b = this.masterSays ? this.senders : this.remotes;
-    var d = b.elementAt(di);
-    if(d){
+    var d = this._map.elementAt(di[0]);
+    if(d && d._version===di[1]){
+      console.log('ok');
       d.destroy(true);
       b.remove(di);
     }
@@ -411,10 +396,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   if(input.userstatus) {
     var us = input.userstatus;
-    if(this.senders){
-      var s = this.senders.elementAt(us[0]);
-      if(s){
-        s.setStatus(us[1]);
+    if(this._map){
+      var s = this._map.elementAt(us[0]);
+      if(s && s._version===us[1]){
+        s.setStatus(us[2]);
       }
     }
     return;
@@ -422,11 +407,11 @@ ReplicatorCommunication.prototype.handOver = function(input){
   if(input.usersay){
     console.log(input);
     var us = input.usersay;
-    if(this.senders){
-      var s = this.senders.elementAt(us[0]);
-      if(s){
+    if(this._map){
+      var s = this._map.elementAt(us[0]);
+      if(s && s._version===us[1]){
         console.log(s.follower.path);
-        s.say(us[1]);
+        s.say(us[2]);
       }
     }
     return;
@@ -445,8 +430,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
 };
 
 ReplicatorCommunication.prototype.purge = function () {
-  if(this.senders){
-    this.senders.traverse([this.senders,senderDestroyer]);
+  if(this._map){
+    this._map.traverse([this._map,userDestroyer]);
   }
 };
 
