@@ -58,7 +58,7 @@ RemoteFollower.prototype.destroy = function(){
     console.log(this.username(),'has rc, but rc has no _map?!');
     return;
   }
-  console.log('Slot',this._replicationid,'removed as RemoteFollower');
+  //console.log('Slot',this._replicationid,'removed as RemoteFollower');
   this.rc._map.remove(this._replicationid);
   DataFollower.prototype.destroy.call(this);
 };
@@ -95,7 +95,7 @@ RemoteUser.prototype = Object.create(DataUser.prototype,{constructor:{
   configurable:false
 }});
 RemoteUser.prototype.destroy = function(){
-  console.log('Slot',this._replicationid,'removed as RemoteUser');
+  //console.log('Slot',this._replicationid,'removed as RemoteUser');
   if(!this.rc){return;}
   this.rc._map.remove(this._replicationid);
   DataUser.prototype.destroy.call(this);
@@ -161,10 +161,10 @@ function RemoteFollowerSlave(rc,localfollower){
   delete localfollower.dataforremote;
   var _parent = localfollower._parent.remotelink;
   if(_parent){
-    console.log('new RemoteFollowerSlave id',this._id,'version',this._version,'on parent id',_parent._id,'parent version',_parent._version);
+    //console.log('new RemoteFollowerSlave id',this._id,'version',this._version,'on parent id',_parent._id,'parent version',_parent._version);
     this.send('createFollower',_parent._id,_parent._version,this._id,this._version,localfollower.remotetail);
   }else{
-    console.log('new RemoteUser id',this._id,'version',this._version);
+    //console.log('new RemoteUser id',this._id,'version',this._version);
     this.send('createUser',localfollower.username(),localfollower.realmname(),localfollower.roles(),this._id,this._version,localfollower.remotetail);
   }
 }
