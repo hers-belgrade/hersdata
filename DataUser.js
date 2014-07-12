@@ -17,6 +17,7 @@ DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   configurable:true
 }});
 DataUser.prototype.dataDestroyed = function(){
+  if(!this.destroyed){return;}
   this.setStatus('DISCONNECTED');
   this.destroy();
 };
