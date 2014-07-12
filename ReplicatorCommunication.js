@@ -385,7 +385,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
     if(d && d._version===di[1]){
       console.log('ok');
       d.destroy(true);
-      b.remove(di);
+      this._map.remove(di);
     }
     return;
   }
