@@ -413,8 +413,10 @@ ReplicatorCommunication.prototype.handOver = function(input){
     if(this._map){
       var s = this._map.elementAt(us[0]);
       if(s && s._version===us[1]){
-        console.log(s.follower.path);
+        console.log(s.follower.path,us);
         s.say(us[2]);
+      }else{
+        console.log('fail for',us,s);
       }
     }
     return;
