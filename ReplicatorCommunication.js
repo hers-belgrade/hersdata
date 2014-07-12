@@ -333,6 +333,7 @@ ReplicatorCommunication.prototype.createUser = function(username,realmname,roles
   new RemoteUser(this,username,realmname,roles,id,version,path);
 };
 ReplicatorCommunication.prototype.createFollower = function(parentid,parentversion,id,version,path){
+  if(!this._map){return;}
   var p = this._map.elementAt(parentid);
   if(!(p&&p._version===parentversion)){
     return;
