@@ -855,7 +855,6 @@ Collection.prototype.processInput = function(sender,input){
         ret.token = sender.replicaToken;
         var reviv = [];
         User.Traverse(function(u){
-          console.log('in traversing',u.fullname(),u.server,'<>',rtn,'?');
           if(u.server === rtn){
             var ud = {username:u.username(),realmname:u.realmname(),roles:u.roles()};
             var engs = [];

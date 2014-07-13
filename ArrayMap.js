@@ -35,6 +35,7 @@ ArrayMap.prototype.add = function(item){
   return addToMap(this.arry,item);
 };
 function removeFromMap(a,index){
+  if(index>=a.length){return;}
   if(index==a.length-1){
     a.pop();
     while(a.length && typeof a[a.length-1] === 'undefined'){

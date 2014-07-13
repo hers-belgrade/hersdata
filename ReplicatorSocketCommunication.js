@@ -85,8 +85,7 @@ ReplicatorSocketCommunication.prototype.bufferize = function(sq){
   var sqb = new Buffer(JSON.stringify(sq),'utf8');
   }
   catch(e){
-    console.log(require('util').inspect(sq,{depth:null}));
-    console.log('could not be JSONed');
+    console.log(e,'in JSONing',sq);
     process.exit(0);
   }
   var lb = new Buffer(4);

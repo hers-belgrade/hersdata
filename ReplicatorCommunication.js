@@ -438,6 +438,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
 };
 
 ReplicatorCommunication.prototype.purge = function () {
+  return;
   if(this._map){
     this._map.traverse([this._map,userDestroyer]);
   }

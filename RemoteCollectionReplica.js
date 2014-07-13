@@ -25,17 +25,16 @@ RemoteCollectionReplica.prototype.go = function(cb){
 
   net.createConnection(this.url.port,this.url.address,function(){
     t.status = 'connected';
-    cb && cb(t.status);
     t.communication.listenTo(this);
-    console.log('connected');
     CollectionReplica.prototype.go.call(t);
+    cb && cb(t.status);
   }).on('error', function (err) {
-    console.log('socket error',err);
+    //console.log('socket error',err);
   }).on('close',function(err){
     if(t.status === 'connected'){
       t.communication.purge();
     }
-    console.log('socket closed on',t.url, err);
+    console.log('socket closed on',t.url, err ? 'with error' : 'with no error');
     t.status = 'disconnected';
     cb && cb(t.status);
     Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);

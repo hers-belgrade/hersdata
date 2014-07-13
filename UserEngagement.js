@@ -20,18 +20,6 @@ UserEngagement.prototype.destroy = function(){
   }
 };
 
-function dumpPusher(map,key,item){
-  if(key !== '__id' && key !== '__engager' && typeof item !== 'function'){
-    map[key] = item;
-  }
-};
-
-UserEngagement.prototype.dumpEngagementInfo = function(){
-  var ret = {};
-  for(var i in this){
-    dumpPusher(ret,i,this[i]);
-  }
-  return ret;
-};
+UserEngagement.prototype.dumpEngagementInfo = function(){};
 
 module.exports = UserEngagement;
