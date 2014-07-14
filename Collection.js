@@ -833,8 +833,8 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
   }
 };
 
-Collection.prototype.internal = function(sender,request,srt,data){
-  console.log('remote replica announcing as',sender,request,srt,data);
+Collection.prototype.initRemoteReplica = function(sender,srt,data){
+  console.log('remote replica announcing as',sender,srt,data);
   if(typeof srt !== 'object'){
     sender.socket && sender.socket.destroy();
   }
