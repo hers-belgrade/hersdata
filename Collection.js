@@ -834,7 +834,7 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
 };
 
 Collection.prototype.initRemoteReplica = function(sender,srt,data){
-  console.log('remote replica announcing as',sender,srt,data);
+  console.log('remote replica announcing as',srt,data);
   if(typeof srt !== 'object'){
     sender.socket && sender.socket.destroy();
   }
@@ -846,7 +846,7 @@ Collection.prototype.initRemoteReplica = function(sender,srt,data){
     }
     //now what??
     //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
-    sender.send('internal','give_up');
+    sender.send('giveUp');
     sender.socket && sender.socket.destroy();
     return;
   }
@@ -873,7 +873,7 @@ Collection.prototype.initRemoteReplica = function(sender,srt,data){
   });
   ret.revive = reviv;
   this.newReplica.fire(sender);
-  sender.send('internal','initDCPreplica',ret);
+  sender.send('initDCPReplica',ret);
 };
 
 Collection.prototype.initDCPReplica = function(sender,data){
