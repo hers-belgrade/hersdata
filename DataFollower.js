@@ -149,12 +149,19 @@ DataFollower.prototype.listenForTarget = function(target){
   this.createListener('targetListener',null,target.newElement);
   this.setStatus('LATER');
 };
+DataFollower.prototype.replicationListener = function(){
+  console.log(this.path,'caught replicationInitiated');
+  this.data = null;
+  this.cursor--;
+  this.setStatus('RETREATING');
+  Timeout.next(this,'huntTarget');
+};
 DataFollower.prototype.destructListener = function(){
   this.data = null;
   this.cursor--;
-  //console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
+  console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
   if(this.cursor<=0){
-    //console.log(this.fullname(),this.path,'exhausted,dying');
+    console.log(this.fullname(),this.path,'exhausted,dying');
     Timeout.next(this,'destroy');
     return;
   }
@@ -202,6 +209,7 @@ DataFollower.prototype.huntTarget = function(){
         this.remoteAttach(target);
         return;
       }else{
+        this.createListener('replicationListener',null,target.replicationInitiated);
         target = null;
       }
       break;
@@ -213,7 +221,6 @@ DataFollower.prototype.huntTarget = function(){
   if(target){
     this.data = target;
     this.listenForDestructor(this.data);
-    this.setStatus('OK');
     if(!this.destroyed){ //setStatus killed me as a consequence
       return;
     }
@@ -223,7 +230,10 @@ DataFollower.prototype.huntTarget = function(){
     if (this.data.communication) {
       this.remoteAttach(this.data);
       return;
+    }else{
+      this.createListener('replicationListener',null,this.data.replicationInitiated);
     }
+    this.setStatus('OK');
     var t = this;
     this.data.traverseElements([this,this.newElementListener]);
     this.createListener('newElementListener',null,this.data.newElement);
@@ -238,6 +248,7 @@ DataFollower.prototype.newElementListener = function(name,el){
 };
 DataFollower.prototype.remoteAttach = function (target) {
   this.remotetail = this.path.slice(this.cursor);
+  this.setStatus('LATER');
   target.communication.remoteLink(this);
   this.data = target;
 };
