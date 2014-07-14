@@ -221,12 +221,6 @@ DataFollower.prototype.huntTarget = function(){
   if(target){
     this.data = target;
     this.listenForDestructor(this.data);
-    if(!this.destroyed){ //setStatus killed me as a consequence
-      return;
-    }
-    if(!this.data){ //setStatus killed me as a consequence
-      return;
-    }
     if (this.data.communication) {
       this.remoteAttach(this.data);
       return;
@@ -234,7 +228,12 @@ DataFollower.prototype.huntTarget = function(){
       this.createListener('replicationListener',null,this.data.replicationInitiated);
     }
     this.setStatus('OK');
-    var t = this;
+    if(!this.destroyed){ //setStatus killed me as a consequence
+      return;
+    }
+    if(!this.data){ //setStatus killed me as a consequence
+      return;
+    }
     this.data.traverseElements([this,this.newElementListener]);
     this.createListener('newElementListener',null,this.data.newElement);
     for(var i in this.followers){
