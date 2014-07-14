@@ -38,7 +38,7 @@ CollectionReplica.prototype.send = function(){
 };
 CollectionReplica.prototype.go = function(){
   //console.log(this,'should go');
-  this.send('internal','need_init',this.replicaToken,this.dump());
+  this.send('initRemoteReplica',this.replicaToken,this.dump());
 };
 CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
   if(this.replicaToken.skipdcp){

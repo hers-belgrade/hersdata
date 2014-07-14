@@ -344,6 +344,7 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   return u;
 };
 ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,version,path){
+  console.log('createUser',arguments)
   new RemoteUser(this,username,realmname,roles,id,version,path);
 };
 ReplicatorCommunication.prototype.createFollower = function(parentid,parentversion,id,version,path){
@@ -398,25 +399,26 @@ function sliceArgs(args){
   args.length=cursor-1;
 };
 ReplicatorCommunication.handOver = function(instance,args){
+  console.log(args);
   var methodname = args[0];
   var method = instance[methodname];
   if(typeof method === 'function'){
     sliceArgs(args);
+    console.log('applying',methodname,'to ReplicatorCommunication');
     method.apply(instance,args);
-    return;
-  }else{
-    if(instance.data){
-      method = instance.data[methodname];
-      if(typeof method === 'function'){
-        args[0] = instance;
-        enLengthenArgs(args);
-        console.log('args',args);
-        method.apply(instance.data,args);
-        return;
-      }
-    }
-    console.log(methodname,'is not a method name');
   }
+  if(instance.data){
+    method = instance.data[methodname];
+    if(typeof method === 'function'){
+      args[0] = instance;
+      enLengthenArgs(args);
+      console.log('applying',methodname,'to dcp');
+      method.apply(instance.data,args);
+      return;
+    }
+  }
+  console.log(methodname,'is not a method name on',args);
+  process.exit(0);
 };
 /*
 ReplicatorCommunication.prototype.handOver = function(input){
