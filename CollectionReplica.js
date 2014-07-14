@@ -47,16 +47,4 @@ CollectionReplica.prototype.commit = function(txnalias,txnprimitives){
     this.send('rpc','_commit',txnalias,txnprimitives);
   }
 };
-CollectionReplica.prototype.waitFor = function(querypath,cb,waiter,startindex){
-  startindex = startindex||0;
-  var ret = {
-  }
-  this.send('rpc','waitFor',querypath.splice(startindex),function(){
-    cb.apply(ret,arguments);
-  },'__persistmycb');
-  var self = this;
-  var c = this.communication.counter.toString();
-  ret.destroy = function () { self.send('internal', 'remoteDestroy', c); }
-  return ret;
-};
 module.exports = CollectionReplica;

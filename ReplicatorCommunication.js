@@ -305,9 +305,12 @@ ReplicatorCommunication.prototype.destroy = function(){
   }
 };
 ReplicatorCommunication.prototype.send = function(code){
+/*
   this.counter.inc();
   var cnt = this.counter.toString();
   var sendobj = {counter:cnt};
+  */
+  var sendobj = {};
   sendobj[code] = Array.prototype.slice.call(arguments,1);
   this.sendobj(sendobj);
 };
@@ -382,10 +385,6 @@ ReplicatorCommunication.prototype.reportResult = function(arry){
   this.sendobj({commandresult:arry});
 };
 ReplicatorCommunication.prototype.handOver = function(input){
-  var counter = input.counter;
-  this.inputcounter = counter;
-  var cbrefs = '';
-  delete input.counter;
   var commandresult = input.commandresult;
   if(commandresult){
     delete input.commandresult;
