@@ -62,6 +62,9 @@ RemoteFollower.prototype.destroy = function(){
   this.rc._map.remove(this._replicationid);
   DataFollower.prototype.destroy.call(this);
 };
+RemoteFollower.prototype.otherSideDied = function(){
+  this.destroy();
+};
 RemoteFollower.prototype.setStatus = statusSetter;
 RemoteFollower.prototype.say = remoteSayer;
 RemoteFollower.prototype.follow = function(path,id,version){
@@ -99,6 +102,9 @@ RemoteUser.prototype.destroy = function(){
   if(!this.rc){return;}
   this.rc._map.remove(this._replicationid);
   DataUser.prototype.destroy.call(this);
+};
+RemoteUser.prototype.otherSideDied = function(){
+  this.destroy();
 };
 RemoteUser.prototype.init = function(){
   var data = this.rc.data.element(this.path);
@@ -221,7 +227,12 @@ RemoteFollowerSlave.prototype.destroy = function(){
   for(var i in this){
     this[i] = null;
   }
-}
+};
+RemoteFollowerSlave.prototype.otherSideDied = function(){
+  if(!this.follower){return;}
+  Timeout.next(this.follower,'destructListener');
+  this.destroy();
+};
 RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
   if(!this.rc.counter){
     cb('DISCARD_THIS');
@@ -270,9 +281,9 @@ function ReplicatorCommunication(data){
   this._map = new ArrayMap();
   this.data = data;
 }
-function userDestroyer(user,userindex){
+function userResetter(user,userindex){
   if(user){
-    user.destroy();
+    user.otherSideDied();
   }
   this.remove(userindex);
 };
@@ -287,7 +298,7 @@ ReplicatorCommunication.prototype.destroy = function(){
     this.data.communication = null;
   }
   if (this._map) {
-    this._map.traverse([this._map,userDestroyer]);
+    this._map.traverse([this._map,userResetter]);
   }
   for(var i in this){
     this[i] = null;
@@ -438,9 +449,8 @@ ReplicatorCommunication.prototype.handOver = function(input){
 };
 
 ReplicatorCommunication.prototype.purge = function () {
-  return;
   if(this._map){
-    this._map.traverse([this._map,userDestroyer]);
+    this._map.traverse([this._map,userResetter]);
   }
 };
 

@@ -33,11 +33,13 @@ RemoteCollectionReplica.prototype.go = function(cb){
   }).on('close',function(err){
     if(t.status === 'connected'){
       t.communication.purge();
+    }else{
+      console.log('current status is',t.status,'going again in a second');
+      Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
     }
     console.log('socket closed on',t.url, err ? 'with error' : 'with no error');
     t.status = 'disconnected';
     cb && cb(t.status);
-    Timeout.set(function(t,cb){cb && cb('reconnecting');t.go(cb);},1000,t,cb);
   });
 };
 RemoteCollectionReplica.prototype.destroy = function(){

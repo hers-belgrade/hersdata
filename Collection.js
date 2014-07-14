@@ -163,7 +163,9 @@ function Collection(a_l){
 
 Collection.prototype.destroy = function(){
   if(!this._destroyData){return;}
-  this._destroyData();
+  var dd = this._destroyData;
+  this._destroyData = null;
+  dd.call(this);
   this.destroyed.fire(this);
   this.destroyed.destruct();
   this.replicationInitiated.destruct();
@@ -706,17 +708,26 @@ Collection.prototype.getReplicatingUser = function(cb){
   });
 };
 
+Collection.prototype.removeRemoteReplica = function(replicaname){
+  if(!this._destroyData){return;}
+  this.commit('remote_replica_gone',[
+    ['remove',[replicaname]]
+  ]);
+};
+
+Collection.prototype.handleRemoteReplicaUser = function(replicaname,user){
+  user.destroyed.attach([this,this.removeRemoteReplica,[replicaname]]);
+};
+
 Collection.prototype.createRemoteReplica = function(localname,name,realmname,url,skipdcp){
   if(this.element([localname])){return;}
   if(!url){
     console.trace();
     throw "createRemoteReplica expects 4 params now";
   }
-  if(url==='local'){
-    this.add(localname,new (require('./ChildProcessCollectionReplica'))(realmname,skipdcp));
-  }else{
-    this.add(localname,new (require('./RemoteCollectionReplica'))(name,realmname,url,skipdcp));
-  }
+  var rr = url==='local' ?  new (require('./ChildProcessCollectionReplica'))(realmname,skipdcp) : new (require('./RemoteCollectionReplica'))(name,realmname,url,skipdcp);
+  rr.getReplicatingUser([this,this.handleRemoteReplicaUser,[localname]]);
+  this.add(localname,rr);
 };
 
 Collection.prototype.closeReplicatingClient = function(replicatorname){
