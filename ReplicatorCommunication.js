@@ -403,12 +403,12 @@ function sliceArgs(args){
   args.length=cursor-1;
 };
 ReplicatorCommunication.handOver = function(instance,args){
-  console.log(args);
+  //console.log(args);
   var methodname = args[0];
   var method = instance[methodname];
   if(typeof method === 'function'){
     sliceArgs(args);
-    console.log('applying',methodname,'to ReplicatorCommunication');
+    //console.log('applying',methodname,'to ReplicatorCommunication');
     method.apply(instance,args);
     return;
   }
@@ -417,12 +417,12 @@ ReplicatorCommunication.handOver = function(instance,args){
     if(typeof method === 'function'){
       args[0] = instance;
       enLengthenArgs(args);
-      console.log('applying',methodname,'to dcp');
+      //console.log('applying',methodname,'to dcp');
       method.apply(instance.data,args);
       return;
     }
   }
-  console.log(methodname,'is not a method name on',args);
+  console.log(methodname,'is not a method name with',args);
   process.exit(0);
 };
 ReplicatorCommunication.prototype.userstatus = function(id,version,stts){
