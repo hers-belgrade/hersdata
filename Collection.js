@@ -886,6 +886,10 @@ Collection.prototype.initDCPReplica = function(sender,data){
   this.replicationInitiated.fire(this.replicatingUser);
 };
 
+Collection.prototype.replicaGoingDown = function(sender){
+  this.closeReplicatingClient(sender.replicaToken.name);
+};
+
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){

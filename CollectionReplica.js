@@ -10,7 +10,7 @@ function CollectionReplica(name,realmname,skipdcp){
       process.exit();
     }
     t.downnotified=true;
-    t.send('internal','going_down');
+    t.send && t.send('replicaGoingDown');
     process.exit();
   };
   process.on('exit',going_down);
