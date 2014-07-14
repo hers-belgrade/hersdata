@@ -431,6 +431,14 @@ ReplicatorCommunication.prototype.userstatus = function(id,version,stts){
     }
   }
 };
+ReplicatorCommunication.prototype.usersay = function(id,version,item){
+  if(this._map){
+    var s = this._map.elementAt(id);
+    if(s && s._version===version){
+      s.say(item);
+    }
+  }
+};
 /*
 ReplicatorCommunication.prototype.handOver = function(input){
   var commandresult = input.commandresult;
