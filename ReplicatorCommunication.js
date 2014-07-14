@@ -173,6 +173,8 @@ function RemoteFollowerSlave(rc,localfollower){
   }
 }
 RemoteFollowerSlave.prototype.send = function(code){
+  this.rc.send.apply(this.rc,arguments);
+  return;
   var obj = {
     code:code
   };
