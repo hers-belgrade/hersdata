@@ -153,7 +153,7 @@ DataFollower.prototype.destructListener = function(){
   this.data = null;
   this.cursor--;
   //console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
-  if(this.cursor<=0){
+  if(this.cursor<0){
     //console.log(this.fullname(),this.path,'exhausted,dying');
     Timeout.next(this,'destroy');
     return;
