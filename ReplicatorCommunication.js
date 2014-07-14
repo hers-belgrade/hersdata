@@ -439,6 +439,12 @@ ReplicatorCommunication.prototype.usersay = function(id,version,item){
     }
   }
 };
+ReplicatorCommunication.prototype.destroyRemote = function(id,version){
+  var d = this._map.elementAt(id);
+  if(d && d._version===version){
+    d.destroy(true);
+  }
+};
 /*
 ReplicatorCommunication.prototype.handOver = function(input){
   var commandresult = input.commandresult;
