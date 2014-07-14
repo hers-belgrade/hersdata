@@ -223,7 +223,7 @@ RemoteFollowerSlave.prototype.destroy = function(){
     console.log('removing slot with report',this._id,this._version);
     */
     this.rc._map.remove(this._id);
-    this.rc.sendobj({destroy:[this._id,this._version]});
+    this.rc.send('destroyRemote',this._id,this._version);
     this._id = null;
   }
   for(var i in this){
@@ -370,9 +370,9 @@ ReplicatorCommunication.prototype.perform = function(id,version,code,path,paramo
   var m = r[code];
   //console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
-    m.call(r,path,paramobj,[this,'reportResult',[[id,version,cbid]]]);
+    m.call(r,path,paramobj,[this,'reportResult',[['commandresult',id,version,cbid]]]);
   }else{
-    this.sendobj({commandresult:[id,version,cbid,'NO_METHOD',[code]]});
+    this.send('commandresult',id,version,cbid,'NO_METHOD',[code]);
   }
 };
 ReplicatorCommunication.prototype.reportResult = function(arry){
@@ -383,7 +383,7 @@ ReplicatorCommunication.prototype.reportResult = function(arry){
     arry.push(arguments[i]);
   }
   //console.log('commandresult',arry);
-  this.sendobj({commandresult:arry});
+  this.send.apply(this,arry);
 };
 function enLengthenArgs(args){
   var cursor = 0;
