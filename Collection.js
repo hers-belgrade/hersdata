@@ -876,6 +876,16 @@ Collection.prototype.initRemoteReplica = function(sender,srt,data){
   sender.send('internal','initDCPreplica',ret);
 };
 
+Collection.prototype.initDCPReplica = function(sender,data){
+  this.cloneFromRemote(data,true);
+  this.replicatingUser = sender.createSuperUser(this.replicaToken,true);
+  if(data.revive){
+    this.replicatingUser.revive = data.revive;
+  }
+  console.log('superuser replicationid',this.replicatingUser._replicationid);
+  this.replicationInitiated.fire(this.replicatingUser);
+};
+
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){
