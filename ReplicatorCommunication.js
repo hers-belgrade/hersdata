@@ -348,7 +348,6 @@ ReplicatorCommunication.prototype.createSuperUser = function(token,slaveside){
   return u;
 };
 ReplicatorCommunication.prototype.createUser = function(username,realmname,roles,id,version,path){
-  console.log('createUser',arguments)
   new RemoteUser(this,username,realmname,roles,id,version,path);
 };
 ReplicatorCommunication.prototype.createFollower = function(parentid,parentversion,id,version,path){
