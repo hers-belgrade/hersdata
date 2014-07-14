@@ -833,6 +833,49 @@ Collection.prototype.cloneFromRemote = function(remotedump,docreatereplicator){
   }
 };
 
+Collection.prototype.internal = function(sender,request,srt,data){
+  console.log('remote replica announcing as',sender,request,srt,data);
+  if(typeof srt !== 'object'){
+    sender.socket && sender.socket.destroy();
+  }
+  sender.replicaToken = srt;
+  if(this.replicatingClients[sender.replicaToken.name]){
+    console.log('but it is a duplicate, I already have');
+    for(var i in this.replicatingClients){
+      console.log(i);
+    }
+    //now what??
+    //this.closeReplicatingClient(sender.replicaToken.name); //sloppy, leads to ping-pong between several replicas with the same name
+    sender.send('internal','give_up');
+    sender.socket && sender.socket.destroy();
+    return;
+  }
+  this.replicatingClients[sender.replicaToken.name] = sender;
+  var dodcp = !sender.replicaToken.skipdcp;
+  if(dodcp){
+    this.cloneFromRemote(data);
+  }
+  sender.createSuperUser(sender.replicaToken);
+  var ret = dodcp ? this.dump(sender.replicaToken) : {};
+  var rtn = sender.replicaToken.name;
+  ret.token = sender.replicaToken;
+  var reviv = [];
+  User.Traverse(function(u){
+    if(u.server === rtn){
+      var ud = {username:u.username(),realmname:u.realmname(),roles:u.roles()};
+      var engs = [];
+      for(var i in u.engagements){
+        engs.push(u.engagements[i].dumpEngagementInfo());
+      }
+      ud.engagements = engs;
+      reviv.push(ud);
+    }
+  });
+  ret.revive = reviv;
+  this.newReplica.fire(sender);
+  sender.send('internal','initDCPreplica',ret);
+};
+
 Collection.prototype.processInput = function(sender,input){
   var internal = input.internal;
   if(internal){

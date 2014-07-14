@@ -382,10 +382,20 @@ ReplicatorCommunication.prototype.reportResult = function(arry){
   //console.log('commandresult',arry);
   this.sendobj({commandresult:arry});
 };
-function sliceArgs(args){
-  for(var i in args){
-    console.log(i,'in args');
+function enLengthenArgs(args){
+  var cursor = 0;
+  while(cursor in args){
+    cursor ++;
   }
+  args.length=cursor;
+};
+function sliceArgs(args){
+  var cursor = 1;
+  while(cursor in args){
+    args[cursor] = args[cursor-1];
+    cursor ++;
+  }
+  args.length=cursor-1;
 };
 ReplicatorCommunication.handOver = function(instance,args){
   var methodname = args[0];
@@ -395,6 +405,16 @@ ReplicatorCommunication.handOver = function(instance,args){
     method.apply(instance,args);
     return;
   }else{
+    if(instance.data){
+      method = instance.data[methodname];
+      if(typeof method === 'function'){
+        args[0] = instance;
+        enLengthenArgs(args);
+        console.log('args',args);
+        method.apply(instance.data,args);
+        return;
+      }
+    }
     console.log(methodname,'is not a method name');
   }
 };
