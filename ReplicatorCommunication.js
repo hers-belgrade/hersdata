@@ -370,9 +370,9 @@ ReplicatorCommunication.prototype.perform = function(id,version,code,path,paramo
   var m = r[code];
   //console.log('perform',id,code,path,paramobj,cbid);
   if(typeof m === 'function'){
-    m.call(r,path,paramobj,[this,'reportResult',[['commandresult',id,version,cbid]]]);
+    m.call(r,path,paramobj,[this,'reportResult',[['execute',id,version,cbid]]]);
   }else{
-    this.send('commandresult',id,version,cbid,'NO_METHOD',[code]);
+    this.send('execute',id,version,cbid,'NO_METHOD',[code]);
   }
 };
 ReplicatorCommunication.prototype.reportResult = function(arry){
