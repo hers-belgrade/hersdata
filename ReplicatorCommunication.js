@@ -423,6 +423,14 @@ ReplicatorCommunication.handOver = function(instance,args){
   console.log(methodname,'is not a method name on',args);
   process.exit(0);
 };
+ReplicatorCommunication.prototype.userstatus = function(id,version,stts){
+  if(this._map){
+    var s = this._map.elementAt(id);
+    if(s && s._version===version){
+      s.setStatus(stts);
+    }
+  }
+};
 /*
 ReplicatorCommunication.prototype.handOver = function(input){
   var commandresult = input.commandresult;
