@@ -2,9 +2,9 @@ var CollectionReplica = require('./CollectionReplica');
 var ReplicatorChildProcessCommunication = require('./ReplicatorChildProcessCommunication').Child;
 
 function ChildProcessCollectionReplica(realm,skipdcp){
-  if(!realm){return;}
-  this.communication = new ReplicatorChildProcessCommunication(this);
+  if(!realm){ return; }
   CollectionReplica.call(this,realm,realm,skipdcp);
+  this.communication = new ReplicatorChildProcessCommunication(this);
 }
 ChildProcessCollectionReplica.prototype = Object.create(CollectionReplica.prototype,{constructor:{
   value: ChildProcessCollectionReplica,
