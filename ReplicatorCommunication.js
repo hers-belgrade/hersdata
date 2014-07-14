@@ -305,14 +305,12 @@ ReplicatorCommunication.prototype.destroy = function(){
   }
 };
 ReplicatorCommunication.prototype.send = function(code){
-/*
-  this.counter.inc();
-  var cnt = this.counter.toString();
-  var sendobj = {counter:cnt};
-  */
+  /*
   var sendobj = {};
   sendobj[code] = Array.prototype.slice.call(arguments,1);
   this.sendobj(sendobj);
+  */
+  this.sendobj(arguments);
 };
 ReplicatorCommunication.prototype.execute = function(commandresult){
   if(commandresult.length){
@@ -384,6 +382,23 @@ ReplicatorCommunication.prototype.reportResult = function(arry){
   //console.log('commandresult',arry);
   this.sendobj({commandresult:arry});
 };
+function sliceArgs(args){
+  for(var i in args){
+    console.log(i,'in args');
+  }
+};
+ReplicatorCommunication.handOver = function(instance,args){
+  var methodname = args[0];
+  var method = instance[methodname];
+  if(typeof method === 'function'){
+    sliceArgs(args);
+    method.apply(instance,args);
+    return;
+  }else{
+    console.log(methodname,'is not a method name');
+  }
+};
+/*
 ReplicatorCommunication.prototype.handOver = function(input){
   var commandresult = input.commandresult;
   if(commandresult){
@@ -446,6 +461,7 @@ ReplicatorCommunication.prototype.handOver = function(input){
   }
   this.data.processInput(this,input);
 };
+*/
 
 ReplicatorCommunication.prototype.purge = function () {
   if(this._map){

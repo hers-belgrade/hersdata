@@ -232,7 +232,7 @@ ReplicatorSocketCommunication.prototype.exec = function(){
     //console.log('ql >',this.execQueue.length);
     if(drp){
       var es = Timeout.now();
-      this.handOver(drp);
+      ReplicatorCommunication.handOver(this,drp);
       //ReplicatorSocketCommunication.execTime += (Timeout.now()-es);
       //ReplicatorSocketCommunication.input-=dr.length;
     }

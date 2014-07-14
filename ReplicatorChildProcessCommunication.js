@@ -4,7 +4,7 @@ function CPReplicatorCommunication(data){
   ReplicatorCommunication.call(this,data);
   var t = this;
   this.messageHandler = function(input){
-    t.handOver(input);
+    ReplicatorCommunication.handOver(t,drp);
   };
 }
 CPReplicatorCommunication.prototype = Object.create(ReplicatorCommunication.prototype,{constructor:{
