@@ -314,20 +314,22 @@ ReplicatorCommunication.prototype.send = function(code){
   */
   this.sendobj(arguments);
 };
-ReplicatorCommunication.prototype.execute = function(commandresult){
-  if(commandresult.length){
-    var rid = commandresult.shift();
-    var r = this._map.elementAt(rid);
-    if(!r){
-      return;
-    }
-    var version = commandresult.shift();
-    if(r._version!==version){
-      return;
-    }
-    var cbref = commandresult.shift();
-    r.docb(cbref,commandresult);
+ReplicatorCommunication.prototype.execute = function(rid,version,cbid){
+  var r = this._map.elementAt(rid);
+  if(!r){
+    return;
   }
+  if(r._version!==version){
+    return;
+  }
+  var c = 3;
+  var args = {};
+  for(;c<arguments.length;c++){
+    args[c-3] = arguments[c];
+  }
+  args.length = arguments.length-3;
+  console.log('applying',args);
+  r.docb(cbid,args);
 };
 ReplicatorCommunication.prototype.remoteLink = function(follower){
   new RemoteFollowerSlave(this,follower);
