@@ -395,7 +395,7 @@ function enLengthenArgs(args){
 function sliceArgs(args){
   var cursor = 1;
   while(cursor in args){
-    args[cursor] = args[cursor-1];
+    args[cursor-1] = args[cursor];
     cursor ++;
   }
   args.length=cursor-1;
@@ -408,6 +408,7 @@ ReplicatorCommunication.handOver = function(instance,args){
     sliceArgs(args);
     console.log('applying',methodname,'to ReplicatorCommunication');
     method.apply(instance,args);
+    return;
   }
   if(instance.data){
     method = instance.data[methodname];
