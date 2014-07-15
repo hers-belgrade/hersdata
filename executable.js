@@ -55,5 +55,6 @@ module.exports = {
   ensure: __ensureExecutable,
   run: __execute,
   call: __executeScalar,
-  apply: __executeArray
+  apply: __executeArray,
+  dummyFunc: __dummy
 };

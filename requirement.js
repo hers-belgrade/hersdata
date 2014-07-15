@@ -1,4 +1,9 @@
 var RandomBytes = require('crypto').randomBytes,
+  executable = require('./executable'),
+  isExecutable = executable.isA,
+  execRun = executable.run,
+  execCall = executable.call,
+  execApply = executable.apply,
   Timeout = require('herstimeout');
 
 var errors = {
@@ -21,7 +26,7 @@ function init(){
 };
 
 function offerTickOut(t,to,oid,tocb, user){
-  if(tocb(to)){
+  if(execCall(tocb,to)){
     removeOffer(oid);
     return;
   }
@@ -38,6 +43,9 @@ function offerTickOut(t,to,oid,tocb, user){
 };
 
 function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
+  if(!isExecutable(cb)){
+    return;
+  }
   if(typeof data4json === 'object'){
     data4json = JSON.stringify(data4json);
   }
@@ -54,7 +62,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     actions.push(['set',['offers']]);
   }else{
     if(offersel.element([offerid])){
-      cb('DUPLICATE_OFFER_ID',offerid);
+      execApply(cb,['DUPLICATE_OFFER_ID',offerid]);
       return;
       console.trace();
       console.log(offersel.dataDebug());
@@ -68,7 +76,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     if(!this.self.offertimeouts){
       this.self.offertimeouts = {};
     }
-    if(!timeoutcb){
+    if(!isExecutable(timeoutcb)){
       this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid, tuser){
         //console.log('timed out, should cancel the offer ...',oid);
         t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, tuser)
@@ -78,7 +86,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     }
   }
   this.data.commit('set_offer',actions);
-  cb('OFFER_SET',offerid);
+  execApply(cb,['OFFER_SET',offerid]);
 }
 setOffer.params=['data4json','timeout','timeoutcb','offerid'];
 setOffer.defaults = {offerid:null,timeout:0,timeoutcb:null};
@@ -96,7 +104,7 @@ function doCall(callname,cb, id, user){
     //console.log('accepted in',callname);
     switch(callname){
       case 'onBid':
-        t.self.notifyDone();
+        execRun(t.self.notifyDone);
         break;
       case 'onOffer':
         removeOffer.call(t,id);
@@ -139,7 +147,7 @@ function offer(paramobj,cb,user){
     var to = this.self.offertimeouts[offerid];
     Timeout.clear(to.timeout);
     if(to.cb){
-      to.cb();
+      execRun(to.cb);
     }
     delete this.self.offertimeouts[offerid];
   }

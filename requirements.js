@@ -1,3 +1,9 @@
+var executable = require('./executable'),
+  isExecutable = executable.isA,
+  execCall = executable.call,
+  execApply = executable.apply,
+  dummy = executable.dummyFunc;
+
 var errors = {
   'OK' : {message:'OK'},
   'INVALID_REQUIREMENTNAMES' : {message:'Requirements to start may be a string, commadelimited string or an array'},
@@ -19,16 +25,25 @@ function _close(requirement, cb) {
   ]);
 }
 
+function removeRequirement(reqname){
+  this.commit('requirement_'+reqname+'_done',[
+    ['remove',[reqname]]
+  ]);
+};
+
 function start(requirements,cb){
+  if(!isExecutable(cb)){
+    return;
+  }
   var createactions = [];
   for(var i in requirements){
     var mr = this.self.requirements[i];
     if(typeof mr === 'undefined'){
-      cb('REQUIREMENT_NOT_RECOGNIZED',i);
+      execApply(cb,['REQUIREMENT_NOT_RECOGNIZED',i]);
       return;
     }
     if(this.data.element([i])){
-      cb('REQUIREMENT_ALREADY_PENDING',i);
+      execApply(cb,['REQUIREMENT_ALREADY_PENDING',i]);
       return;
     }
     createactions.push(['set',[i],requirements[i]==='null'?undefined:requirements[i]]);
@@ -39,18 +54,16 @@ function start(requirements,cb){
     var d = this.data;
     this.data.element([i]).attach('./requirement',{
       cbs:mr,
-      notifyDone:(function(_i){
-      var i=_i;
-      return function(){
-        d.commit('requirement_'+i+'_done',[
-          ['remove',[i]]
-        ]);
-      };
-    })(i)});
+      notifyDone:[this.data,removeRequirement,[i]]
+    });
   }
-  cb('OK');
+  execCall(cb,'OK');
 }
 start.params = 'originalobj';
+
+function cbApplicator(){
+  execApply(this,[arguments[0]].concat(arguments[1]));
+};
 
 function startwoffer(requirementswoffers,cb,user){
   var createactions = [];
@@ -63,7 +76,7 @@ function startwoffer(requirementswoffers,cb,user){
     if(this.data.element([i])){
       var r = requirementswoffers[i];
       delete requirementswoffers[i];
-      this.data.element([i]).functionalities.requirement.f.setOffer(r.offer,function(){},user);
+      this.data.element([i]).functionalities.requirement.f.setOffer(r.offer,dummy,user);
       //cb('REQUIREMENT_ALREADY_PENDING',i);
       //return;
     }else{
@@ -81,17 +94,9 @@ function startwoffer(requirementswoffers,cb,user){
     //console.log('attaching requirement on',i);
     var f = this.data.element([i]).attach('./requirement',{
       cbs:mr,
-      notifyDone:(function(_i){
-      var i=_i;
-      return function(){
-        d.commit('requirement_'+i+'_done',[
-          ['remove',[i]]
-        ]);
-      };
-    })(i)});
-    f.setOffer(r.offer,function(){
-      cb.apply(null,[arguments[0]].concat(arguments[1]));
-    },user);
+      notifyDone:[this.data,removeRequirement,[i]]
+    });
+    f.setOffer(r.offer,[cb,cbApplicator],user);
   }
   //console.log('requirementwoffer set',this.data.dataDebug());
 }
