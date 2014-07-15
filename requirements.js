@@ -53,6 +53,7 @@ function start(requirements,cb){
     var mr = this.self.requirements[i];
     var d = this.data;
     this.data.element([i]).attach('./requirement',{
+      functionality:this.self.functionality,
       cbs:mr,
       notifyDone:[this.data,removeRequirement,[i]]
     });
@@ -93,6 +94,7 @@ function startwoffer(requirementswoffers,cb,user){
     var d = this.data;
     //console.log('attaching requirement on',i);
     var f = this.data.element([i]).attach('./requirement',{
+      functionality:this.self.functionality,
       cbs:mr,
       notifyDone:[this.data,removeRequirement,[i]]
     });

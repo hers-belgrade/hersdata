@@ -328,7 +328,7 @@ ReplicatorCommunication.prototype.execute = function(rid,version,cbid){
     args[c-3] = arguments[c];
   }
   args.length = arguments.length-3;
-  console.log('applying',args);
+  //console.log('applying',args);
   r.docb(cbid,args);
 };
 ReplicatorCommunication.prototype.remoteLink = function(follower){

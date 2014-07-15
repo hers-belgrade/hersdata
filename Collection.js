@@ -11,6 +11,7 @@ var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
 var User = require('./User');
 var UserEngagement = require('./UserEngagement');
+var attachedfunctionalityprototyper = require('./attachedfunctionalityprototyper');
 var __CollectionCount = 0;
 
 function onChildTxn(name,onntxn,txnc,txnb,txne){
@@ -85,7 +86,7 @@ function Collection(a_l){
     return access_level;
   };
   var data = {};
-  //this.functionalities = {};
+  this.functionalities = {};
 
   this.debug = function(caption){
     console.log(caption,utils.inspect(data,false,null,true));
@@ -440,7 +441,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
     var m = f[methodname];
     if(typeof m === 'function'){
       //console.log('invoking',methodname,'for',user.fullname(),cb); 
-      m(paramobj,cb,user);
+      m.call(f,paramobj,cb,user);
     }else{
       if(isExecutable(cb)){
         applyExecutable(cb,['NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname]);
@@ -596,6 +597,7 @@ function localerrorhandler(errors,originalerrcb){
 };
 
 Collection.prototype.attach = function(functionalityname, config, key){
+  return attachedfunctionalityprototyper(functionalityname,this,config,key);
   var self = this;
   if(!key){key=undefined;}
   var ret = config||{};

@@ -96,35 +96,74 @@ removeOffer = function (oid) {
   this.data.commit ('remove_offer', [ ['remove', ['offers', oid]] ]);
 }
 
+function accepter(cb,callname,acceptobj){
+  this.self.counter++;
+  //console.log('accepted in',callname);
+  switch(callname){
+    case 'onBid':
+      execRun(this.self.notifyDone);
+      break;
+    case 'onOffer':
+      removeOffer.call(this,id);
+      break;
+  }
+  execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
+};
+
+function bidAccepter(cb,callname,acceptobj){
+  this.self.counter++;
+  execRun(this.self.notifyDone);
+  execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
+};
+
+function offerAccepter(cb,id,callname,acceptobj){
+  this.self.counter++;
+  removeOffer.call(this,id);
+  execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
+};
+
+function offerer(cb,user,offerobj){
+  this.self.setOffer(offerobj,function(errc,errp){
+    if(errc==='OFFER_SET'){
+      execApply(cb,['DO_OFFER',errp[0]]);
+    }
+  },user);
+};
+
+function refuser(refusecode,id,cb){
+  (callname === 'onOffer') && removeOffer.call(this, id);
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
+  execApply(cb,args);
+}
+
+function bidRefuser(cb){
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift('BID_REFUSED');
+  execApply(cb,args);
+}
+
+function offerRefuser(id,cb){
+  removeOffer.call(this, id);
+  var args = Array.prototype.slice.call(arguments);
+  args.unshift('OFFER_REFUSED');
+  execApply(cb,args);
+}
+
 function doCall(callname,cb, id, user){
   var t = this;
   var args = Array.prototype.slice.call(arguments,3);
-  args.push(function accept(acceptobj){
-    t.self.counter++;
-    //console.log('accepted in',callname);
-    switch(callname){
-      case 'onBid':
-        execRun(t.self.notifyDone);
-        break;
-      case 'onOffer':
-        removeOffer.call(t,id);
-        break;
-    }
-    cb('ACCEPTED',RandomBytes(8).toString('hex')+t.self.counter,acceptobj);
-  },function dooffer(offerobj){
-    t.self.setOffer(offerobj,function(errc,errp){
-      if(errc==='OFFER_SET'){
-        cb('DO_OFFER',errp[0]);
-      }
-    },user);
-  },function refuse(){
-    (callname === 'onOffer') && removeOffer.call(t, id);
-    var args = Array.prototype.slice.call(arguments);
-    args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
-    cb.apply(null,args);
-  });
+  switch(callname){
+    case 'onBid':
+      args.push(function(acceptobj){bidAccepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){bidRefuser.call(t,cb)});
+      break;
+    case 'onOffer':
+      args.push(function(acceptobj){offerAccepter.call(t,cb,id,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb)});
+      break;
+  }
+  //args.push(function(acceptobj){accepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){refuser.call(t,callname,id,cb)});
   //console.log(args);
-  this.self.cbs[callname].apply(this,args);
+  this.self.cbs[callname].apply(this.self.functionality.SELF,args);
 };
 
 function bid(paramobj,cb,user){

@@ -20,6 +20,16 @@ function __dummy(){};
 function __ensureExecutable(entity){
   return __isExecutable(entity) ? entity : __dummy;
 }
+function __ensureExecutableWithThis(entity,t){
+  if(typeof entity === 'function'){
+    return [t,entity];
+  }
+  if(isExecutable(entity)){
+    entity[0] = t;
+    return entity;
+  }
+  return __dummy;
+};
 
 function __execute(exc){
   if(typeof exc === 'function'){
@@ -53,6 +63,7 @@ function __executeArray(exc,params){
 module.exports = {
   isA: __isExecutable,
   ensure: __ensureExecutable,
+  ensureWithThis:__ensureExecutableWithThis,
   run: __execute,
   call: __executeScalar,
   apply: __executeArray,
