@@ -34,7 +34,7 @@ function offerTickOut(t,to,oid,tocb, user){
     to--;
     t.self.offertimeouts[oid] = {timeout:Timeout.set(offerTickOut,1000,t,to,oid,tocb),cb:tocb};
   }else{
-    if(tocb()){
+    if(execRun(tocb)){
       removeOffer(oid);
       return;
     }
