@@ -100,6 +100,38 @@ function selfApplicator(f){
   f.apply(this.SELF,arguments);
 }
 
+function AFSelfBare(data,fqnname,functionality){
+  this.data = data;
+  this.self = functionality;
+  this.superUser = new SuperUser(data,null,null,fqnname,'dcp');
+};
+AFSelfBare.prototype.destroy = function(){
+  this.data = null;
+  this.self = null;
+  this.superUser = null;
+}
+
+function AFSelfWReqs(data,fqnname,functionality,requirements){
+  AFSelfBare.call(this,data,fqnname,functionality);
+  if(!data.element(['__requirements'])){
+    data.commit('requirements_create',[
+      ['set',['__requirements']]
+    ]);
+  }
+  var re = data.elementRaw('__requirements');
+  re.attach('./requirements',{functionality:functionality,requirements:requirements});
+  var rf = re.functionalities.requirements;
+  this.openBid = function(){rf.start.apply(rf,arguments);};
+  this.offer = function(){rf.startwoffer.apply(rf,arguments)};
+  this.closeBid = function(){rf._close.apply(rf,arguments)};
+};
+AFSelfWReqs.prototype.destroy = function(){
+  this.openBid = null;
+  this.offer = null;
+  this.closeBid = null;
+  AFSelfBare.prototype.destroy.call(this);
+};
+
 function getConstructor(modulename){
   var c = __Cache[modulename];
   if(c){
@@ -107,6 +139,7 @@ function getConstructor(modulename){
   }
   c = function(fqnname,data,config,key){
     this.fqnname = fqnname;
+    this.key = key;
     if (!this.validate_config(config)) {
       console.log('Configuration validation failed, functionality: '+modulename, config);
     }else{
@@ -116,36 +149,25 @@ function getConstructor(modulename){
     }
     var ctor = __Cache[modulename];
     var req,off,reqs, close;
-    this.SELF = {data:data,self:this,superUser:new SuperUser(data,null,null,fqnname,'dcp')};
-    this.engagement = new UserEngagement(this.SELF.superUser._parent);
     if (ctor.requirements) {
-      if(!data.element(['__requirements'])){
-        data.commit('requirements_create',[
-          ['set',['__requirements']]
-        ]);
-      }
-      var re = data.elementRaw('__requirements');
-      re.attach('./requirements',{functionality:this,requirements:ctor.requirements});
-      var rf = re.functionalities.requirements.f;
-      this.SELF.openBid = function(){rf.start.apply(rf,arguments);};
-      this.SELF.offer = function(){rf.startwoffer.apply(rf,arguments)};
-      this.SELF.closeBid = function(){rf._close.apply(rf,arguments)};
+      this.SELF = new AFSelfWReqs(data,fqnname,this,ctor.requirements);
+    }else{
+      this.SELF = new AFSelfBare(data,fqnname,this);
     }
+    this.engagement = new UserEngagement(this.SELF.superUser._parent);
     this.init();
-    data.functionalities[fqnname] = {f:this,key:key};
+    data.functionalities[fqnname] = this;
   };
   c.prototype.__DESTROY__ = function(){
     if(!this.SELF){return;}
     var f = this.SELF.data.functionalities[this.fqnname];
     if(f){
-      var ret = f.ret;
-      f.ret = null;
-      f.key = null;
       delete this.SELF.data.functionalities[this.fqnname];
-      this.engagement.destroy();
-      for(var i in this){
-        this[i] = null;
-      }
+    }
+    this.engagement.destroy();
+    this.SELF.destroy();
+    for(var i in this){
+      this[i] = null;
     }
   };
 

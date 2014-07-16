@@ -1,16 +1,13 @@
 var utils = require('util');
 var throw_if_invalid_scalar = require('./helpers').throw_if_invalid_scalar;
-var Path = require('path');
 var net = require('net');
 var BigCounter = require('./BigCounter');
 var child_process = require('child_process');
 var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
 var executable = require('./executable'),isExecutable = executable.isA,callExecutable=executable.call,applyExecutable=executable.apply;
 var HookCollection = require('./hookcollection');
-var SuperUser = require('./SuperUser');
 var Scalar = require('./Scalar');
 var User = require('./User');
-var UserEngagement = require('./UserEngagement');
 var attachedfunctionalityprototyper = require('./attachedfunctionalityprototyper');
 var __CollectionCount = 0;
 
@@ -178,7 +175,7 @@ Collection.prototype.destroy = function(){
   this.newElement.destruct();
   for(var i in this.functionalities){
     //console.log('__DESTROY__ing',i);
-    this.functionalities[i].f.__DESTROY__();
+    this.functionalities[i].__DESTROY__();
   }
   for(var i in this){
     this[i] = null;
@@ -437,7 +434,6 @@ Collection.prototype.run = function(path,paramobj,cb,user){
       }
       return;
     }
-    f = f.f;
     var m = f[methodname];
     if(typeof m === 'function'){
       //console.log('invoking',methodname,'for',user.fullname(),cb); 
@@ -468,14 +464,14 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements',rn]);
-  if(!(re && re.functionalities && re.functionalities.requirement.f)){
+  if(!(re && re.functionalities && re.functionalities.requirement)){
     console.log('no requirement',rn,'on',this.dataDebug(),'=>',re?re.dataDebug():'','with',path);
     if(isExecutable(cb)){
       applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
     }
     return;
   }
-  re.functionalities.requirement.f.bid(paramobj,cb,user);
+  re.functionalities.requirement.bid(paramobj,cb,user);
 };
 
 Collection.prototype.takeOffer = function(path,paramobj,cb,user){
@@ -487,208 +483,18 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   }
   var rn = path[path.length-1];
   var re = this.element(['__requirements',rn]);
-  if(!(re && re.functionalities.requirement.f)){
+  if(!(re && re.functionalities.requirement)){
     console.log('no requirement',rn,'on',this.dataDebug());
     if(isExecutable(cb)){
       applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
     }
     return;
   }
-  re.functionalities.requirement.f.offer(paramobj,cb,user);
-};
-
-function defaultChecker(mname,__pn,__pd){
-  if(typeof __pd === 'undefined'){
-    console.log('paramobj provided to',mname,'is missing the value for',__pn);
-    return;
-  }
-  return __pd;
-};
-
-function paramBuilder(mname,pa,pd,__pn,__p){
-  if(typeof __p === 'undefined'){
-    __p = defaultChecker(mname,__pn,pd[__pn]);
-  }
-  pa.push(__p);
-};
-
-function __doParams(mname,_p,errors,obj,errcb,caller){
-  var pa = [];
-  if(_p.params){
-    if(_p.params==='originalobj'){
-      if(typeof obj !== 'object'){
-        throw 'First parameter to '+mname+' has to be an object';
-      }
-      pa.push(obj);
-    }else{
-      var _ps = _p.params;
-      if(typeof obj !== 'object'){
-        console.trace();
-        throw 'First parameter to '+mname+' has to be an object with the following keys: '+_ps.join(',')
-      }
-      for(var i=0; i<_ps.length; i++){
-        paramBuilder(mname,pa,_p.defaults||{},_ps[i],obj[_ps[i]]);
-      }
-    }
-  }
-  pa.push(localerrorhandler(errors,errcb),caller);
-  return pa;
-};
-
-function __nullerrorhandler(errkey,errparams,errmess){
-  return;
-  if(errkey){console.log('('+errkey+'): '+errmess);}
-}
-
-var __produceFunctionalityResultMessage = typeof process.env['DCP_GENERATE_MESSAGES'] !== 'undefined';
-
-function __errorhandler(exctbl,map,errorkey,errorparams){
-  if(!errorkey){
-    applyExecutable(exctbl,[0,'ok']);
-    return;
-  }
-  if(typeof map[errorkey] !== 'object'){
-    console.trace();
-    throw 'Error key '+errorkey+' not specified in the error map';
-  }
-  var eo = map[errorkey];
-  var errmess = eo.message;
-  var eop = eo.params;
-  if(eop && eop.length){
-    if(errorparams.length!==eo.params.length){
-      console.log(errorparams);
-      console.log(errorparams.length,'<>',eo.params.length+1);
-      throw 'Improper number of error parameters provided for '+errorkey;
-    }
-    if(__produceFunctionalityResultMessage){
-      var eopl = eop.length;
-      for(var i=0; i<eopl; i++){
-        errmess = errmess.replace(new RegExp('\\['+eop[i]+'\\]','g'),errorparams[i]);
-      }
-    }else{
-      errmess = '';
-    }
-  }
-  applyExecutable(exctbl,[errorkey,errorparams,errmess]);
-}
-
-function __attachedMethodResolver(selffunc,errors,mname,_p){
-  if (mname.charAt(0) == '_') {
-    return function () {
-      return _p.apply(selffunc(), arguments);
-    }
-  }
-  if(mname!=='init'){
-    return function(obj,errcb,caller){
-      _p.apply(selffunc(),__doParams(mname,_p,errors,obj,errcb,caller));
-    };
-  }else{
-    return function(errcb,caller){
-      _p.call(selffunc(),localerrorhandler(errors,errcb),caller);
-    };
-  }
-};
-
-function localerrorhandler(errors,originalerrcb){
-  var ecb = (isExecutable(originalerrcb)) ? originalerrcb : __nullerrorhandler, _errors = errors;
-  return function(errkey){
-    __errorhandler(ecb,_errors,errkey,Array.prototype.slice.call(arguments,1));
-  };
+  re.functionalities.requirement.offer(paramobj,cb,user);
 };
 
 Collection.prototype.attach = function(functionalityname, config, key){
   return attachedfunctionalityprototyper(functionalityname,this,config,key);
-  var self = this;
-  if(!key){key=undefined;}
-  var ret = config||{};
-  var m;
-  var fqnname;
-  switch(typeof functionalityname){
-    case 'string':
-      m = require(functionalityname);
-      fqnname = Path.basename(functionalityname);
-      break;
-    case 'object':
-      if(functionalityname.functionalityname && functionalityname.instancename){
-        fqnname = functionalityname.instancename;
-        m = require(functionalityname.functionalityname);
-      }else{
-        m = functionalityname;
-        fqnname = 'object';
-      }
-      break;
-    default:
-      return;// {};
-  }
-  if(typeof m.errors !== 'object'){
-    throw functionalityname+" does not have the 'errors' map";
-  }
-  
-  if ('function' === typeof(m.validate_config)) {
-    if (!m.validate_config(config)) {
-      console.log('Configuration validation failed, functionality: '+functionalityname, config);
-      return null;
-    }
-  } 
-
-  var req,off,reqs, close;
-  if (m.requirements) {
-    if(!self.element(['__requirements'])){
-      self.commit('requirements_create',[
-        ['set',['__requirements']]
-      ]);
-    }
-    var re = self.element(['__requirements']);
-    reqs = {}; 
-    re.attach('./requirements',{requirements:reqs});
-    var rf = re.functionalities.requirements.f;
-    req = rf.start;
-    off = rf.startwoffer;
-    close = rf._close;
-  }
-  var fsu = new SuperUser(self,null,null,fqnname,'dcp');
-  var sue = new UserEngagement(fsu._parent);
-  var SELF = (function(s,r,su,rq,off,close){var _close = close,_s=s,_r=r,_su=su, _req=rq, _offer=off;return function(){return {data:_s, self:_r, superUser:_su, openBid:_req, closeBid:close, offer:_offer};}})(self,ret,fsu,req,off, close);
-  if(req){
-    for(var i in m.requirements){
-      var r = m.requirements[i];
-      var myr = {};
-      for(var f in r){
-        myr[f] = (function(_f){
-          var f = _f;
-          return function(){f.apply(SELF(),arguments);};
-        })(r[f]);
-      }
-      reqs[i] = myr;
-    }
-  }
-  for(var i in m){
-    var p = m[i];
-    if((typeof p !== 'function')) continue;
-    ret[i] = __attachedMethodResolver(SELF,m.errors,i,p);
-  }
-  ret['__DESTROY__'] = function(){
-    var f = self.functionalities[fqnname];
-    if(f){
-      var ret = f.ret;
-      f.ret = null;
-      f.key = null;
-      delete self.functionalities[fqnname];
-      for(var i in ret){
-        ret[i] = null;
-      }
-      sue.destroy();
-    }
-    self = null;
-    SELF = null;
-  };
-
-  if ('function' === typeof(ret.init)) { ret.init(); }
-  if(!this.functionalities){
-    this.functionalities = {};
-  }
-  this.functionalities[fqnname] = {f:ret,key:key};
-  return ret;
 };
 
 Collection.prototype.setSessionUserFunctionality = function(config,requirements){
@@ -987,10 +793,10 @@ Collection.prototype.startFifo = function(size,idfieldname){
 };
 
 Collection.prototype.addToFifo = function(item){
-  var f = this.functionalities.fifofunctionality.f;
+  var f = this.functionalities.fifofunctionality;
   if(!f){
     this.startFifo();
-    f = this.functionalities.fifofunctionality.f;
+    f = this.functionalities.fifofunctionality;
   }
   f.add(item);
 };

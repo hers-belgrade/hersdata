@@ -112,8 +112,8 @@ function accepter(cb,callname,acceptobj){
 
 function bidAccepter(cb,callname,acceptobj){
   this.self.counter++;
-  execRun(this.self.notifyDone);
   execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
+  execRun(this.self.notifyDone);
 };
 
 function offerAccepter(cb,id,callname,acceptobj){
@@ -130,22 +130,15 @@ function offerer(cb,user,offerobj){
   },user);
 };
 
-function refuser(refusecode,id,cb){
-  (callname === 'onOffer') && removeOffer.call(this, id);
-  var args = Array.prototype.slice.call(arguments);
-  args.unshift(callname === 'onBid' ? 'BID_REFUSED' : 'OFFER_REFUSED');
-  execApply(cb,args);
-}
-
-function bidRefuser(cb){
-  var args = Array.prototype.slice.call(arguments);
+function bidRefuser(cb,args){
+  args = Array.prototype.slice.call(args);
   args.unshift('BID_REFUSED');
   execApply(cb,args);
 }
 
-function offerRefuser(id,cb){
+function offerRefuser(id,cb,args){
+  args = Array.prototype.slice.call(args);
   removeOffer.call(this, id);
-  var args = Array.prototype.slice.call(arguments);
   args.unshift('OFFER_REFUSED');
   execApply(cb,args);
 }
@@ -155,10 +148,10 @@ function doCall(callname,cb, id, user){
   var args = Array.prototype.slice.call(arguments,3);
   switch(callname){
     case 'onBid':
-      args.push(function(acceptobj){bidAccepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){bidRefuser.call(t,cb)});
+      args.push(function(acceptobj){bidAccepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){bidRefuser.call(t,cb,arguments)});
       break;
     case 'onOffer':
-      args.push(function(acceptobj){offerAccepter.call(t,cb,id,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb)});
+      args.push(function(acceptobj){offerAccepter.call(t,cb,id,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb,arguments)});
       break;
   }
   //args.push(function(acceptobj){accepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){refuser.call(t,callname,id,cb)});

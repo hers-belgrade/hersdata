@@ -26,6 +26,10 @@ function _close(requirement, cb) {
 }
 
 function removeRequirement(reqname){
+  if(!this.elementRaw(reqname)){
+    console.log('no requirement',reqname,'on',this.dataDebug());
+    process.exit(0);
+  }
   this.commit('requirement_'+reqname+'_done',[
     ['remove',[reqname]]
   ]);
@@ -77,7 +81,7 @@ function startwoffer(requirementswoffers,cb,user){
     if(this.data.element([i])){
       var r = requirementswoffers[i];
       delete requirementswoffers[i];
-      this.data.element([i]).functionalities.requirement.f.setOffer(r.offer,dummy,user);
+      this.data.element([i]).functionalities.requirement.setOffer(r.offer,dummy,user);
       //cb('REQUIREMENT_ALREADY_PENDING',i);
       //return;
     }else{

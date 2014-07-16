@@ -43,10 +43,10 @@ WebServer.prototype.startSocketIO = function(app) {
   console.log('socket.io listening');
   io.set('authorization', function(handshakeData, callback){
     var username = handshakeData.query.username;
-    var sess = handshakeData.query[dataMaster.functionalities.sessionuserfunctionality.f.fingerprint];
+    var sess = handshakeData.query[dataMaster.functionalities.sessionuserfunctionality.fingerprint];
     console.log('sock.io incoming',username,sess);
     if(username && sess){
-      var u = dataMaster.functionalities.sessionuserfunctionality.f._findUser(username);
+      var u = dataMaster.functionalities.sessionuserfunctionality._findUser(username);
       if(!u){
         callback(null,false);
       }else{
@@ -61,12 +61,12 @@ WebServer.prototype.startSocketIO = function(app) {
   io.sockets.on('connection',function(sock){
     var username = sock.handshake.username,
       session = sock.handshake.session,
-      u = dataMaster.functionalities.sessionuserfunctionality.f._findUser(username);
+      u = dataMaster.functionalities.sessionuserfunctionality._findUser(username);
     //console.log(username,'sockio connected',session,'session',u.sessions);
     u.makeSession(session);
     u.sessions[session].setSocketIO(sock);
     sock.on('!',function(data){
-      dataMaster.functionalities.sessionuserfunctionality.f.executeOnUser({user:u,session:session,commands:data},function(errc,errp,errm){
+      dataMaster.functionalities.sessionuserfunctionality.executeOnUser({user:u,session:session,commands:data},function(errc,errp,errm){
         sock.emit('=',errc==='OK' ? errp[0] : {errorcode:errc,errorparams:errp,errormessage:errm});
       });
     });
@@ -100,7 +100,7 @@ WebServer.prototype.start = function (port) {
     ///TODO: HARDCODED !!!!
     purl.query.address = req.connection.remoteAddress;//'127.0.0.1';
 
-    self.data.functionalities.sessionuserfunctionality.f[urlpath](purl.query,function(errcb,errparams,errmessage){
+    self.data.functionalities.sessionuserfunctionality[urlpath](purl.query,function(errcb,errparams,errmessage){
       if(errcb==='OK'){
         res.write(JSON.stringify(errparams[0]));
       }else{
