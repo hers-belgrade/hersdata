@@ -133,6 +133,7 @@ function executeOneOnUser(user,command,params,cb){
 }
 
 function userExecutor(session,user,paramobj,statuscb){
+  if(!user.destroyed){return;} //ded already
   var commands = paramobj.dontparse ? paramobj.commands : JSON.parse(paramobj.commands);
   var sessionobj = {};
   sessionobj[this.self.fingerprint]=session;

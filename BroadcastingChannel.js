@@ -26,9 +26,16 @@ BroadcastingChannel.prototype.activate = function(){
 BroadcastingChannel.prototype.deactivate = function(){
   if(this.subscription<0){return;}
   if(!this.bcaster){return;}
+  if(!this.bcaster.destroyed){
+    this.subscription = -1;
+    this.bcaster = null;
+    this.translatorname = '';
+    return;
+  }
   this.bcaster.detach(this.subscription,this.translatorname);
   this.subscription = -1;
   this.bcaster = null;
+  this.translatorname = '';
 };
 BroadcastingChannel.prototype.switchTo = function(broadcaster,translatorname){
   if(broadcaster&&this.bcaster&&broadcaster===this.bcaster){
