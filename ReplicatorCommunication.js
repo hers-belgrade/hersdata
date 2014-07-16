@@ -189,7 +189,7 @@ RemoteFollowerSlave.prototype.send = function(code){
 RemoteFollowerSlave.prototype.setStatus = function(stts){
   if(stts==='DISCARD_THIS'){
     if(this._id!==null){
-      console.log('removing slot',this._id);
+      //console.log('removing slot',this._id);
       this.rc._map.remove(this._id);
       this._id = null;
     }
@@ -201,7 +201,7 @@ RemoteFollowerSlave.prototype.setStatus = function(stts){
 RemoteFollowerSlave.prototype.say = function(item){
   if(item==='DISCARD_THIS'){
     if(this._id!==null){
-      console.log('removing slot',this._id);
+      //console.log('removing slot',this._id);
       this.rc._map.remove(this._id);
       this._id = null;
     }
