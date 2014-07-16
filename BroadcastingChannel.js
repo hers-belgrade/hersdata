@@ -34,8 +34,6 @@ BroadcastingChannel.prototype.deactivate = function(){
   }
   this.bcaster.detach(this.subscription,this.translatorname);
   this.subscription = -1;
-  this.bcaster = null;
-  this.translatorname = '';
 };
 BroadcastingChannel.prototype.switchTo = function(broadcaster,translatorname){
   if(broadcaster&&this.bcaster&&broadcaster===this.bcaster){

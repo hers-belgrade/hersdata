@@ -243,6 +243,9 @@ DataFollower.prototype.huntTarget = function(){
 };
 DataFollower.prototype.newElementListener = function(name,el){
   this.reportElement(undefined,name,el);
+  if(!this.attachAppropriately){
+    return;
+  }
   this.attachAppropriately(name,el);
 };
 DataFollower.prototype.remoteAttach = function (target) {
