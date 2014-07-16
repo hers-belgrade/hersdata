@@ -82,7 +82,7 @@ ConsumerSession.prototype.setSocketIO = function(sock){
   sock.on('disconnect',function(){
     sock.user = null;
     t.sockio = null;
-    t.destroy();
+    t.destroy && t.destroy();
   });
   /*
   if(this.queue && this.queue.length){
