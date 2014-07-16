@@ -40,7 +40,7 @@ function _produceUser(paramobj,cb,nextcb){
   if(this.self.userFactory){
     var map = this.self.userMap;
     var t = this;
-    this.self.userFactory(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
+    this.self.userFactory._produceUser(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
       if(user){
         map[user.username()] = user;
       }
@@ -205,6 +205,11 @@ produceAndExecute.params='originalobj';
 
 
 function init(){
+  if(this.self.userFactory && typeof this.self.userFactory._produceUser !== 'function'){
+    console.trace();
+    console.log('userFactory has to have a method named _produceUser, will process.exit now');
+    process.exit(0);
+  }
   this.self.fingerprint = RandomBytes(12).toString('hex');
   console.log('sessionuserfunctionality started',this.self.fingerprint);
   this.self.userMap = {};

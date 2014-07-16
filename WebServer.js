@@ -9,8 +9,7 @@ var http = require('http');
 function WebServer (root, realm, userFactoryModule) {
   this.data = new ChildProcessCollectionReplica(realm);
   this.data.go();
-  var module = this.data.attach(userFactoryModule);
-  this.data.attach('./sessionuserfunctionality',{realmName:realm, userFactory:module._userFactory});
+  this.data.attach('./sessionuserfunctionality',{realmName:realm, userFactory:this.data.attach(userFactoryModule)});
 	this.root = root;
   this.realm = realm;
 }
