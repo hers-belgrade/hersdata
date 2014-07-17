@@ -378,9 +378,7 @@ ReplicatorCommunication.prototype.perform = function(id,version,code,path,paramo
 };
 ReplicatorCommunication.prototype.reportResult = function(arry){
   //console.log('reporting results',arguments,'for arry',arry);
-  for(var i in arguments){
-    if(i==0){continue;}
-    //console.log('pushing',arguments[i],'for',i);
+  for(var i=1; i<arguments.length; i++){
     arry.push(arguments[i]);
   }
   //console.log('commandresult',arry);
