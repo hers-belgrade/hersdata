@@ -110,13 +110,13 @@ function accepter(cb,callname,acceptobj){
   execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
 };
 
-function bidAccepter(cb,callname,acceptobj){
+function bidAccepter(cb,acceptobj){
   this.self.counter++;
   execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
   execRun(this.self.notifyDone);
 };
 
-function offerAccepter(cb,id,callname,acceptobj){
+function offerAccepter(cb,id,acceptobj){
   this.self.counter++;
   removeOffer.call(this,id);
   execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
@@ -148,10 +148,10 @@ function doCall(callname,cb, id, user){
   var args = Array.prototype.slice.call(arguments,3);
   switch(callname){
     case 'onBid':
-      args.push(function(acceptobj){bidAccepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){bidRefuser.call(t,cb,arguments)});
+      args.push(function(acceptobj){bidAccepter.call(t,cb,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){bidRefuser.call(t,cb,arguments)});
       break;
     case 'onOffer':
-      args.push(function(acceptobj){offerAccepter.call(t,cb,id,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb,arguments)});
+      args.push(function(acceptobj){offerAccepter.call(t,cb,id,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb,arguments)});
       break;
   }
   //args.push(function(acceptobj){accepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){refuser.call(t,callname,id,cb)});
@@ -169,8 +169,11 @@ function bid(paramobj,cb,user){
 bid.params = 'originalobj';
 
 function offer(paramobj,cb,user){
+  if(!isExecutable(cb)){
+    return;
+  }
   if(!this.self.cbs.onOffer){
-    cb('NO_OFFERS_ON_THIS_REQUIREMENT');
+    execCall(cb,'NO_OFFERS_ON_THIS_REQUIREMENT');
     return;
   }
   //console.log('offer',paramobj,offerid);
@@ -186,7 +189,7 @@ function offer(paramobj,cb,user){
   var offerel = this.data.element(['offers',offerid]);
   if(!offerel){
     console.log('no offerid',offerid,'on',this.data.element(['offers']).dataDebug(),'for',user.fullname(),this.self.counter);
-    cb('INVALID_OFFER_ID',offerid);
+    execApply(cb,['INVALID_OFFER_ID',offerid]);
     //process.exit(0);
     return;
   }
