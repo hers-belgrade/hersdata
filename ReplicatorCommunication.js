@@ -248,6 +248,13 @@ RemoteFollowerSlave.prototype.perform = function(code,path,paramobj,cb){
   this.cbs[rcs] = cb;
   this.send('perform',this._id,this._version,code,path,paramobj,rcs);
 };
+function execApplyOnArgs(cb,args){
+  var a = [];
+  for(var i=0; i<args.length; i++){
+    a.push(args[i]);
+  }
+  execApply(cb,a);
+};
 RemoteFollowerSlave.prototype.docb = function(cbid,args){
   /*
   console.log('docb',cbid);//,args);
@@ -267,7 +274,7 @@ RemoteFollowerSlave.prototype.docb = function(cbid,args){
         execCall(cb,args[0]);
         break;
       default:
-        execApply(cb,args);
+        execApplyOnArgs(cb,args);
         break;
     }
   }
