@@ -60,6 +60,15 @@ function __executeArray(exc,params){
   return exc[1].apply(exc[0],exc[2] ? exc[2].concat(params) : params);
 };
 
+function traverse(entity,cb){
+  if(!__isExecutable(cb)){
+    return;
+  }
+  for(var i in entity){
+    __executeArray(cb,entity[i],i);
+  }
+};
+
 module.exports = {
   isA: __isExecutable,
   ensure: __ensureExecutable,
@@ -67,5 +76,6 @@ module.exports = {
   run: __execute,
   call: __executeScalar,
   apply: __executeArray,
-  dummyFunc: __dummy
+  dummyFunc: __dummy,
+  traverse:traverse
 };
