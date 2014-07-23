@@ -788,8 +788,8 @@ Collection.prototype.processInput = function(sender,input){
   }
 };
 
-Collection.prototype.startFifo = function(size,idfieldname){
-  this.attach('./fifofunctionality',{size:size||10,idname:idfieldname});
+Collection.prototype.startFifo = function(size,idfieldname,jsonize){
+  this.attach('./fifofunctionality',{size:size||10,idname:idfieldname,jsonize:jsonize});
 };
 
 Collection.prototype.addToFifo = function(item){

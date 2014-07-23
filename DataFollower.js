@@ -159,10 +159,8 @@ DataFollower.prototype.replicationListener = function(){
 DataFollower.prototype.destructListener = function(){
   this.data = null;
   this.cursor--;
-  //console.log(this.fullname(),this.path,'got its target destroyed, cursor is currently',this.cursor);
-  if(this.cursor<=0){
-    //console.log(this.fullname(),this.path,'exhausted,dying');
-    Timeout.next(this,'destroy');
+  if(this.cursor<0){
+    //cursor is way behind the path. Parent listener will destroy me anyhow...
     return;
   }
   this.setStatus('RETREATING');
