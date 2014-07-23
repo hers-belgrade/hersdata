@@ -76,7 +76,7 @@ DataFollower.prototype.destroy = function(){
     this.remotelink.destroy();
   }
   for(var i in this.followers){
-    this.followers[i].destroy(); //the follower's .destroy() might delete this.followers as well, so
+    this.followers[i].destroy && this.followers[i].destroy(); //the follower's .destroy() might delete this.followers as well, so
     this.followers && delete this.followers[i]; //this.followers has to be checked for
   }
   //block reentrance
@@ -235,6 +235,9 @@ DataFollower.prototype.huntTarget = function(){
       return;
     }
     this.data.traverseElements([this,this.newElementListener]);
+    if(!this.data){ //ditto
+      return;
+    }
     this.createListener('newElementListener',null,this.data.newElement);
     for(var i in this.followers){
       checkFollowerForStalled.call(this,this.followers[i]);
@@ -242,6 +245,7 @@ DataFollower.prototype.huntTarget = function(){
   }
 };
 DataFollower.prototype.newElementListener = function(name,el){
+  if(!this.reportElement){return;}
   this.reportElement(undefined,name,el);
   if(!this.attachAppropriately){
     return;
