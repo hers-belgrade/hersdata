@@ -35,13 +35,17 @@ function add(item,cb){
       }
     });
   }
-  actions.push(['set',[id]]);
-  for(var i in item){
-    var d = item[i], tod = typeof d;
-    if(!(tod==='number'||tod==='string')){
-      d = JSON.stringify(d);
+  if(this.self.jsonize!==true){
+    actions.push(['set',[id]]);
+    for(var i in item){
+      var d = item[i], tod = typeof d;
+      if(!(tod==='number'||tod==='string')){
+        d = JSON.stringify(d);
+      }
+      actions.push(['set',[id,i],[d]]);
     }
-    actions.push(['set',[id,i],[d]]);
+  }else{
+    actions.push(['set',[id],[JSON.stringify(item)]]);
   }
   this.data.commit('new_fifo_item',actions);
   execCall(cb,'OK');
