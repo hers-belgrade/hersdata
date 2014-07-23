@@ -81,6 +81,7 @@ function __errorhandler(exctbl,map,errorkey,errorparams){
 }
 
 function __attachedMethodResolver(ctor,mname,_p){
+  if(mname==='validate_config'){return;}
   if (mname.charAt(0) == '_') {
     ctor.prototype[mname] = function(){return _p.apply(this.SELF,arguments);};
   }else if(mname!=='init'){
