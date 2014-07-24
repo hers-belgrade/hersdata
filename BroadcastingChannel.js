@@ -26,7 +26,8 @@ BroadcastingChannel.prototype.activate = function(){
 BroadcastingChannel.prototype.deactivate = function(){
   if(this.subscription<0){return;}
   if(!this.bcaster){return;}
-  if(!this.bcaster.destroyed){
+  if(!this.bcaster.destroy){
+    console.log('bcaster does not exist any more',this.bcaster);
     this.subscription = -1;
     this.bcaster = null;
     this.translatorname = '';
