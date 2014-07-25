@@ -41,7 +41,7 @@ HTTPTalker.prototype.tell = function(page,obj,cb){
       executable.call(_cb,data);
     });
   }).on('error',function(e){
-    console.log('HTTPTalker error',e.code ? e.code : '');
+    console.log('HTTPTalker error',e.code ? e.code : '', t.host, t.port);
     Timeout.set(t,1000,'tell',page,obj,cb);
   }).end();
 };

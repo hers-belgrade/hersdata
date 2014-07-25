@@ -155,7 +155,7 @@ function getConstructor(modulename){
     }else{
       this.SELF = new AFSelfBare(data,fqnname,this);
     }
-    this.engagement = new UserEngagement(this.SELF.superUser._parent);
+    this.__attached_functionality_engagement = new UserEngagement(this.SELF.superUser._parent);
     this.init();
     data.functionalities[fqnname] = this;
   };
@@ -165,7 +165,7 @@ function getConstructor(modulename){
     if(f){
       delete this.SELF.data.functionalities[this.fqnname];
     }
-    this.engagement.destroy();
+    this.__attached_functionality_engagement.destroy();
     this.SELF.destroy();
     for(var i in this){
       this[i] = null;

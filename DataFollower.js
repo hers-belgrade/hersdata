@@ -300,6 +300,7 @@ DataFollower.prototype.scalarDestroyed = function(name){
     process.exit(0);
   }
   this.say([this.path,[name]]);
+  if(!this.destroyListener){return;}
   this.destroyListener('scalarChanged',[name]);
   this.destroyListener('scalarDestroyed',[name]);
 };
