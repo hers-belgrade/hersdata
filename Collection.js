@@ -199,7 +199,12 @@ Collection.prototype.add = function(name,entity){
 };
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
-  applyExecutable(this._commit,[txnalias,txnprimitives]);
+  try {
+    applyExecutable(this._commit,[txnalias,txnprimitives]);
+  }catch (e) {
+    console.log('ERROR:', txnalias, txnprimitives);
+    throw e;
+  }
 };
 
 Collection.prototype.type = function(){
