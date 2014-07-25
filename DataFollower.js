@@ -113,6 +113,7 @@ DataFollower.prototype.upward = function(item){
   }
 };
 DataFollower.prototype.say = function(item){
+  if(!this.upward){return;}
   if(isExecutable(this.saycb)){
     execCall(this.saycb,item);
   }else{
