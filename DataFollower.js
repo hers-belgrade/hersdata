@@ -508,13 +508,13 @@ OfferHandler.prototype.say = function(item){
     var data = item[1][1];
     var cbr = execApply(this.cb,[this.path[this.path.length-1],data]);
     if(typeof data === 'undefined'){
-      this.destroy();
+      this.destroy && this.destroy();
     }else{
       if(cbr){
         if(cbr==='super'){
           this._parent.destroy();
         }else{
-          this.destroy();
+          this.destroy && this.destroy();
         }
       }
     }
