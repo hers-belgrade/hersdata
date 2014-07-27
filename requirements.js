@@ -78,14 +78,15 @@ function startwoffer(requirementswoffers,cb,user){
       cb('REQUIREMENT_NOT_RECOGNIZED',i);
       return;
     }
-    if(this.data.element([i])){
+    var key = requirementswoffers[i].key,de=this.data.elementRaw(i);
+    if(de){
       var r = requirementswoffers[i];
       delete requirementswoffers[i];
-      this.data.element([i]).functionalities.requirement.setOffer(r.offer,dummy,user);
-      //cb('REQUIREMENT_ALREADY_PENDING',i);
-      //return;
+      if(de.access_level()!==key){
+        createactions.push(['set',[i],key==='null'?undefined:key]);
+      }
+      de.functionalities.requirement.setOffer(r.offer,dummy,user);
     }else{
-      var key = requirementswoffers[i].key;
       createactions.push(['set',[i],key==='null'?undefined:key]);
     }
   }
@@ -96,7 +97,7 @@ function startwoffer(requirementswoffers,cb,user){
     var r = requirementswoffers[i];
     var mr = this.self.requirements[i];
     var d = this.data;
-    //console.log('attaching requirement on',i);
+    //console.log(user.username(),'attaching requirement',i,'on',this.data.dataDebug());
     var f = this.data.element([i]).attach('./requirement',{
       functionality:this.self.functionality,
       cbs:mr,

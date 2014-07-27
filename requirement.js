@@ -26,21 +26,25 @@ function init(){
 };
 
 function offerTickOut(t,to,oid,tocb, user){
-  if(execCall(tocb,to)){
-    removeOffer(oid);
+  if(typeof to !== 'number'){return;}
+  if(!t.self.offertimeouts[oid]){
     return;
   }
-  if(to){
+  execCall(tocb,to);
+  if(to>0){
     to--;
     t.self.offertimeouts[oid] = {timeout:Timeout.set(offerTickOut,1000,t,to,oid,tocb),cb:tocb};
   }else{
-    if(execRun(tocb)){
-      removeOffer(oid);
-      return;
-    }
-    t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, user);
+    nullOfferTriggerer(t,oid,user);
   }
 };
+
+function nullOfferTriggerer(t,oid, tuser){
+  //console.log('timed out, should cancel the offer ...',oid);
+  if(t&&t.self && t.self.offer){
+    t.self.offer({offerid:oid}, undefined, tuser);
+  }
+}
 
 function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
   if(!isExecutable(cb)){
@@ -77,10 +81,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
       this.self.offertimeouts = {};
     }
     if(!isExecutable(timeoutcb)){
-      this.self.offertimeouts[offerid] = {timeout:Timeout.set(function(t,oid, tuser){
-        //console.log('timed out, should cancel the offer ...',oid);
-        t&&t.self && t.self.offer && t.self.offer({offerid:oid}, undefined, tuser)
-      },timeout,this,offerid,user)};
+      this.self.offertimeouts[offerid] = {timeout:Timeout.set(nullOfferTriggerer,timeout,this,offerid,user)};
     }else{
       offerTickOut(this,timeout,offerid,timeoutcb, user);
     }
@@ -95,20 +96,6 @@ setOffer.defaults = {offerid:null,timeout:0,timeoutcb:null};
 removeOffer = function (oid) {
   this.data.commit ('remove_offer', [ ['remove', ['offers', oid]] ]);
 }
-
-function accepter(cb,callname,acceptobj){
-  this.self.counter++;
-  //console.log('accepted in',callname);
-  switch(callname){
-    case 'onBid':
-      execRun(this.self.notifyDone);
-      break;
-    case 'onOffer':
-      removeOffer.call(this,id);
-      break;
-  }
-  execApply(cb,['ACCEPTED',RandomBytes(8).toString('hex')+this.self.counter,acceptobj]);
-};
 
 function bidAccepter(cb,acceptobj){
   this.self.counter++;
@@ -154,8 +141,6 @@ function doCall(callname,cb, id, user){
       args.push(function(acceptobj){offerAccepter.call(t,cb,id,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){offerRefuser.call(t,id,cb,arguments)});
       break;
   }
-  //args.push(function(acceptobj){accepter.call(t,cb,callname,acceptobj)},function(offerobj){offerer.call(t,cb,user,offerobj)},function(){refuser.call(t,callname,id,cb)});
-  //console.log(args);
   this.self.cbs[callname].apply(this.self.functionality.SELF,args);
 };
 

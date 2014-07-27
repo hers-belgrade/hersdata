@@ -9,6 +9,7 @@ var executable = require('./executable'),
   UserEngagement = require('./UserEngagement');
 
 var __Cache = {};
+var __attached_functionality_instance_count=0;
 
 function defaultChecker(mname,__pn,__pd){
   if(typeof __pd === 'undefined'){
@@ -102,6 +103,8 @@ function selfApplicator(f){
 }
 
 function AFSelfBare(data,fqnname,functionality){
+  __attached_functionality_instance_count++;
+  //console.log(__attached_functionality_instance_count,'attached functionalities after',fqnname,'created');
   this.data = data;
   this.self = functionality;
   this.superUser = new SuperUser(data,null,null,fqnname,'dcp');
@@ -109,7 +112,10 @@ function AFSelfBare(data,fqnname,functionality){
 AFSelfBare.prototype.destroy = function(){
   this.data = null;
   this.self = null;
+  this.superUser.destroy();
   this.superUser = null;
+  __attached_functionality_instance_count--;
+  //console.log(__attached_functionality_instance_count,'attached functionalities');
 }
 
 function AFSelfWReqs(data,fqnname,functionality,requirements){
@@ -121,16 +127,36 @@ function AFSelfWReqs(data,fqnname,functionality,requirements){
   }
   var re = data.elementRaw('__requirements');
   re.attach('./requirements',{functionality:functionality,requirements:requirements});
-  var rf = re.functionalities.requirements;
-  this.openBid = function(){rf.start.apply(rf,arguments);};
-  this.offer = function(){rf.startwoffer.apply(rf,arguments)};
-  this.closeBid = function(){rf._close.apply(rf,arguments)};
 };
 AFSelfWReqs.prototype.destroy = function(){
-  this.openBid = null;
-  this.offer = null;
-  this.closeBid = null;
   AFSelfBare.prototype.destroy.call(this);
+};
+AFSelfWReqs.prototype.openBid = function(){
+  var re = this.data.elementRaw('__requirements');
+  if(re){
+    var rf = re.functionalities.requirements;
+    if(rf){
+      rf.start.apply(rf,arguments);
+    }
+  }
+};
+AFSelfWReqs.prototype.offer = function(){
+  var re = this.data.elementRaw('__requirements');
+  if(re){
+    var rf = re.functionalities.requirements;
+    if(rf){
+      rf.startwoffer.apply(rf,arguments);
+    }
+  }
+};
+AFSelfWReqs.prototype.closeBid = function(){
+  var re = this.data.elementRaw('__requirements');
+  if(re){
+    var rf = re.functionalities.requirements;
+    if(rf){
+      rf._close.apply(rf,arguments);
+    }
+  }
 };
 
 function getConstructor(modulename){

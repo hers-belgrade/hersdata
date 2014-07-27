@@ -7,8 +7,8 @@ function DataUser(data,createcb,cb,username,realmname,roles,userconstructor,user
   userconstructor = userconstructor || User;
   DataFollower.call(this,data,createcb,cb,User.Create(username,realmname,roles,userconstructor,userctoroptions));
   UserEngagement.call(this,this._parent);
-  this._parent.destroyed.attach([this,'parentDestroyed']);
-  data.destroyed.attach([this,'dataDestroyed']);
+  //this._parent.destroyed.attach([this,'parentDestroyed']);
+  //data.destroyed.attach([this,'dataDestroyed']);
 };
 DataUser.prototype = Object.create(DataFollower.prototype,{constructor:{
   value:DataUser,

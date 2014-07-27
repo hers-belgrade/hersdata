@@ -1,24 +1,18 @@
-var utils = require('util');
-var throw_if_invalid_scalar = require('./helpers').throw_if_invalid_scalar;
-var net = require('net');
-var BigCounter = require('./BigCounter');
-var child_process = require('child_process');
-var ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication');
-var executable = require('./executable'),isExecutable = executable.isA,callExecutable=executable.call,applyExecutable=executable.apply;
-var HookCollection = require('./hookcollection');
-var Scalar = require('./Scalar');
-var User = require('./User');
-var attachedfunctionalityprototyper = require('./attachedfunctionalityprototyper');
+var utils = require('util'),
+  throw_if_invalid_scalar = require('./helpers').throw_if_invalid_scalar,
+  net = require('net'),
+  BigCounter = require('./BigCounter'),
+  child_process = require('child_process'),
+  ReplicatorSocketCommunication = require('./ReplicatorSocketCommunication'),
+  executable = require('./executable'),
+  isExecutable = executable.isA,
+  execCall=executable.call,
+  execApply=executable.apply,
+  HookCollection = require('./hookcollection'),
+  Scalar = require('./Scalar'),
+  User = require('./User'),
+  attachedfunctionalityprototyper = require('./attachedfunctionalityprototyper');
 var __CollectionCount = 0;
-
-function onChildTxn(name,onntxn,txnc,txnb,txne){
-  return function _onChildTxn(chldcollectionpath,txnalias,txnprimitives,txnid){
-    txnc.inc();
-    //txnb.fire(txnalias); //don't report txns that are not yours
-    //txne.fire(txnalias);
-    onntxn.fire([name].concat(chldcollectionpath),txnalias,txnprimitives,txnc.clone());
-  };
-};
 
 function childTxnHandler(name,txnc,chldcollectionpath,txnalias,txnprimitives,txnid){
   txnc.inc();
@@ -41,7 +35,7 @@ function collectionCommiter(txnc,txnalias,txnprimitives,_txnc,targetpath) {
       console.log('no element to _commit on');
       process.exit(0);
     }
-    applyExecutable(el._commit,[txnalias,txnprimitives]);
+    execApply(el._commit,[txnalias,txnprimitives]);
     return;
   }
   if(this.__commitunderway){
@@ -68,7 +62,7 @@ function collectionCommiter(txnc,txnalias,txnprimitives,_txnc,targetpath) {
   if(this.__commitstodo){
     if(this.__commitstodo.length){
       //this._commit.apply(this,this.__commitstodo.shift());
-      applyExecutable(this._commit,this.__commitstodo.shift());
+      execApply(this._commit,this.__commitstodo.shift());
     }else{
       this.__commitstodo = null;
     }
@@ -89,12 +83,7 @@ function Collection(a_l){
     console.log(caption,utils.inspect(data,false,null,true));
   };
 
-  this.access_level = function(){
-    return access_level;
-  };
-
   this.newElement = new HookCollection();
-
   this.onNewTransaction = new HookCollection();
   this.accessLevelChanged = new HookCollection();
   this.txnBegins = new HookCollection();
@@ -121,7 +110,7 @@ function Collection(a_l){
   this.traverseElements = function(cb){
     if(!isExecutable(cb)){return;}
     for(var i in data){
-      var cbr = applyExecutable(cb,[i,data[i]]);
+      var cbr = execApply(cb,[i,data[i]]);
       if(typeof cbr !== 'undefined'){
         return cbr;
       }
@@ -200,7 +189,7 @@ Collection.prototype.add = function(name,entity){
 
 Collection.prototype.commit = function(txnalias,txnprimitives){
   try {
-    applyExecutable(this._commit,[txnalias,txnprimitives]);
+    execApply(this._commit,[txnalias,txnprimitives]);
   }catch (e) {
     console.log('ERROR:', txnalias, txnprimitives);
     throw e;
@@ -426,7 +415,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
   //console.log(methodname);
 	if (methodname.charAt(0) === '_' && user.username().charAt(0)!=='*'){
     if(isExecutable(cb)){
-      applyExecutable(cb,['ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname]);
+      execApply(cb,['ACCESS_FORBIDDEN',[methodname],'You are not allowed to invoke '+methodname]);
     }
     return;
   }
@@ -435,7 +424,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
     var key = f.key;
     if((typeof key !== 'undefined')&&(!user.contains(key))){
       if(isExecutable(cb)){
-        applyExecutable(cb,['ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have']);
+        execApply(cb,['ACCESS_FORBIDDEN',[key],'Functionality '+functionalityname+' is locked by '+key+' which you do not have']);
       }
       return;
     }
@@ -445,7 +434,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
       m.call(f,paramobj,cb,user);
     }else{
       if(isExecutable(cb)){
-        applyExecutable(cb,['NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname]);
+        execApply(cb,['NO_METHOD',[methodname,functionalityname],'Method '+methodname+' not found on '+functionalityname]);
       }
       return;
     }
@@ -454,7 +443,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
     console.log(functionalityname,'is not a functionalityname while processing',path);
     //console.log(this.dataDebug());
     if(isExecutable(cb)){
-      applyExecutable(cb,['NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here']);
+      execApply(cb,['NO_FUNCTIONALITY',[functionalityname],'Functionality '+functionalityname+' does not exist here']);
     }
     return;
   }
@@ -463,7 +452,7 @@ Collection.prototype.run = function(path,paramobj,cb,user){
 Collection.prototype.takeBid = function(path,paramobj,cb,user){
   if(!path.length){
     if(isExecutable(cb)){
-      callExecutable(cb,'VOID_REQUIREMENT');
+      execCall(cb,'VOID_REQUIREMENT');
     }
     return;
   }
@@ -472,7 +461,7 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
   if(!(re && re.functionalities && re.functionalities.requirement)){
     console.log('no requirement',rn,'on',this.dataDebug(),'=>',re?re.dataDebug():'','with',path);
     if(isExecutable(cb)){
-      applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
+      execApply(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
     }
     return;
   }
@@ -482,7 +471,7 @@ Collection.prototype.takeBid = function(path,paramobj,cb,user){
 Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   if(!path.length){
     if(isExecutable(cb)){
-      callExecutable(cb,'VOID_REQUIREMENT');
+      execCall(cb,'VOID_REQUIREMENT');
     }
     return;
   }
@@ -491,7 +480,7 @@ Collection.prototype.takeOffer = function(path,paramobj,cb,user){
   if(!(re && re.functionalities.requirement)){
     console.log('no requirement',rn,'on',this.dataDebug());
     if(isExecutable(cb)){
-      applyExecutable(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
+      execApply(cb,['NO_REQUIREMENT',[rn],'Requirement '+rn+' does not exist']);
     }
     return;
   }
@@ -509,14 +498,14 @@ Collection.prototype.setSessionUserFunctionality = function(config,requirements)
 Collection.prototype.getReplicatingUser = function(cb){
   if(this.replicatingUser){
     if(isExecutable(cb)){
-      callExecutable(cb,this.replicatingUser);
+      execCall(cb,this.replicatingUser);
     }
     return;
   }
   var t=this,rul = this.replicationInitiated.attach(function(user){
     t.replicationInitiated.detach(rul);
     if(isExecutable(cb)){
-      callExecutable(cb,user);
+      execCall(cb,user);
     }
   });
 };
@@ -599,7 +588,7 @@ Collection.prototype.openReplication = function(port,cb){
     console.log('yes');
     server.on('listening',function(){
       console.log('listening',port);
-      callExecutable(cb,port);
+      execCall(cb,port);
     });
   }
   server.listen(port);
