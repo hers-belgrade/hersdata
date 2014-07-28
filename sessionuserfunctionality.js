@@ -17,7 +17,17 @@ var errors = {
 function _findUser(username){
   return this.self.userMap[username];
 }
-
+function removerOfUserFromMap(user){
+  delete this.self.userMap[user.username()];
+};
+function userFactoryUserHandler(nextcb,params,user){
+  if(user){
+    this.self.userMap[user.username()] = user;
+  }
+  user.destroyed.attach([this,removerOfUserFromMap,[user]]);
+  params.unshift(user);
+  nextcb.apply(this,params);
+};
 function _produceUser(paramobj,cb,nextcb){
   if(!paramobj.name){
     cb('NO_NAME');
@@ -40,18 +50,9 @@ function _produceUser(paramobj,cb,nextcb){
   if(this.self.userFactory){
     var map = this.self.userMap;
     var t = this;
-    this.self.userFactory._produceUser(this.data,paramobj.name,this.self.realmName,paramobj.roles,function(user){
-      if(user){
-        map[user.username()] = user;
-      }
-      user.destroyed.attach((function(m,u){
-        return function(){
-          delete m[u.username()];
-        };
-      })(map,user));
-      params.unshift(user);
-      nextcb.apply(t,params);
-    });
+    console.trace();
+    console.log('should produce user from',paramobj);
+    this.self.userFactory._produceUser(this.data,paramobj.name,this.self.realmName,paramobj.roles,userFactoryUserHandler.bind(this,nextcb,params));
   }else{
     var u = new SessionUser(this.data,paramobj.name,this.self.realmName,paramobj.roles);
     this.self.userMap[u.username()] = u;
