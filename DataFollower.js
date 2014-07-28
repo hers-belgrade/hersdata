@@ -385,7 +385,9 @@ DataFollower.prototype.follow = function(path,cb,saycb,ctor,options){
     var f = this.followers[spath];
     if(f){
       //console.log('already have follower for',spath);
-      cb && cb.call(f,f._status);
+      if(isExecutable(cb)){
+        execCall(cb,f._status);
+      }
       return f;
     }
   }else{

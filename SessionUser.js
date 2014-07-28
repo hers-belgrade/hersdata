@@ -154,6 +154,8 @@ SessionUser.prototype.sessionForAddress = function(address){
     }
   }
   //console.log('sessionsperaddress',this.sessionsperaddress,'=>',ret);
+  console.trace();
+  console.log('no sessions allowed for',address,'because',this.sessionsperaddress,maxsessionsperaddress);
   return null;
 };
 SessionUser.prototype.makeSession = function(sess,address){
