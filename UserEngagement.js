@@ -7,6 +7,8 @@ function UserEngagement(user){
   this.__id = __UserEngagementCounter.toString();
   this.__engager = user;
   if(!user.engage){
+    console.trace();
+    console.log('no method named engage in',user);
     process.exit(0);
   }
   user.engage(this);

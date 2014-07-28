@@ -1,5 +1,6 @@
-var Timeout = require('herstimeout');
-var DataUser = require('./DataUser');
+var Timeout = require('herstimeout'),
+  DataUser = require('./DataUser'),
+  UserEngagement = require('./UserEngagement');
 
 var __socketIOSessions = [];
 
@@ -39,6 +40,7 @@ var maxsessionsperaddress = 10,
   nosessionsgraceperiod = 3000;
 
 function ConsumerSession(u,session,address){
+  UserEngagement.call(this,u.__engager);
   this.user = u;
   this.session = session;
   this.address = address;
@@ -49,9 +51,16 @@ function ConsumerSession(u,session,address){
     t.say(item);
   });
 };
+ConsumerSession.prototype = Object.create(UserEngagement.prototype,{constructor:{
+  value:ConsumerSession,
+  enumerable:false,
+  configurable:false,
+  writable:false
+}});
 ConsumerSession.prototype.destroy = function(){
   if(!this.user){return;}
   this.user.sessionDown(this);
+  UserEngagement.prototype.destroy();
   for(var i in this){
     this[i] = null;
   }
@@ -176,7 +185,7 @@ SessionUser.prototype.sessionDown = function(sess){
   this.sessionsperaddress[sess.address]--;
   console.log(this.username(),'session',sess.session,'down',this.sessioncount,'left');
   if(this.sessioncount<1){
-    if(this.dieTimeout){
+    if(this.dieTimeout>=0){
       Timeout.clear(this.dieTimeout);
     }
     this.dieTimeout = Timeout.set(this,nosessionsgraceperiod,'destroy');
