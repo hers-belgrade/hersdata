@@ -83,6 +83,7 @@ function setOffer(data4json,timeout,timeoutcb,offerid,cb,user){
     if(!isExecutable(timeoutcb)){
       this.self.offertimeouts[offerid] = {timeout:Timeout.set(nullOfferTriggerer,timeout,this,offerid,user)};
     }else{
+      this.self.offertimeouts[offerid] = {timeout:Timeout.set(offerTickOut,1000,this,timeout,offerid,timeoutcb),cb:timeoutcb};
       offerTickOut(this,timeout,offerid,timeoutcb, user);
     }
   }
