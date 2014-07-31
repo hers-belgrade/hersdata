@@ -1,5 +1,5 @@
 var RandomBytes = require('crypto').randomBytes,
-  executable = require('./executable'),
+  executable = require('hersexecutable'),
   isExecutable = executable.isA,
   execRun = executable.run,
   execCall = executable.call,
