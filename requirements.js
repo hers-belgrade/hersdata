@@ -1,4 +1,4 @@
-var executable = require('./executable'),
+var executable = require('hersexecutable'),
   isExecutable = executable.isA,
   execCall = executable.call,
   execApply = executable.apply,
