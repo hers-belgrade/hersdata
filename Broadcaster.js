@@ -1,5 +1,5 @@
 var DataUser = require('./DataUser'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('hersexecutable').HookCollection;
 
 function PathTranslator(path,replaceleading){
   this.translate = typeof replaceleading === 'undefined' ? function(cb){

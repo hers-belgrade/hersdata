@@ -3,13 +3,13 @@ var Timeout = require('herstimeout'),
   DataFollower = require('./DataFollower'),
   DataUser = require('./DataUser'),
   SuperUser = require('./SuperUser'),
-  ArrayMap = require('./ArrayMap'),
-  HookCollection = require('./hookcollection'),
-  executable = require('./executable'),
+  executable = require('hersexecutable'),
   isExecutable = executable.isA,
   execRun = executable.run,
   execCall = executable.call,
-  execApply = executable.apply;
+  execApply = executable.apply,
+  ArrayMap = executable.ArrayMap,
+  HookCollection = executable.HookCollection;
 
 var __start = Timeout.now();
 

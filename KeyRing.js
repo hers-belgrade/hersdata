@@ -1,4 +1,4 @@
-var HookCollection = require('./hookcollection');
+var HookCollection = require('hersexecutable').HookCollection;
 
 function KeyRing(roles){
   if(typeof roles === 'undefined'){

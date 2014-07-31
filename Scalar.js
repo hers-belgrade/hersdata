@@ -1,4 +1,4 @@
-var HookCollection = require('./hookcollection');
+var HookCollection = require('hersexecutable').HookCollection;
 var throw_if_invalid_scalar = require('./helpers').throw_if_invalid_scalar;
 
 function throw_if_invalid_scalar_or_undefined(val){

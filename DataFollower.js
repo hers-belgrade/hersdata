@@ -1,10 +1,10 @@
 var User = require('./User'),
   Listener = require('./Listener'),
-  executable = require('./executable'),
+  executable = require('hersexecutable'),
   isExecutable = executable.isA,
   execCall = executable.call,
   execApply = executable.apply,
-  HookCollection = require('./hookcollection'),
+  HookCollection = executable.HookCollection,
   Timeout = require('herstimeout');
 
 var __DataFollowerInstanceCount = 0;

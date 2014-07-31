@@ -1,6 +1,6 @@
 var http = require('http'),
-Timeout = require('herstimeout'),
-  executable = require('./executable');
+  Timeout = require('herstimeout'),
+  executable = require('hersexecutable');
 
 function HTTPTalker(host,port){
   this.host = host;

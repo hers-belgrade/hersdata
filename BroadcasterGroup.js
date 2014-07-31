@@ -1,5 +1,5 @@
 var hersdata = require('hersdata'),
-  HookCollection = require('./hookcollection'),
+  HookCollection = require('hersexecutable').HookCollection,
   Broadcaster = require('./Broadcaster');
 
 function BroadcasterGroup(){

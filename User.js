@@ -1,9 +1,9 @@
 var KeyRing = require('./KeyRing'),
-  executable = require('./executable'),
+  executable = require('hersexecutable'),
   ensureExecutable = executable.ensure,
   execCall = executable.call,
   execApply = executable.apply,
-  HookCollection = require('./hookcollection'),
+  HookCollection = executable.HookCollection,
   Timeout = require('herstimeout');
 
 var __Instances = {};

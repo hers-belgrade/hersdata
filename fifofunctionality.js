@@ -1,5 +1,5 @@
 var BigCounter = require('./BigCounter'),
-  executable = require('./executable'),
+  executable = require('hersexecutable'),
   execCall = executable.call;
 
 var errors = {

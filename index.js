@@ -1,6 +1,6 @@
 var Collection = require('./Collection'),
   SuperUser = require('./SuperUser'),
-  HookCollection = require('./hookcollection');
+  HookCollection = require('hersexecutable').HookCollection;
 
 function DataMaster(){
   Collection.call(this);
@@ -34,10 +34,7 @@ module.exports = {
   RemoteCollectionReplica:require('./RemoteCollectionReplica'),
   BigCounter:require('./BigCounter'),
 	helpers: require('./helpers'),
-  executable: require('./executable'),
   Transactioner: require('./Transactioner'),
-  ArrayMap: require('./ArrayMap'),
-  HookCollection: HookCollection,
   Listener: require('./Listener'),
   UserEngagement: require('./UserEngagement'),
   SessionUser: require('./SessionUser'),
